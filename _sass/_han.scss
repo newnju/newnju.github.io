@@ -118,10 +118,11 @@ h1, h2, h3, h4 {
     50%      { opacity: 1; }
 }
 
-/* 博局镜纹样整体颜色的呼吸渐变：品牌色 → 朱砂色 → 品牌色 */
+/* 博局镜纹样整体颜色的呼吸渐变：青铜绿 → 鎏金 → 朱砂 → 青铜绿，随主题联动 */
 @keyframes han-mirror-breathe {
     0%, 100% { color: var(--han-patina); }
-    50%      { color: var(--han-vermilion); }
+    33%      { color: var(--han-gold); }
+    66%      { color: var(--han-vermilion); }
 }
 
 @media (prefers-reduced-motion: reduce) {
