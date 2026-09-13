@@ -59,6 +59,8 @@ h1, h2, h3, h4 {
     margin: 0.2em 0 1.2em 1.6em;
     color: var(--han-patina);
     transition: color 0.5s ease;
+    /* 呼吸渐变色：在品牌色与朱砂色间缓慢往复，默认生效、无需悬浮 */
+    animation: han-mirror-breathe 12s ease-in-out infinite;
 }
 
 .han-mirror svg {
@@ -66,10 +68,6 @@ h1, h2, h3, h4 {
     width: 100%;
     height: auto;
     overflow: visible;
-}
-
-.han-mirror:hover {
-    color: var(--han-vermilion);
 }
 
 /* 外区分三圈反向缓慢旋转：最外圈顺时针、锯齿与栉齿逆时针、铭文带顺时针 */
@@ -120,7 +118,16 @@ h1, h2, h3, h4 {
     50%      { opacity: 1; }
 }
 
+/* 博局镜纹样整体颜色的呼吸渐变：品牌色 → 朱砂色 → 品牌色 */
+@keyframes han-mirror-breathe {
+    0%, 100% { color: var(--han-patina); }
+    50%      { color: var(--han-vermilion); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .han-mirror {
+        animation: none;
+    }
     .han-mirror .mirror-outer,
     .han-mirror .mirror-sawtooth,
     .han-mirror .mirror-inscription {

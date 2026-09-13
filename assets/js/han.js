@@ -152,7 +152,8 @@
 })();
 
 /* ==========================================================================
-   3. 配色主题切换（南大紫 / 青铜绿），持久化到 localStorage
+   3. 配色主题（南大紫 / 青铜绿），从 localStorage 恢复
+      历史上由调色按钮切换，按钮已移除，仅保留已保存偏好的应用
    ========================================================================== */
 (function () {
   "use strict";
@@ -163,30 +164,9 @@
   function apply(theme) {
     if (THEMES.indexOf(theme) === -1) theme = "nju";
     html.setAttribute("data-color-theme", theme);
-    var icon = document.getElementById("color-icon");
-    if (icon) {
-      var brand = getComputedStyle(html).getPropertyValue("--han-patina").trim();
-      if (brand) icon.style.color = brand;
-      icon.title = (theme === "nju")
-        ? "当前：南大紫 · 点击切换为青铜绿"
-        : "当前：青铜绿 · 点击切换为南大紫";
-      icon.setAttribute("aria-label", icon.title);
-    }
   }
 
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) {}
   apply(saved || html.getAttribute("data-color-theme") || "nju");
-
-  var toggle = document.getElementById("color-toggle");
-  if (toggle) {
-    toggle.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var cur = html.getAttribute("data-color-theme") || "nju";
-      var next = (cur === "nju") ? "han" : "nju";
-      apply(next);
-      try { localStorage.setItem(KEY, next); } catch (err) {}
-    });
-  }
 })();

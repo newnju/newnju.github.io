@@ -41,14 +41,14 @@ Selected Work
 
 * Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." *Huaxia Wenhua*, 2025, (04): 27–32.
 * Wu, Jiawen. "How to Trust: Rethinking Responsibility for Trust in the News and Communication System in the Age of Large Language Models." *Rongmei*, 2026, (9): 4–11.
-* "Zhi and Wen in Four-Deity TLV Mirror Ornament," Fifth Mao Jiaqi History Forum, Nanjing University — Award of Excellence
+* "Zhi and Wen in Four-Deity TLV Mirror Ornament" won the Award of Excellence at the Fifth Mao Jiaqi History Forum, School of History, Nanjing University (2025.11)
 * The publication list is on the [Publications](/en/publications/) page; the full record is in the [CV](/en/cv/).
 
 Projects
 ======
 
   <ul>{% for post in site.portfolio %}
-    {% include archive-single-cv.html %}
+    {% include archive-single.html %}
   {% endfor %}</ul>
 
 Awards
