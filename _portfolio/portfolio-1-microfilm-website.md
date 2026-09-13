@@ -1,6 +1,6 @@
 ---
 title: "《乐动斋微电影网站建设》"
-excerpt: "<img src='/images/portfolio/website.svg' alt='乐动斋微电影网站'><br/>校级重点大学生创新训练计划项目（2018XSKY017），**项目负责人**，2018.05 – 2019.05。为校园微电影团队搭建作品展示网站，负责整体架构与前端实现。"
+excerpt: "校级重点大学生创新训练计划项目（2018XSKY017），**项目负责人**，2018.05 – 2019.05。为校园微电影团队搭建作品展示网站，负责整体架构与前端实现。"
 collection: portfolio
 permalink: /portfolio/microfilm-website
 ---

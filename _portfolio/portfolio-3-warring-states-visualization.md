@@ -1,6 +1,6 @@
 ---
 title: "《春秋战国时期国家间战争》数据可视化"
-excerpt: "<img src='/images/portfolio/war.svg' alt='春秋战国国家间战争可视化'><br/>2022.07 – 2022.08。清洗与整理春秋战国战争史料，使用 D3.js 构建交互式可视化，呈现战役之间的胜败关联；**获北京大学可视化暑期学校优秀课程设计**，成果被澎湃新闻报道。"
+excerpt: "2022.07 – 2022.08。清洗与整理春秋战国战争史料，使用 D3.js 构建交互式可视化，呈现战役之间的胜败关联；**获北京大学可视化暑期学校优秀课程设计**，成果被澎湃新闻报道。"
 collection: portfolio
 permalink: /portfolio/warring-states-visualization
 ---

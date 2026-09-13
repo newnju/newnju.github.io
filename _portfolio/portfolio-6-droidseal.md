@@ -1,6 +1,6 @@
 ---
 title: "DroidSeal"
-excerpt: "<img src='/images/portfolio/droidseal.svg' alt='DroidSeal 安卓安全项目'><br/>安卓安全开源项目，已发布到 npm，累计下载量超过 1K。"
+excerpt: "安卓安全开源项目，已发布到 npm，累计下载量超过 1K。"
 collection: portfolio
 permalink: /portfolio/droidseal
 ---
