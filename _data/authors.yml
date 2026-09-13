@@ -1,0 +1,9 @@
+# Authors
+# 用于多作者署名场景（博客文章 / 合作内容）。单人站点保持与 _config.yml 的 author 一致即可。
+
+武嘉文:
+  name        : "武嘉文"
+  uri         : ""
+  email       : "wujiawen@smail.nju.edu.cn"
+  bio         : "南京大学新闻传播学院博士研究生"
+  avatar      : "avatar.png"

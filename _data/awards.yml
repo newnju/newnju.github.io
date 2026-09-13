@@ -1,0 +1,93 @@
+# ==========================================================================
+# 获奖与荣誉数据（/timeline/ 页面的唯一数据源）
+# --------------------------------------------------------------------------
+# 维护方法：只改本文件，页面自动更新。按年份倒序排列。
+#
+# 每一条的结构：
+#   - text  : 必填，获奖名称
+#     level : 选填，等级标签。可选值（决定标签颜色）：
+#               international 国际 / national 国家级 / provincial 省级
+#               school 校级 / other 其他
+#             标签文字取自 _data/ui-text.yml 的 award_level_* 键，中英自动切换
+#     note  : 选填，补充说明（颁发单位、事由等），显示为小字
+#
+# 新增一条：复制下面任意一条改掉文字即可。加一个新年份就加一个 - year 分组。
+#
+# 「key: honours」这一组是荣誉（而非获奖），会单独渲染到首页的「荣誉」小节，
+# 所以它的内容就是主页上显示的那几条。首页与时间轴都按 key 取，改 year 的显示文字不影响。
+# text_en / year_en 选填，英文页优先取它们、缺省回落中文。
+# ==========================================================================
+
+- year: "2026"
+  items:
+    - text: "获第四届“艺蕴中国”艺术教育创新实践作品展编剧 A 类一等奖"
+      text_en: "First Prize (Category A, Screenwriting), 4th \"Yi Yun China\" Art Education Innovation and Practice Exhibition"
+      level: national
+      note: "面向全国各高等院校征集（简称“国艺展”）"
+    - text: "获第三届新时代文化传播与媒介发展青年学者论坛二等奖"
+      text_en: "Second Prize, 3rd Young Scholars Forum on Cultural Communication and Media Development"
+      level: national
+      note: "论文《文化生态视域下南京白局的个性维系与当代建构》；面向海内外公开征稿"
+
+- year: "2025"
+  items:
+    - text: "《四神博局纹饰的质与文》获优秀奖"
+      level: school
+      note: "南京大学历史学院第五届茅家琦史学论坛"
+
+- year: "2022"
+  items:
+    - text: "获北京大学可视化暑期学校优秀课程设计"
+      level: other
+      note: "北京大学"
+    - text: "获南京大学研究生公益服务优秀奖"
+      level: school
+      note: "社会实践"
+
+- year: "2021"
+  items:
+    - text: "获江苏省大学生创新训练计划优秀结项"
+      level: provincial
+      note: "江苏省教育厅"
+    - text: "获中国好创意暨全国数字艺术设计大赛江苏赛区二等奖"
+      level: provincial
+      note: "中国好创意暨全国数字艺术设计大赛组委会"
+    - text: "连续三年获南京大学校级二、三等奖学金"
+      level: school
+      note: "2021 – 2024"
+
+- year: "2020"
+  items:
+    - text: "获第十二届全国大学生广告艺术大赛江苏赛区优秀奖"
+      level: provincial
+      note: "全国大学生广告艺术大赛江苏赛区"
+
+- year: "2019"
+  items:
+    - text: "获江苏高校学生境外学习政府奖学金"
+      level: provincial
+      note: "江苏省教育厅"
+
+- year: "2018"
+  items:
+    - text: "获中国大学生计算机设计大赛全国三等奖"
+      level: national
+      note: "中国大学生计算机设计大赛组委会"
+    - text: "获江苏省计算机设计大赛校级一等奖"
+      level: school
+      note: "南京晓庄学院"
+
+- year: "荣誉"
+  year_en: "Honours"
+  key: honours
+  items:
+    - text: "南京大学优秀毕业生"
+      text_en: "Outstanding Graduate, Nanjing University"
+    - text: "南京大学优秀研究生"
+      text_en: "Outstanding Postgraduate, Nanjing University"
+    - text: "南京大学优秀共青团干部"
+      text_en: "Outstanding Communist Youth League Cadre, Nanjing University"
+    - text: "南京大学图书馆年度优秀读者"
+      text_en: "Reader of the Year, Nanjing University Library"
+    - text: "南京大学第五届研究生代表大会代表"
+      text_en: "Delegate, Fifth Graduate Students' Congress, Nanjing University"

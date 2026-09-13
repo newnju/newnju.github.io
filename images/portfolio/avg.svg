@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="g5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12203d"/>
+      <stop offset="100%" stop-color="#2b6cb0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#g5)"/>
+  <g stroke="#ffffff" stroke-opacity="0.30" fill="none" stroke-width="2">
+    <rect x="180" y="130" width="440" height="120" rx="14"/>
+    <rect x="180" y="290" width="300" height="80" rx="14"/>
+  </g>
+  <g fill="#ffffff" fill-opacity="0.45">
+    <circle cx="222" cy="190" r="9"/><circle cx="258" cy="190" r="9"/><circle cx="294" cy="190" r="9"/>
+  </g>
+  <g fill="#ffffff" fill-opacity="0.22">
+    <rect x="330" y="180" width="240" height="8" rx="4"/>
+    <rect x="330" y="200" width="180" height="8" rx="4"/>
+    <rect x="212" y="320" width="220" height="8" rx="4"/>
+    <rect x="212" y="340" width="150" height="8" rx="4"/>
+  </g>
+  <g fill="#ffffff" fill-opacity="0.85">
+    <circle cx="500" cy="250" r="5"/><circle cx="530" cy="250" r="5"/><circle cx="560" cy="250" r="5"/>
+  </g>
+  <text x="400" y="440" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="30" fill="#ffffff" fill-opacity="0.92">AIGC 剧情向原创游戏 AVG-game</text>
+</svg>

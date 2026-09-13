@@ -1,0 +1,62 @@
+{% include base_path %}
+{%- comment -%}
+  履历页用的会议 / 暑期学校列表项（紧凑版，不含摘要）
+  英文字段选填，缺省回落中文。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+
+{% if post.header.teaser %}
+  {% capture teaser %}{{ post.header.teaser }}{% endcapture %}
+{% else %}
+  {% assign teaser = site.teaser %}
+{% endif %}
+
+{% assign title = post.title_en | default: post.title %}
+{% assign _type = post.type %}
+{% assign _venue = post.venue %}
+{% assign _loc = post.location %}
+{% if _en %}
+  {% assign _type = post.type_en | default: post.type %}
+  {% assign _venue = post.venue_en | default: post.venue %}
+  {% assign _loc = post.location_en | default: post.location %}
+{% endif %}
+
+{%- comment -%} 三项里缺哪项就跳过，避免出现多余的「｜」 {%- endcomment -%}
+{% assign _meta = "" %}
+{% if _type %}{% assign _meta = _type %}{% endif %}
+{% if _venue %}{% if _meta != "" %}{% assign _meta = _meta | append: _ui.sep_pipe %}{% endif %}{% assign _meta = _meta | append: _venue %}{% endif %}
+{% if _loc %}{% if _meta != "" %}{% assign _meta = _meta | append: _ui.sep_pipe %}{% endif %}{% assign _meta = _meta | append: _loc %}{% endif %}
+
+{% if post.id %}
+  {% assign title = title | markdownify | remove: "<p>" | remove: "</p>" %}
+{% endif %}
+
+<div class="{{ include.type | default: "list" }}__item">
+  <article class="archive__item" itemscope itemtype="http://schema.org/CreativeWork">
+    <li>
+    {% if include.type == "grid" and teaser %}
+      <div class="archive__item-teaser">
+        <img src=
+          {% if teaser contains "://" %}
+            "{{ teaser }}"
+          {% else %}
+            "{{ teaser | prepend: "/images/" | prepend: base_path }}"
+          {% endif %}
+          alt="">
+      </div>
+    {% endif %}
+    <h3 class="archive__item-title" itemprop="headline">
+      {% if post.link %}
+        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+      {% else %}
+        <a href="{{ base_path }}{{ post.url }}" rel="permalink">{{ title }}</a>
+      {% endif %}
+    </h3>
+    {% if post.datetext %}<p class="page__meta"><i class="fa fa-clock" aria-hidden="true"></i> {{ post.datetext }}</p>{% endif %}
+    {% if _meta != "" %}<p class="archive__item-excerpt" itemprop="description">{{ _meta }}</p>{% endif %}
+    </li>
+  </article>
+</div>

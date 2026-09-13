@@ -1,0 +1,30 @@
+{%- comment -%}
+  论文 BibTeX：一键复制 + 折叠查看
+  --------------------------------------------------------------------------
+  用法：
+    条目页（_publications/*.md 的详情页）  —— {% include han-bibtex.html %}
+    列表页（archive-single.html 循环内）    —— {% include han-bibtex.html bibtex=post.bibtex %}
+
+  数据来自条目 front matter 的 bibtex 字段（YAML 块标量，可写多行）。
+  不写 bibtex 字段的条目不会输出任何内容，因此可以逐条慢慢补。
+
+  复制按钮放在 <summary> 里，为的是让「复制」与「展开」同一行、代码块独占下一行。
+  脚本会对按钮的点击做 preventDefault，避免顺带触发折叠；脚本不执行时按钮无反应，
+  但 <details> 仍可展开、文字仍可手动选中复制，属渐进增强。
+  样式在 _sass/_han.scss 第 4 节。
+{%- endcomment -%}
+{%- assign _bib = include.bibtex | default: page.bibtex -%}
+{%- assign _ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] -%}
+{%- if _bib -%}
+<div class="han-bibtex" data-bibtex>
+  <details class="han-bibtex__details">
+    <summary>
+      <span class="han-bibtex__caret" aria-hidden="true"></span>
+      <button type="button" class="han-bibtex__btn" data-bibtex-copy
+              data-label-done="{{ _ui.copied_label | default: '已复制' }}">{{ _ui.copy_bibtex_label | default: '复制 BibTeX' }}</button>
+      <span class="han-bibtex__label">BibTeX</span>
+    </summary>
+    <pre class="han-bibtex__pre">{{ _bib | strip | escape }}</pre>
+  </details>
+</div>
+{%- endif -%}

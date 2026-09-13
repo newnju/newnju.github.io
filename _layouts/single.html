@@ -1,0 +1,119 @@
+---
+layout: default
+---
+
+{% include base_path %}
+{% assign ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] %}
+
+{% if page.header.overlay_color or page.header.overlay_image or page.header.image %}
+  {% include page__hero.html %}
+{% endif %}
+
+{% if page.url != "/" and site.breadcrumbs %}
+  {% unless paginator %}
+    {% include breadcrumbs.html %}
+  {% endunless %}
+{% endif %}
+
+<div id="main" role="main">
+  {% include sidebar.html %}
+
+  <article class="page" itemscope itemtype="http://schema.org/CreativeWork">
+    {% if page.title %}<meta itemprop="headline" content="{{ page.title | markdownify | strip_html | strip_newlines | escape_once }}">{% endif %}
+    {% if page.excerpt %}<meta itemprop="description" content="{{ page.excerpt | markdownify | strip_html | strip_newlines | escape_once }}">{% endif %}
+    {% if page.date %}<meta itemprop="datePublished" content="{{ page.date | date: "%B %d, %Y" }}">{% endif %}
+    {% if page.modified %}<meta itemprop="dateModified" content="{{ page.modified | date: "%B %d, %Y" }}">{% endif %}
+
+    <div class="page__inner-wrap">
+      {% unless page.header.overlay_color or page.header.overlay_image %}
+        <header>
+          {% if page.title %}<h1 class="page__title" itemprop="headline">{{ page.title | markdownify | remove: "<p>" | remove: "</p>" }}</h1>{% endif %}
+          {% if page.read_time %}
+            <p class="page__meta"><i class="fa fa-clock" aria-hidden="true"></i> {% include read-time.html %}</p>
+          {% endif %}
+        {% if page.modified %}
+          <p class="page__date"><strong><i class="fa fa-fw fa-calendar" aria-hidden="true"></i> {{ ui.date_label | default: "Published:" }}</strong> <time datetime="{{ page.modified | date: "%Y-%m-%d" }}">{{ page.modified | date: "%B %d, %Y" }}</time></p>
+        {% endif %}
+        
+        {% if page.collection == 'teaching' %}
+          <p> {{ page.type }}, <i>{{ page.venue }}</i>, {{ page.date | default: "1900-01-01" | date: "%Y" }} </p>
+        {% elsif page.venue and page.date %}
+          <p>{{ ui.published_in | default: "发表于" }} <i>{{ page.venue }}</i>{{ ui.year_open | default: "（" }}{{ page.date | default: "1900-01-01" | date: "%Y" }}{{ ui.year_suffix | default: " 年）" }} </p>
+        {% elsif page.date %}
+          <p class="page__date"><strong><i class="fa fa-fw fa-calendar" aria-hidden="true"></i> {{ ui.date_label | default: "Published:" }}</strong> <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | default: "1900-01-01" | date: "%B %d, %Y" }}</time></p>
+        {% endif %}    
+        </header>
+      {% endunless %}
+
+      <section class="page__content" itemprop="text">
+        {%- comment -%}
+          首页的博局镜装饰。放在布局里而不是 Markdown 正文里，
+          避免 kramdown 解析 HTML 块时对内联 SVG 做多余处理。
+          页面只需在 front matter 写 mirror: true。
+        {%- endcomment -%}
+        {% if page.mirror %}{% include han-mirror.html %}{% endif %}
+        {{ content }}
+
+        {% if page.citation and page.paperurl and page.slidesurl and page.bibtexurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.citation and page.paperurl and page.slidesurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
+        {% elsif page.citation and page.paperurl and page.bibtexurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.citation and page.paperurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a></p>
+        {% elsif page.citation and page.slidesurl and page.bibtexurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.citation and page.slidesurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
+        {% elsif page.slidesurl and page.bibtexurl %}
+          <p style="font-size: smaller"><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.paperurl and page.bibtexurl %}
+          <p style="font-size: smaller"><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.citation and page.bibtexurl %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% elsif page.citation %}
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}</p>
+        {% elsif page.slidesurl %}
+          <p style="font-size: smaller"><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
+        {% elsif page.bibtexurl %}
+          <p style="font-size: smaller"><a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+        {% endif %}
+
+        {% if page.link %}<div><a href="{{ page.link }}" class="btn">{{ ui.ext_link_label | default: "Direct Link" }}</a></div>{% endif %}
+
+        {%- comment -%} 论文详情页：一键复制 BibTeX（条目 front matter 里的 bibtex 字段） {%- endcomment -%}
+        {% include han-bibtex.html %}
+      </section>
+
+      <footer class="page__meta">
+        {% if ui.meta_label %}
+          <h4 class="page__meta-title">{{ ui.meta_label }}</h4>
+        {% endif %}
+        {% include page__taxonomy.html %}
+      </footer>
+
+      {% if page.share %}{% include social-share.html %}{% endif %}
+
+      {% include post_pagination.html %}
+    </div>
+
+    {% if site.comments.provider and page.comments %}
+      {% include comments.html %}
+    {% endif %}
+  </article>
+
+  {% comment %}<!-- only show related on a post page when not disabled -->{% endcomment %}
+  {% if page.id and page.related and site.related_posts.size > 0 %}
+    <div class="page__related">
+      {% if ui.related_label %}
+        <h4 class="page__related-title">{{ ui.related_label | default: "You May Also Enjoy" }}</h4>
+      {% endif %}
+      <div class="grid__wrapper">
+        {% for post in site.related_posts limit:4 %}
+          {% include archive-single.html type="grid" %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>

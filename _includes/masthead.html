@@ -1,0 +1,52 @@
+{% include base_path %}
+{%- comment -%}
+  顶部导航
+  --------------------------------------------------------------------------
+  · 中英共用 _data/navigation.yml：英文页优先取 title_en，并自动给链接加上 /en 前缀
+  · 末尾的语言切换项文案取自 _data/ui-text.yml 的 lang_switch_label / lang_switch_href
+  · 语言项与主题切换项都带 persist，不会被 greedy-nav 折叠进「更多」菜单
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _home = base_path | append: "/" -%}
+{%- if _en -%}{%- assign _home = base_path | append: "/en/" -%}{%- endif -%}
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        <button><span class="navicon"></span></button>
+        <ul class="visible-links">
+          <li class="masthead__menu-item masthead__menu-item--lg persist {% if page.url == '/' or page.url == '/index.html' or page.url == '/en/' %}selected{% endif %}">
+            <a href="{{ _home }}">{{ site.title }}</a>
+          </li>
+          {% for link in site.data.navigation.main %}
+            {% assign _title = link.title %}
+            {% if _en and link.title_en %}{% assign _title = link.title_en %}{% endif %}
+            {% if link.url contains 'http' %}
+              {% assign _url = link.url %}
+            {% elsif _en %}
+              {% assign _url = '/en' | append: link.url %}
+            {% else %}
+              {% assign _url = link.url %}
+            {% endif %}
+            <li class="masthead__menu-item {% if page.url contains link.url and link.url != '/' %}selected{% endif %}">
+              <a href="{{ base_path }}{{ _url }}">{{ _title }}</a>
+            </li>
+          {% endfor %}
+          <li class="masthead__menu-item persist lang-switch">
+            <a href="{{ base_path }}{{ _ui.lang_switch_href }}"><i class="fa-solid fa-language" aria-hidden="true"></i>{{ _ui.lang_switch_label | default: "English" }}</a>
+          </li>
+          <li id="theme-toggle" class="masthead__menu-item persist tail">
+            <a role="button" aria-labelledby="theme-icon"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true" title="toggle theme"></i></a>
+          </li>
+          <li id="color-toggle" class="masthead__menu-item persist tail">
+            <a role="button" aria-labelledby="color-icon"><i id="color-icon" class="fa-solid fa-palette" aria-hidden="true" title="切换主题配色"></i></a>
+          </li>
+        </ul>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+---
+layout: archive
+title: "Publications"
+permalink: /en/publications/
+locale: en
+author_profile: true
+---
+
+{% if site.author.googlescholar %}
+  <div class="wordwrap">You can also find my articles on my <a href="{{ site.author.googlescholar }}">Google Scholar profile</a>.</div>
+{% endif %}
+
+{% include base_path %}
+
+{% assign ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] %}
+
+{% if site.publication_category %}
+  {% for category in site.publication_category %}
+    {% assign cat_title = category[1].title_en | default: category[1].title %}
+    {% assign title_shown = false %}
+    {% for post in site.publications reversed %}
+      {% if post.category != category[0] %}
+        {% continue %}
+      {% endif %}
+      {% unless title_shown %}
+        <h2>{{ cat_title }}</h2><hr />
+        {% assign title_shown = true %}
+      {% endunless %}
+      {% include archive-single.html %}
+    {% endfor %}
+  {% endfor %}
+
+  <!-- Entries with a missing or unrecognised category go under a fallback
+       heading instead of being dropped silently. -->
+  {% assign other_shown = false %}
+  {% for post in site.publications reversed %}
+    {% assign has_category = false %}
+    {% for category in site.publication_category %}
+      {% if post.category == category[0] %}
+        {% assign has_category = true %}
+      {% endif %}
+    {% endfor %}
+    {% if has_category %}
+      {% continue %}
+    {% endif %}
+    {% unless other_shown %}
+      <h2>{{ ui.other_label | default: "Other" }}</h2><hr />
+      {% assign other_shown = true %}
+    {% endunless %}
+    {% include archive-single.html %}
+  {% endfor %}
+{% else %}
+  {% for post in site.publications reversed %}
+    {% include archive-single.html %}
+  {% endfor %}
+{% endif %}

@@ -1,0 +1,290 @@
+<!-- ==========================================================================
+     博局镜（规矩镜）纹样结构 · 首页装饰
+     --------------------------------------------------------------------------
+     手绘 SVG（无需外部脚本生成）；要调纹饰直接改本文件。
+     依据论文《四神博局镜与汉代宇宙观》的实物拓片与结构图：
+       · 各层半径按拓片实测：素缘 194-199 · 云气纹 174-194 · 锯齿纹 148-174
+         栉齿纹 133-148 · 铭文带 114-133 · 内区 58-114 · 方框半边长 58
+       · T 纹在方框四边正中向外伸出，反 L 纹与 T 纹相对、在四方轴线上，
+         V 纹在方框四角、尖角朝镜心；十二乳钉与十二辰铭相间于方框内
+       · 铭文取尚方镜常见吉语，字头朝内（与实物一致）
+     全部图形用 currentColor，配色随 .han-mirror 的 color 走。
+     外区分成三组，在 _sass/_han.scss 里反向缓慢旋转：
+       .mirror-outer       最外圈（素缘 + 云气纹）      顺时针
+       .mirror-sawtooth    中间圈（锯齿纹 + 栉齿纹）    逆时针
+       .mirror-inscription 铭文带                      顺时针
+     内区（方框、TLV、乳钉、十二辰、镜钮）不转。
+     ========================================================================== -->
+<div class="han-mirror">
+  <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="四神博局镜图式：镜钮与柿蒂纹钮座，双线方框内十二乳钉与十二辰铭，方框外为 TLV 博局纹与青龙、白虎、朱雀、玄武四神，外区依次为铭文带、栉齿纹、锯齿纹、云气纹与素缘">
+    <defs>
+      <path id="han-petal"
+            d="M0 0 C 8 -6 13 -16 11 -25 C 9.5 -31 4.8 -35 0 -36.5 C -4.8 -35 -9.5 -31 -11 -25 C -13 -16 -8 -6 0 0 Z"/>
+      <path id="han-cloud" d="M-7 2 C-7 -3 -2 -6 2 -4 C6 -2 6 2 3 4 M2 -4 C4 -8 9 -8 10 -4 C11 0 7 2 4 1"/>
+    </defs>
+
+    <!-- 镜面底色 -->
+    <circle cx="200" cy="200" r="199" fill="currentColor" opacity="0.05"/>
+
+    <!-- ══ 最外圈：素缘 + 云气纹（顺时针转）════════════════════════ -->
+    <g class="mirror-outer">
+      <g fill="none" stroke="currentColor">
+        <circle cx="200" cy="200" r="199" stroke-width="1.8" opacity="0.85"/>
+        <circle cx="200" cy="200" r="194" stroke-width="1.2" opacity="0.5"/>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.65">
+        <path d="M200 19 L208.07 15.19 L216.12 15.72 L223.63 20.55 L230.74 25.67 L238.31 27.18 L246.85 25.17 L255.63 23.58 L263.27 26.17 L269.27 32.78 L274.81 39.57 L281.74 42.98 L290.5 43.25 L299.39 43.99 L306.1 48.47 L310.19 56.4 L313.78 64.4 L319.59 69.49 L327.99 72.01 L336.38 75.03 L341.71 81.09 L343.6 89.81 L345 98.47 L349.29 104.89 L356.75 109.5 L364.08 114.58 L367.65 121.82 L367.22 130.73 L366.34 139.46 L368.82 146.77 L374.83 153.15 L380.6 159.96 L382.17 167.88 L379.45 176.37 L376.34 184.57 L376.85 192.28 L381 200 L384.81 208.07 L384.28 216.12 L379.45 223.63 L374.33 230.74 L372.82 238.31 L374.83 246.85 L376.42 255.63 L373.83 263.27 L367.22 269.27 L360.43 274.81 L357.02 281.74 L356.75 290.5 L356.01 299.39 L351.53 306.1 L343.6 310.19 L335.6 313.78 L330.51 319.59 L327.99 327.99 L324.97 336.38 L318.91 341.71 L310.19 343.6 L301.53 345 L295.11 349.29 L290.5 356.75 L285.42 364.08 L278.18 367.65 L269.27 367.22 L260.54 366.34 L253.23 368.82 L246.85 374.83 L240.04 380.6 L232.12 382.17 L223.63 379.45 L215.43 376.34 L207.72 376.85 L200 381 L191.93 384.81 L183.88 384.28 L176.37 379.45 L169.26 374.33 L161.69 372.82 L153.15 374.83 L144.37 376.42 L136.73 373.83 L130.73 367.22 L125.19 360.43 L118.26 357.02 L109.5 356.75 L100.61 356.01 L93.9 351.53 L89.81 343.6 L86.22 335.6 L80.41 330.51 L72.01 327.99 L63.62 324.97 L58.29 318.91 L56.4 310.19 L55 301.53 L50.71 295.11 L43.25 290.5 L35.92 285.42 L32.35 278.18 L32.78 269.27 L33.66 260.54 L31.18 253.23 L25.17 246.85 L19.4 240.04 L17.83 232.12 L20.55 223.63 L23.66 215.43 L23.15 207.72 L19 200 L15.19 191.93 L15.72 183.88 L20.55 176.37 L25.67 169.26 L27.18 161.69 L25.17 153.15 L23.58 144.37 L26.17 136.73 L32.78 130.73 L39.57 125.19 L42.98 118.26 L43.25 109.5 L43.99 100.61 L48.47 93.9 L56.4 89.81 L64.4 86.22 L69.49 80.41 L72.01 72.01 L75.03 63.62 L81.09 58.29 L89.81 56.4 L98.47 55 L104.89 50.71 L109.5 43.25 L114.58 35.92 L121.82 32.35 L130.73 32.78 L139.46 33.66 L146.77 31.18 L153.15 25.17 L159.96 19.4 L167.88 17.83 L176.37 20.55 L184.57 23.66 L192.28 23.15 L200 19"/>
+        <path d="M200 10.4 L208.43 6.93 L216.79 8.08 L224.59 13.21 L232.08 18.06 L240.12 19.04 L249.07 16.86 L258.11 15.69 L265.89 18.97 L272.1 25.94 L278.08 32.56 L285.59 35.59 L294.8 35.8 L303.83 37.01 L310.5 42.19 L314.69 50.53 L318.76 58.47 L325.22 63.35 L334.07 65.93 L342.48 69.44 L347.58 76.17 L349.47 85.31 L351.34 94.03 L356.32 100.41 L364.2 105.2 L371.41 110.77 L374.6 118.58 L374.06 127.9 L373.61 136.81 L376.77 144.26 L383.14 150.93 L388.67 158.17 L389.72 166.55 L386.79 175.41 L384.05 183.9 L385.17 191.92 L389.6 200 L393.07 208.43 L391.92 216.79 L386.79 224.59 L381.94 232.08 L380.96 240.12 L383.14 249.07 L384.31 258.11 L381.03 265.89 L374.06 272.1 L367.44 278.08 L364.41 285.59 L364.2 294.8 L362.99 303.83 L357.81 310.5 L349.47 314.69 L341.53 318.76 L336.65 325.22 L334.07 334.07 L330.56 342.48 L323.83 347.58 L314.69 349.47 L305.97 351.34 L299.59 356.32 L294.8 364.2 L289.23 371.41 L281.42 374.6 L272.1 374.06 L263.19 373.61 L255.74 376.77 L249.07 383.14 L241.83 388.67 L233.45 389.72 L224.59 386.79 L216.1 384.05 L208.08 385.17 L200 389.6 L191.57 393.07 L183.21 391.92 L175.41 386.79 L167.92 381.94 L159.88 380.96 L150.93 383.14 L141.89 384.31 L134.11 381.03 L127.9 374.06 L121.92 367.44 L114.41 364.41 L105.2 364.2 L96.17 362.99 L89.5 357.81 L85.31 349.47 L81.24 341.53 L74.78 336.65 L65.93 334.07 L57.52 330.56 L52.42 323.83 L50.53 314.69 L48.66 305.97 L43.68 299.59 L35.8 294.8 L28.59 289.23 L25.4 281.42 L25.94 272.1 L26.39 263.19 L23.23 255.74 L16.86 249.07 L11.33 241.83 L10.28 233.45 L13.21 224.59 L15.95 216.1 L14.83 208.08 L10.4 200 L6.93 191.57 L8.08 183.21 L13.21 175.41 L18.06 167.92 L19.04 159.88 L16.86 150.93 L15.69 141.89 L18.97 134.11 L25.94 127.9 L32.56 121.92 L35.59 114.41 L35.8 105.2 L37.01 96.17 L42.19 89.5 L50.53 85.31 L58.47 81.24 L63.35 74.78 L65.93 65.93 L69.44 57.52 L76.17 52.42 L85.31 50.53 L94.03 48.66 L100.41 43.68 L105.2 35.8 L110.77 28.59 L118.58 25.4 L127.9 25.94 L136.81 26.39 L144.26 23.23 L150.93 16.86 L158.17 11.33 L166.55 10.28 L175.41 13.21 L183.9 15.95 L191.92 14.83 L200 10.4"/>
+      </g>
+    </g>
+
+    <!-- ══ 中间圈：锯齿纹 + 栉齿纹（逆时针转）══════════════════════ -->
+    <g class="mirror-sawtooth">
+      <g fill="currentColor" opacity="0.72">
+        <polygon id="han-tooth" points="191.77,52 208.23,52 200,26"/>
+        <use href="#han-tooth" transform="rotate(7.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(15 200 200)"/>
+        <use href="#han-tooth" transform="rotate(22.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(30 200 200)"/>
+        <use href="#han-tooth" transform="rotate(37.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(45 200 200)"/>
+        <use href="#han-tooth" transform="rotate(52.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(60 200 200)"/>
+        <use href="#han-tooth" transform="rotate(67.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(75 200 200)"/>
+        <use href="#han-tooth" transform="rotate(82.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(90 200 200)"/>
+        <use href="#han-tooth" transform="rotate(97.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(105 200 200)"/>
+        <use href="#han-tooth" transform="rotate(112.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(120 200 200)"/>
+        <use href="#han-tooth" transform="rotate(127.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(135 200 200)"/>
+        <use href="#han-tooth" transform="rotate(142.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(150 200 200)"/>
+        <use href="#han-tooth" transform="rotate(157.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(165 200 200)"/>
+        <use href="#han-tooth" transform="rotate(172.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(180 200 200)"/>
+        <use href="#han-tooth" transform="rotate(187.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(195 200 200)"/>
+        <use href="#han-tooth" transform="rotate(202.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(210 200 200)"/>
+        <use href="#han-tooth" transform="rotate(217.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(225 200 200)"/>
+        <use href="#han-tooth" transform="rotate(232.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(240 200 200)"/>
+        <use href="#han-tooth" transform="rotate(247.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(255 200 200)"/>
+        <use href="#han-tooth" transform="rotate(262.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(270 200 200)"/>
+        <use href="#han-tooth" transform="rotate(277.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(285 200 200)"/>
+        <use href="#han-tooth" transform="rotate(292.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(300 200 200)"/>
+        <use href="#han-tooth" transform="rotate(307.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(315 200 200)"/>
+        <use href="#han-tooth" transform="rotate(322.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(330 200 200)"/>
+        <use href="#han-tooth" transform="rotate(337.5 200 200)"/>
+        <use href="#han-tooth" transform="rotate(345 200 200)"/>
+        <use href="#han-tooth" transform="rotate(352.5 200 200)"/>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.5">
+        <line x1="200" y1="65.5" x2="203.07" y2="53.53"/>
+        <line x1="211.72" y1="66.01" x2="215.82" y2="54.36"/>
+        <line x1="223.36" y1="67.54" x2="228.46" y2="56.29"/>
+        <line x1="234.81" y1="70.08" x2="240.87" y2="59.32"/>
+        <line x1="246" y1="73.61" x2="252.98" y2="63.41"/>
+        <line x1="256.84" y1="78.1" x2="264.68" y2="68.55"/>
+        <line x1="267.25" y1="83.52" x2="275.89" y2="74.69"/>
+        <line x1="277.15" y1="89.82" x2="286.52" y2="81.78"/>
+        <line x1="286.45" y1="96.97" x2="296.5" y2="89.77"/>
+        <line x1="295.11" y1="104.89" x2="305.74" y2="98.6"/>
+        <line x1="303.03" y1="113.55" x2="314.17" y2="108.2"/>
+        <line x1="310.18" y1="122.85" x2="321.74" y2="118.5"/>
+        <line x1="316.48" y1="132.75" x2="328.38" y2="129.42"/>
+        <line x1="321.9" y1="143.16" x2="334.04" y2="140.88"/>
+        <line x1="326.39" y1="154" x2="338.68" y2="152.79"/>
+        <line x1="329.92" y1="165.19" x2="342.27" y2="165.05"/>
+        <line x1="332.46" y1="176.64" x2="344.78" y2="177.59"/>
+        <line x1="333.99" y1="188.28" x2="346.18" y2="190.29"/>
+        <line x1="334.5" y1="200" x2="346.47" y2="203.07"/>
+        <line x1="333.99" y1="211.72" x2="345.64" y2="215.82"/>
+        <line x1="332.46" y1="223.36" x2="343.71" y2="228.46"/>
+        <line x1="329.92" y1="234.81" x2="340.68" y2="240.87"/>
+        <line x1="326.39" y1="246" x2="336.59" y2="252.98"/>
+        <line x1="321.9" y1="256.84" x2="331.45" y2="264.68"/>
+        <line x1="316.48" y1="267.25" x2="325.31" y2="275.89"/>
+        <line x1="310.18" y1="277.15" x2="318.22" y2="286.52"/>
+        <line x1="303.03" y1="286.45" x2="310.23" y2="296.5"/>
+        <line x1="295.11" y1="295.11" x2="301.4" y2="305.74"/>
+        <line x1="286.45" y1="303.03" x2="291.8" y2="314.17"/>
+        <line x1="277.15" y1="310.18" x2="281.5" y2="321.74"/>
+        <line x1="267.25" y1="316.48" x2="270.58" y2="328.38"/>
+        <line x1="256.84" y1="321.9" x2="259.12" y2="334.04"/>
+        <line x1="246" y1="326.39" x2="247.21" y2="338.68"/>
+        <line x1="234.81" y1="329.92" x2="234.95" y2="342.27"/>
+        <line x1="223.36" y1="332.46" x2="222.41" y2="344.78"/>
+        <line x1="211.72" y1="333.99" x2="209.71" y2="346.18"/>
+        <line x1="200" y1="334.5" x2="196.93" y2="346.47"/>
+        <line x1="188.28" y1="333.99" x2="184.18" y2="345.64"/>
+        <line x1="176.64" y1="332.46" x2="171.54" y2="343.71"/>
+        <line x1="165.19" y1="329.92" x2="159.13" y2="340.68"/>
+        <line x1="154" y1="326.39" x2="147.02" y2="336.59"/>
+        <line x1="143.16" y1="321.9" x2="135.32" y2="331.45"/>
+        <line x1="132.75" y1="316.48" x2="124.11" y2="325.31"/>
+        <line x1="122.85" y1="310.18" x2="113.48" y2="318.22"/>
+        <line x1="113.55" y1="303.03" x2="103.5" y2="310.23"/>
+        <line x1="104.89" y1="295.11" x2="94.26" y2="301.4"/>
+        <line x1="96.97" y1="286.45" x2="85.83" y2="291.8"/>
+        <line x1="89.82" y1="277.15" x2="78.26" y2="281.5"/>
+        <line x1="83.52" y1="267.25" x2="71.62" y2="270.58"/>
+        <line x1="78.1" y1="256.84" x2="65.96" y2="259.12"/>
+        <line x1="73.61" y1="246" x2="61.32" y2="247.21"/>
+        <line x1="70.08" y1="234.81" x2="57.73" y2="234.95"/>
+        <line x1="67.54" y1="223.36" x2="55.22" y2="222.41"/>
+        <line x1="66.01" y1="211.72" x2="53.82" y2="209.71"/>
+        <line x1="65.5" y1="200" x2="53.53" y2="196.93"/>
+        <line x1="66.01" y1="188.28" x2="54.36" y2="184.18"/>
+        <line x1="67.54" y1="176.64" x2="56.29" y2="171.54"/>
+        <line x1="70.08" y1="165.19" x2="59.32" y2="159.13"/>
+        <line x1="73.61" y1="154" x2="63.41" y2="147.02"/>
+        <line x1="78.1" y1="143.16" x2="68.55" y2="135.32"/>
+        <line x1="83.52" y1="132.75" x2="74.69" y2="124.11"/>
+        <line x1="89.82" y1="122.85" x2="81.78" y2="113.48"/>
+        <line x1="96.97" y1="113.55" x2="89.77" y2="103.5"/>
+        <line x1="104.89" y1="104.89" x2="98.6" y2="94.26"/>
+        <line x1="113.55" y1="96.97" x2="108.2" y2="85.83"/>
+        <line x1="122.85" y1="89.82" x2="118.5" y2="78.26"/>
+        <line x1="132.75" y1="83.52" x2="129.42" y2="71.62"/>
+        <line x1="143.16" y1="78.1" x2="140.88" y2="65.96"/>
+        <line x1="154" y1="73.61" x2="152.79" y2="61.32"/>
+        <line x1="165.19" y1="70.08" x2="165.05" y2="57.73"/>
+        <line x1="176.64" y1="67.54" x2="177.59" y2="55.22"/>
+        <line x1="188.28" y1="66.01" x2="190.29" y2="53.82"/>
+      </g>
+    </g>
+
+    <!-- ══ 铭文带 114-133（顺时针转）：字头朝内、字距紧密 ═══════════ -->
+    <g class="mirror-inscription">
+      <g fill="none" stroke="currentColor" opacity="0.5">
+        <circle cx="200" cy="200" r="114" stroke-width="1.2"/>
+        <circle cx="200" cy="200" r="133" stroke-width="1.2"/>
+      </g>
+      <g fill="currentColor" opacity="0.88" aria-hidden="true" font-family="'Source Han Serif SC','Noto Serif CJK SC','Songti SC','STSong','SimSun',Georgia,serif" font-size="20" text-anchor="middle" dominant-baseline="central">
+        <text transform="translate(200 76.5) rotate(180)">尚</text>
+        <text transform="translate(236.4 81.99) rotate(197.14)">方</text>
+        <text transform="translate(269.57 97.96) rotate(214.29)">作</text>
+        <text transform="translate(296.56 123) rotate(231.43)">镜</text>
+        <text transform="translate(314.96 154.88) rotate(248.57)">真</text>
+        <text transform="translate(323.15 190.77) rotate(265.71)">大</text>
+        <text transform="translate(320.4 227.48) rotate(282.86)">好</text>
+        <text transform="translate(306.95 261.75) rotate(300)">上</text>
+        <text transform="translate(284 290.53) rotate(317.14)">有</text>
+        <text transform="translate(253.58 311.27) rotate(334.29)">仙</text>
+        <text transform="translate(218.41 322.12) rotate(351.43)">人</text>
+        <text transform="translate(181.59 322.12) rotate(368.57)">不</text>
+        <text transform="translate(146.42 311.27) rotate(385.71)">知</text>
+        <text transform="translate(116 290.53) rotate(402.86)">老</text>
+        <text transform="translate(93.05 261.75) rotate(420)">渴</text>
+        <text transform="translate(79.6 227.48) rotate(437.14)">饮</text>
+        <text transform="translate(76.85 190.77) rotate(454.29)">玉</text>
+        <text transform="translate(85.04 154.88) rotate(471.43)">泉</text>
+        <text transform="translate(103.44 123) rotate(488.57)">饥</text>
+        <text transform="translate(130.43 97.96) rotate(505.71)">食</text>
+        <text transform="translate(163.6 81.99) rotate(522.86)">枣</text>
+      </g>
+    </g>
+
+    <!-- ── 内区 58-114 ──────────────────────────────────────────── -->
+    <g fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-linecap="square">
+      <rect x="140.5" y="140.5" width="119" height="119" stroke-width="1.5" opacity="0.6"/>
+      <rect x="143.5" y="143.5" width="113" height="113" stroke-width="1.5" opacity="0.6"/>
+
+      <!-- T 纹 ×4：方框四边正中向外伸出 -->
+      <g stroke-width="2" opacity="0.95">
+        <path d="M200 142 L200 120 M179.29 122.73 L220.71 122.73"/>
+        <path d="M258 200 L280 200 M277.27 179.29 L277.27 220.71"/>
+        <path d="M200 258 L200 280 M220.71 277.27 L179.29 277.27"/>
+        <path d="M142 200 L120 200 M122.73 220.71 L122.73 179.29"/>
+      </g>
+      <!-- 反 L 纹 ×4：与 T 纹相对，在四方轴线上、T 纹之外 -->
+      <g stroke-width="2" opacity="0.95">
+        <path d="M174.38 104.37 L225.62 104.37 M225.62 104.37 L228.99 91.82"/>
+        <path d="M295.63 174.38 L295.63 225.62 M295.63 225.62 L308.18 228.99"/>
+        <path d="M225.62 295.63 L174.38 295.63 M174.38 295.63 L171.01 308.18"/>
+        <path d="M104.37 225.62 L104.37 174.38 M104.37 174.38 L91.82 171.01"/>
+      </g>
+      <!-- V 纹 ×4：方框四角外侧，尖角朝镜心、开口朝外 -->
+      <g stroke-width="2" opacity="0.95">
+        <path d="M271.42 128.58 L271.42 111.58 M271.42 128.58 L288.42 128.58"/>
+        <path d="M271.42 271.42 L271.42 254.42 M271.42 271.42 L254.42 271.42"/>
+        <path d="M128.58 271.42 L128.58 288.42 M128.58 271.42 L111.58 271.42"/>
+        <path d="M128.58 128.58 L128.58 145.58 M128.58 128.58 L145.58 128.58"/>
+      </g>
+
+      <!-- 四乳钉：方框四角方向 -->
+      <g fill="currentColor" stroke="none" opacity="0.9">
+        <circle cx="259.4" cy="140.6" r="4"/>
+        <circle cx="259.4" cy="259.4" r="4"/>
+        <circle cx="140.6" cy="259.4" r="4"/>
+        <circle cx="140.6" cy="140.6" r="4"/>
+      </g>
+
+      <!-- 方框内：十二乳钉与十二辰铭相间 -->
+      <g fill="currentColor" stroke="none" opacity="0.85">
+        <circle cx="200" cy="154" r="2.6"/>
+        <circle cx="223" cy="160.16" r="2.6"/>
+        <circle cx="239.84" cy="177" r="2.6"/>
+        <circle cx="246" cy="200" r="2.6"/>
+        <circle cx="239.84" cy="223" r="2.6"/>
+        <circle cx="223" cy="239.84" r="2.6"/>
+        <circle cx="200" cy="246" r="2.6"/>
+        <circle cx="177" cy="239.84" r="2.6"/>
+        <circle cx="160.16" cy="223" r="2.6"/>
+        <circle cx="154" cy="200" r="2.6"/>
+        <circle cx="160.16" cy="177" r="2.6"/>
+        <circle cx="177" cy="160.16" r="2.6"/>
+      </g>
+      <g fill="currentColor" stroke="none" opacity="0.7" aria-hidden="true" font-family="'Songti SC','STSong','SimSun',serif" font-size="9.5" text-anchor="middle" dominant-baseline="central">
+        <text transform="translate(211.91 155.57) rotate(195)">子</text>
+        <text transform="translate(232.53 167.47) rotate(225)">丑</text>
+        <text transform="translate(244.43 188.09) rotate(255)">寅</text>
+        <text transform="translate(244.43 211.91) rotate(285)">卯</text>
+        <text transform="translate(232.53 232.53) rotate(315)">辰</text>
+        <text transform="translate(211.91 244.43) rotate(345)">巳</text>
+        <text transform="translate(188.09 244.43) rotate(375)">午</text>
+        <text transform="translate(167.47 232.53) rotate(405)">未</text>
+        <text transform="translate(155.57 211.91) rotate(435)">申</text>
+        <text transform="translate(155.57 188.09) rotate(465)">酉</text>
+        <text transform="translate(167.47 167.47) rotate(495)">戌</text>
+        <text transform="translate(188.09 155.57) rotate(525)">亥</text>
+      </g>
+
+    </g>
+
+    <!-- 说明：内区四神位次（青龙东、朱雀南、白虎西、玄武北）在 272px 下
+         画不出可辨认的兽形，画成线条反而更乱，故此处只呈现博局纹结构。
+         若要具象四神，用 images/mirror-rubbing.png（论文拓片）替换本图。 -->
+
+    <!-- ── 镜钮与柿蒂纹（四叶）钮座 ─────────────────────────────── -->
+    <g transform="translate(200 200)">
+      <use href="#han-petal" transform="rotate(45)" fill="currentColor" opacity="0.15"/>
+      <use href="#han-petal" transform="rotate(135)" fill="currentColor" opacity="0.15"/>
+      <use href="#han-petal" transform="rotate(225)" fill="currentColor" opacity="0.15"/>
+      <use href="#han-petal" transform="rotate(315)" fill="currentColor" opacity="0.15"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.6">
+        <use href="#han-petal" transform="rotate(45)"/>
+        <use href="#han-petal" transform="rotate(135)"/>
+        <use href="#han-petal" transform="rotate(225)"/>
+        <use href="#han-petal" transform="rotate(315)"/>
+      </g>
+      <circle r="22" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+      <circle r="14" fill="currentColor" opacity="0.85"/>
+      <circle r="7.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
+    </g>
+  </svg>
+  <span class="han-mirror__caption">博局镜纹样结构 · 依新莽四神博局镜拓片摹绘</span>
+</div>

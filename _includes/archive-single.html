@@ -1,0 +1,90 @@
+{% include base_path %}
+{%- comment -%}
+  条目列表卡片
+  --------------------------------------------------------------------------
+  文案统一走 _data/ui-text.yml，按 page.locale 取（缺省回落到 site.locale），
+  这样 /en/ 下的英文页复用同一份条目数据即可切换语言。
+  标题与摘要支持可选英文字段 title_en / excerpt_en，未填时回落中文。
+{%- endcomment -%}
+{% assign ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] %}
+
+{% if post.header.teaser %}
+  {% capture teaser %}{{ post.header.teaser }}{% endcapture %}
+{% else %}
+  {% assign teaser = site.teaser %}
+{% endif %}
+
+{% assign title = post.title_en | default: post.title %}
+{% if post.id %}
+  {% assign title = title | markdownify | remove: "<p>" | remove: "</p>" %}
+{% endif %}
+
+<div class="{{ include.type | default: "list" }}__item">
+  <article class="archive__item" itemscope itemtype="http://schema.org/CreativeWork">
+    {% if include.type == "grid" and teaser %}
+      <div class="archive__item-teaser">
+        <img src=
+          {% if teaser contains "://" %}
+            "{{ teaser }}"
+          {% else %}
+            "{{ teaser | prepend: "/images/" | prepend: base_path }}"
+          {% endif %}
+          alt="">
+      </div>
+    {% endif %}
+
+    <h2 class="archive__item-title" itemprop="headline">
+      {% if post.link %}
+        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+      {% else %}
+        <a href="{{ base_path }}{{ post.url }}" rel="permalink">{{ title }}</a>
+      {% endif %}
+    </h2>
+
+    {% if post.read_time %}
+      <p class="page__meta"><i class="fa fa-clock" aria-hidden="true"></i> {% include read-time.html %}</p>
+    {% endif %}
+
+    {% if post.collection == 'teaching' %}
+      <p> {{ post.type }}{{ ui.sep_comma | default: "，" }}<i>{{ post.venue }}</i>{% if post.datetext %}{{ ui.sep_comma | default: "，" }}{{ post.datetext }}{% endif %} </p>
+    {% elsif post.collection == 'publications' %}
+      <p>{{ ui.published_in | default: "发表于" }} <i>{{ post.venue }}</i>{{ ui.year_open | default: "（" }}{{ post.date | date: "%Y" }}{{ ui.year_suffix | default: " 年）" }}</p>
+    {% elsif post.date %}
+      <p class="page__date"><strong><i class="fa fa-fw fa-calendar" aria-hidden="true"></i> {{ ui.date_label | default: "发布时间：" }}</strong> <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time></p>
+    {% endif %}
+
+    {% assign _excerpt = post.excerpt_en | default: post.excerpt %}
+    {% if _excerpt and site.read_more != 'enabled' %}
+    <div class="archive__item-excerpt" itemprop="description">{{ _excerpt | markdownify }}</div>
+    {% elsif _excerpt and site.read_more == 'enabled' %}
+    <div class="archive__item-excerpt" itemprop="description">{{ _excerpt | markdownify | remove: '<p>' | remove: '</p>' }}<strong><a href="{{ base_path }}{{ post.url }}" rel="permalink"> {{ ui.read_more_label | default: "阅读全文" }}</a></strong></div>
+    {% endif %}
+
+    {%- comment -%} 汇总可下载的附件链接，避免原来十四个分支的组合爆炸 {%- endcomment -%}
+    {% assign _links = "" %}
+    {% if post.paperurl %}
+      {% capture _t %}<a href="{{ post.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{% endcapture %}
+      {% assign _links = _links | append: _t %}
+    {% endif %}
+    {% if post.slidesurl %}
+      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% capture _t %}<a href="{{ post.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a>{% endcapture %}
+      {% assign _links = _links | append: _t %}
+    {% endif %}
+    {% if post.bibtexurl %}
+      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% capture _t %}<a href="{{ post.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a>{% endcapture %}
+      {% assign _links = _links | append: _t %}
+    {% endif %}
+
+    {% if post.citation and _links != "" %}
+      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ post.citation }}<br />{{ _links }}</p>
+    {% elsif post.citation %}
+      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ post.citation }}</p>
+    {% elsif _links != "" %}
+      <p>{{ _links }}</p>
+    {% endif %}
+
+    {% include han-bibtex.html bibtex=post.bibtex %}
+  </article>
+</div>

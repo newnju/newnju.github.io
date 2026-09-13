@@ -1,0 +1,22 @@
+# 统一文本文件的换行符为 LF，避免在 Windows / macOS / GitHub 网页端
+# 之间来回编辑时产生「整文件都被修改」的噪音 diff。
+* text=auto eol=lf
+
+# 二进制文件不做转换
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+
+# GitHub 语法高亮
+*.md   text
+*.yml  text
+*.html text
+*.scss text
+*.css  text
+*.js   text

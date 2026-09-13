@@ -1,0 +1,16 @@
+---
+layout: archive
+title: "会议与暑期学校"
+permalink: /talks/
+author_profile: true
+---
+
+{% if site.talkmap_link == true %}
+
+<p style="text-decoration:underline;"><a href="/talkmap.html">查看我报告过地点的地图！</a></p>
+
+{% endif %}
+
+{% for post in site.talks %}
+  {% include archive-single-talk.html %}
+{% endfor %}

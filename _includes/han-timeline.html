@@ -1,0 +1,26 @@
+{%- comment -%}
+  获奖与荣誉时间轴
+  --------------------------------------------------------------------------
+  数据源：_data/awards.yml（唯一需要维护的文件）
+  用法：{% include han-timeline.html %}
+  · 等级标签文字取自 _data/ui-text.yml 的 award_level_* 键
+  · 条目文字与年份分组名支持 text_en / year_en，缺省回落中文
+  两者都按 page.locale 取，因此同一份数据可直接用于 /en/ 下的英文页。
+  样式在 _sass/_han.scss 第 3 节。
+{%- endcomment -%}
+{%- assign ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+<div class="han-timeline">
+{%- for group in site.data.awards %}
+  {%- assign _year = group.year -%}
+  {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}
+  <h3 class="han-timeline__year">{{ _year }}</h3>
+  {%- for item in group.items %}
+  {%- assign _text = item.text -%}
+  {%- if _en and item.text_en -%}{%- assign _text = item.text_en -%}{%- endif %}
+  <p class="han-timeline__item">{{ _text }}{% if item.level %}{% assign _key = "award_level_" | append: item.level %}{% assign _lv = ui[_key] %} <span class="han-timeline__level han-timeline__level--{{ item.level }}">{{ _lv | default: item.level }}</span>{% endif %}{% if item.note %}<span class="han-timeline__note">{{ item.note }}</span>{% endif %}</p>
+  {%- endfor %}
+{%- endfor %}
+</div>

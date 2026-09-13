@@ -1,0 +1,71 @@
+/* ==========================================================================
+   HAN THEME - DARK VERSION  （汉 · 暗）
+   --------------------------------------------------------------------------
+   暗色下把铜锈绿提亮（暗背景上的深绿不可读），朱砂相应提亮为朱磦。
+   背景不用纯黑，用带绿调的深灰，呼应铜镜背面的暗色包浆。
+   ========================================================================== */
+
+/* Color codes used for the theme */
+$primary-color              : #7cbfa2;
+$gray                       : #7d7566;
+$dark-gray                  : #3f3a33;
+$darker-gray                : #2b2723;
+$light-gray                 : #b0a897;
+$lighter-gray               : #e8e1d3;
+
+$background                 : #1d2321;
+$background-light           : #2a322e;
+$background-lighter         : #353d39;
+$text                       : #e8e3d7;
+$link                       : #86c9ab;
+$link-dark                  : #6aa68c;
+$link-light                 : #b6dcc9;
+
+/* Color codes used for the site */
+$danger-color               : #d9705f;
+$info-color                 : #2f6b5a;
+$notice-color               : #7d7566;
+$success-color              : #62c462;
+$warning-color              : #e0a63c;
+
+/* Other basic settings for the template */
+$border-radius              : 2px;
+$box-shadow                 : 0 1px 1px rgba(0, 0, 0, 0.25);
+$global-transition          : all 0.2s ease-in-out;
+$masthead-height            : 70px;
+$navicon-width              : 28px;
+$navicon-height             : 4px;
+$sidebar-link-max-width     : 250px;
+$sidebar-screen-min-width   : 1024px;
+
+/* Typography: 与明色版一致 */
+$han-serif                  : "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Source Han Serif", Georgia, "Times New Roman", serif;
+$header-font-family         : $han-serif;
+
+/* Dark theme for the site */
+html[data-theme="dark"] {
+    --global-base-color                 : #7cbfa2;
+    --global-bg-color                   : #1d2321;
+    --global-footer-bg-color            : #191e1c;
+    --global-border-color               : #353d39;
+    --global-dark-border-color          : #2a322e;
+    --global-code-background-color      : #262e2b;
+    --global-code-text-color            : #e8e3d7;
+    --global-fig-caption-color          : #a9a294;
+    --global-link-color                 : #86c9ab;
+    --global-link-color-hover           : #b6dcc9;
+    --global-link-color-visited         : #6aa68c;
+    --global-masthead-link-color        : #e8e3d7;
+    --global-masthead-link-color-hover  : #e0776a;
+    --global-text-color                 : #e8e3d7;
+    --global-text-color-light           : #b8b1a2;
+    --global-thead-color                : #2a322e;
+
+    /* 本主题扩展变量 */
+    --han-vermilion                     : #e0776a;
+    --han-patina                        : #7cbfa2;
+    --han-patina-soft                   : #4e7a68;
+    --han-gold                          : #d4b06a;
+    --han-paper                         : #1d2321;
+    --han-ink                           : #e8e3d7;
+}

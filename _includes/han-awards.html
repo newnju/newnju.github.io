@@ -1,0 +1,21 @@
+{%- comment -%}
+  获奖清单（紧凑版，用于首页）
+  --------------------------------------------------------------------------
+  数据源与时间轴相同：_data/awards.yml，唯一区别是这里跳过 key: honours 那一组
+  （荣誉单独渲染，见首页的「荣誉」小节）。
+  要带等级标签的完整版见 /timeline/。
+  year_en / text_en 选填，英文页优先取、缺省回落中文。
+  样式在 _sass/_han.scss 第 3 节。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+<ul class="han-awards">
+{%- for group in site.data.awards %}
+{%- unless group.key == "honours" %}
+  {%- assign _year = group.year -%}
+  {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}
+  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{{ _t }}{% unless forloop.last %}；{% endunless %}{% endfor %}</li>
+{%- endunless %}
+{%- endfor %}
+</ul>

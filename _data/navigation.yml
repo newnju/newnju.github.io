@@ -1,0 +1,36 @@
+# The following is the order of the links in the header of the website.
+#
+# Changing the order here will adjust the order and you can also add additional
+# links. Removing a link prevents it from showing in the header, but does not
+# prevent it from being included in the site.
+#
+# 每一项可另填 title_en：/en/ 下的英文页会优先用它，缺省回落 title。
+# 因此中英文导航共用本文件，不需要维护两份。
+#
+# NOTE that only one of the CV options should be selected, the first is for the
+#      Markdown formatted page while the second is generated using JSON.
+
+main:
+  - title: "论文"
+    title_en: "Publications"
+    url: /publications/
+
+  - title: "项目"
+    title_en: "Projects"
+    url: /portfolio/
+
+  - title: "会议与暑校"
+    title_en: "Talks"
+    url: /talks/
+
+  - title: "获奖"
+    title_en: "Awards"
+    url: /timeline/
+
+  - title: "教学"
+    title_en: "Teaching"
+    url: /teaching/
+
+  - title: "履历"
+    title_en: "CV"
+    url: /cv/

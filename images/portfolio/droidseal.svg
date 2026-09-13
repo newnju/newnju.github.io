@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3d33"/>
+      <stop offset="100%" stop-color="#2f6b5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#g1)"/>
+  <g transform="translate(400,235)">
+    <path d="M0 -120 L92 -80 L92 30 Q92 122 0 152 Q-92 122 -92 30 L-92 -80 Z"
+          fill="#ffffff" fill-opacity="0.12" stroke="#ffffff" stroke-opacity="0.55" stroke-width="4"/>
+    <rect x="-40" y="-34" width="80" height="66" rx="11" fill="#ffffff" fill-opacity="0.88"/>
+    <path d="M-24 -34 v-20 a24 24 0 0 1 48 0 v20" fill="none" stroke="#ffffff" stroke-opacity="0.88" stroke-width="9"/>
+    <circle cx="0" cy="0" r="10" fill="#1f3d33"/>
+    <rect x="-4.5" y="0" width="9" height="24" rx="4.5" fill="#1f3d33"/>
+  </g>
+  <text x="400" y="432" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="34" fill="#ffffff" fill-opacity="0.95">DroidSeal</text>
+</svg>

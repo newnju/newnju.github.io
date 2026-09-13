@@ -1,0 +1,66 @@
+/* ==========================================================================
+   HAN THEME - LIGHT VERSION  （汉 · 明）
+   --------------------------------------------------------------------------
+   取色自汉代青铜镜与同期漆器：
+     铜锈绿 —— 镜身入土千年后的青绿锈色，作主色
+     朱砂   —— 汉代漆器、镜铭填朱的红，作强调色（链接悬停、标题装饰）
+     宣纸   —— 略带暖调的纸白，替代纯白背景
+   所有颜色写成字面色值（不用 mix()），改色时可以直接对照十六进制值。
+   ========================================================================== */
+
+/* Color codes used for the theme */
+$primary-color              : #2f6b5a;   // 铜锈绿
+$gray                       : #7d7566;   // 暖灰
+$dark-gray                  : #3f3a33;   // 正文
+$darker-gray                : #2b2723;
+$light-gray                 : #b0a897;
+$lighter-gray               : #e8e1d3;
+
+/* Color codes used for the site */
+$danger-color               : #a8322a;   // 朱砂
+$info-color                 : #2f6b5a;
+$notice-color               : #7d7566;
+$success-color              : #4f7a4a;
+$warning-color              : #b8860b;
+
+/* Other basic settings for the template */
+$border-radius              : 2px;
+$box-shadow                 : 0 1px 1px rgba(43, 39, 35, 0.10);
+$global-transition          : all 0.2s ease-in-out;
+$masthead-height            : 70px;
+$navicon-width              : 28px;
+$navicon-height             : 4px;
+$sidebar-link-max-width     : 250px;
+$sidebar-screen-min-width   : 1024px;
+
+/* Typography: 标题走宋体（衬线），正文保持无衬线以保证屏幕可读性 */
+$han-serif                  : "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Source Han Serif", Georgia, "Times New Roman", serif;
+$header-font-family         : $han-serif;
+
+/* Default light theme for the site */
+:root {
+    --global-base-color                 : #2f6b5a;
+    --global-bg-color                   : #fbf8f1;
+    --global-footer-bg-color            : #f4efe4;
+    --global-border-color               : #e8e1d3;
+    --global-dark-border-color          : #c3b9a5;
+    --global-code-background-color      : #f6f2e8;
+    --global-code-text-color            : #2b2723;
+    --global-fig-caption-color          : #7d7566;
+    --global-link-color                 : #2b6b56;
+    --global-link-color-hover           : #9e2b25;
+    --global-link-color-visited         : #6a8b7e;
+    --global-masthead-link-color        : #3f3a33;
+    --global-masthead-link-color-hover  : #9e2b25;
+    --global-text-color                 : #3f3a33;
+    --global-text-color-light           : #857d6e;
+    --global-thead-color                : #f4efe4;
+
+    /* 本主题扩展变量 */
+    --han-vermilion                     : #9e2b25;
+    --han-patina                        : #2f6b5a;
+    --han-patina-soft                   : #6f9a8b;
+    --han-gold                          : #b08d3f;
+    --han-paper                         : #fbf8f1;
+    --han-ink                           : #2b2723;
+}

@@ -1,0 +1,525 @@
+/* ==========================================================================
+   HAN THEME — 附加样式（汉 · 自定义层）
+   --------------------------------------------------------------------------
+   本文件刻意只写「纯 CSS」（不含 SCSS 嵌套与变量），
+   这样编译出来的结果和源文件逐字一致，改起来不用懂 Sass。
+   依赖 _han_light.scss / _han_dark.scss 中定义的扩展变量：
+     --han-vermilion  朱砂
+     --han-patina     铜锈绿
+     --han-gold       错金
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 标题字体：走宋体，给文史类站点一点纸本气
+   -------------------------------------------------------------------------- */
+
+.page__title,
+.archive__item-title,
+.author__name,
+h1, h2, h3, h4 {
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+}
+
+/* 页面主标题左侧一道朱砂细线 */
+.page__title {
+    border-left: 3px solid var(--han-vermilion);
+    padding-left: 0.55em;
+    margin-left: -0.55em;
+    line-height: 1.25;
+}
+
+/* 正文里的一级标题加一条浅色底线，层级更清楚 */
+.page__content > h1,
+.page__content > h2 {
+    border-bottom: 1px solid var(--global-border-color);
+    padding-bottom: 0.22em;
+}
+
+/* 引用块用铜锈绿描边 */
+.page__content blockquote {
+    border-left: 4px solid var(--han-patina);
+    background: var(--global-footer-bg-color);
+    padding: 0.6em 1em;
+    font-style: normal;
+}
+
+/* 正文里的表格加一点纸感 */
+.page__content table thead {
+    background: var(--global-thead-color);
+}
+
+/* --------------------------------------------------------------------------
+   2. 博局镜图（首页装饰）
+   -------------------------------------------------------------------------- */
+
+.han-mirror {
+    float: right;
+    width: 272px;
+    max-width: 43%;
+    margin: 0.2em 0 1.2em 1.6em;
+    color: var(--han-patina);
+    transition: color 0.5s ease;
+}
+
+.han-mirror svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.han-mirror:hover {
+    color: var(--han-vermilion);
+}
+
+/* 外区分三圈反向缓慢旋转：最外圈顺时针、锯齿与栉齿逆时针、铭文带顺时针 */
+.han-mirror .mirror-outer,
+.han-mirror .mirror-sawtooth,
+.han-mirror .mirror-inscription {
+    transform-box: view-box;
+    transform-origin: 200px 200px;
+}
+
+.han-mirror .mirror-outer {
+    /* 旋转 + 外圈极轻的呼吸感（呼吸只动 opacity，不冲突） */
+    animation: han-spin 240s linear infinite,
+               han-breathe 9s ease-in-out infinite;
+}
+
+.han-mirror .mirror-sawtooth {
+    animation: han-spin-rev 180s linear infinite;
+}
+
+.han-mirror .mirror-inscription {
+    animation: han-spin 300s linear infinite;
+}
+
+.han-mirror__caption {
+    display: block;
+    clear: both;
+    font-size: 0.72em;
+    line-height: 1.5;
+    color: var(--global-text-color-light);
+    text-align: center;
+    margin-top: 0.6em;
+    font-family: inherit;
+}
+
+@keyframes han-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+@keyframes han-spin-rev {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
+}
+
+@keyframes han-breathe {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .han-mirror .mirror-outer,
+    .han-mirror .mirror-sawtooth,
+    .han-mirror .mirror-inscription {
+        animation: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .han-mirror {
+        float: none;
+        width: 200px;
+        max-width: 70%;
+        margin: 0 auto 1.4em;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   3. 获奖与荣誉时间轴（/timeline/）
+   -------------------------------------------------------------------------- */
+
+.han-timeline {
+    position: relative;
+    margin: 1.6em 0 2.4em;
+    padding-left: 2.4em;
+}
+
+.han-timeline::before {
+    content: "";
+    position: absolute;
+    left: 0.7em;
+    top: 0.5em;
+    bottom: 0.5em;
+    width: 2px;
+    background: linear-gradient(
+        to bottom,
+        transparent 0,
+        var(--global-border-color) 6%,
+        var(--global-border-color) 94%,
+        transparent 100%
+    );
+}
+
+.han-timeline__year {
+    position: relative;
+    margin: 1.7em 0 0.7em;
+    font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", Georgia, serif;
+    font-size: 1.18em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--han-vermilion);
+}
+
+.han-timeline__year:first-child {
+    margin-top: 0;
+}
+
+.han-timeline__year::before {
+    content: "";
+    position: absolute;
+    left: -2.0em;
+    top: 0.42em;
+    width: 0.78em;
+    height: 0.78em;
+    border-radius: 50%;
+    background: var(--han-patina);
+    box-shadow: 0 0 0 3px var(--global-bg-color);
+}
+
+.han-timeline__item {
+    position: relative;
+    margin: 0 0 0.62em;
+    line-height: 1.6;
+}
+
+.han-timeline__item::before {
+    content: "";
+    position: absolute;
+    left: -1.81em;
+    top: 0.62em;
+    width: 0.42em;
+    height: 0.42em;
+    border-radius: 50%;
+    background: var(--han-patina-soft, var(--han-patina));
+}
+
+.han-timeline__level {
+    display: inline-block;
+    margin-left: 0.55em;
+    padding: 0.02em 0.5em;
+    font-size: 0.7em;
+    line-height: 1.6;
+    vertical-align: 0.12em;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    white-space: nowrap;
+    opacity: 0.85;
+}
+
+.han-timeline__level--international { color: var(--han-gold); }
+.han-timeline__level--national      { color: var(--han-vermilion); }
+.han-timeline__level--provincial    { color: var(--han-patina); }
+.han-timeline__level--school        { color: var(--global-text-color-light); }
+.han-timeline__level--other         { color: var(--global-text-color-light); }
+
+.han-timeline__note {
+    display: block;
+    font-size: 0.82em;
+    color: var(--global-text-color-light);
+    line-height: 1.55;
+}
+
+/* 首页的紧凑获奖清单（完整版带等级标签的是 /timeline/） */
+
+.han-awards {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.2em 0 0.6em;
+}
+
+.han-awards li {
+    margin-bottom: 0.45em;
+    line-height: 1.65;
+}
+
+.han-awards__year {
+    display: inline-block;
+    min-width: 3.6em;
+    margin-right: 0.4em;
+    color: var(--han-vermilion);
+    font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   4. 论文页 BibTeX 复制
+   -------------------------------------------------------------------------- */
+
+.han-bibtex {
+    margin-top: 0.7em;
+    font-size: 0.82em;
+}
+
+/* 复制按钮与展开开关同处一行（都在 <summary> 内），代码块独占下一行 */
+.han-bibtex__details summary {
+    display: block;
+    cursor: pointer;
+    color: var(--global-text-color-light);
+    list-style: none;
+}
+
+.han-bibtex__details summary::-webkit-details-marker {
+    display: none;
+}
+
+.han-bibtex__caret {
+    display: inline-block;
+    vertical-align: middle;
+    width: 0;
+    height: 0;
+    margin-right: 0.55em;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.2s ease;
+}
+
+.han-bibtex__details[open] .han-bibtex__caret {
+    transform: rotate(90deg);
+}
+
+.han-bibtex__label {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.7em;
+    letter-spacing: 0.02em;
+}
+
+.han-bibtex__details summary:hover .han-bibtex__label {
+    color: var(--han-patina);
+}
+
+.han-bibtex__btn {
+    display: inline-block;
+    vertical-align: middle;
+    font: inherit;
+    cursor: pointer;
+    padding: 0.22em 0.75em;
+    color: var(--global-text-color-light);
+    background: transparent;
+    border: 1px solid var(--global-border-color);
+    border-radius: 2px;
+    transition: all 0.2s ease-in-out;
+}
+
+.han-bibtex__btn:hover,
+.han-bibtex__btn:focus-visible {
+    color: var(--han-patina);
+    border-color: var(--han-patina);
+}
+
+.han-bibtex__btn.is-done {
+    color: var(--han-vermilion);
+    border-color: var(--han-vermilion);
+}
+
+.han-bibtex__pre {
+    margin: 0.55em 0 0;
+    padding: 0.7em 0.9em;
+    font-size: 0.92em;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x: auto;
+    background: var(--global-code-background-color);
+    color: var(--global-code-text-color);
+    border-left: 3px solid var(--han-patina);
+    border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   5. 顶部导航：语言切换 + 当前项朱砂下划线
+   -------------------------------------------------------------------------- */
+
+.masthead__menu-item.selected > a {
+    box-shadow: inset 0 -2px 0 var(--han-vermilion);
+}
+
+.lang-switch > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32em;
+    letter-spacing: 0.04em;
+}
+
+.lang-switch .fa-solid,
+.lang-switch .fas {
+    font-size: 0.86em;
+    opacity: 0.75;
+}
+
+/* --------------------------------------------------------------------------
+   6. 侧栏头像
+   --------------------------------------------------------------------------
+   侧栏内容宽度实测 189.2px（wrapper 上限 925px，侧栏占 2/12）。
+   主题原本是 max-width: 175px + 5px 内边距 + 1px 描边 + 4px 光圈，
+   总宽会到 197px，比侧栏还宽 8px。
+   这里总宽定为 158px：
+       照片本体 = 158 − 2px 内边距 ×2 − 1px 描边 ×2 = 152px
+       圆圈（含光圈）= 158 + 2px ×2 = 162px
+   即圆圈与照片一起收小（原来是 187 / 177）。max-width: 100% 保证侧栏更窄时自动缩小。
+   -------------------------------------------------------------------------- */
+
+.author__avatar img {
+    box-sizing: border-box;
+    width: 158px;
+    max-width: 100%;
+    height: auto;
+    padding: 2px;
+    border: 1px solid var(--global-border-color);
+    box-shadow: 0 0 0 2px var(--global-footer-bg-color);
+}
+
+@media (min-width: 57.8125em) {
+    /* 头像整体往上、稍微靠右带一点 */
+    .author__avatar {
+        margin: -22px 0 8px 4px;
+    }
+
+    /* 侧栏文字默认占满 189px，右端会紧贴内容列正文；
+       留出一点右内边距做视觉间隔。 */
+    .author__content,
+    .author__urls-wrapper {
+        padding-right: 14px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   7. 打印样式：方便直接把履历页打印 / 存成 PDF
+   -------------------------------------------------------------------------- */
+
+@media print {
+    .masthead,
+    .sidebar,
+    .page__footer,
+    .han-bibtex,
+    .page__share,
+    .pagination {
+        display: none !important;
+    }
+
+    .page__title {
+        border-left: 0;
+        padding-left: 0;
+        margin-left: 0;
+    }
+
+    body {
+        background: #fff;
+        color: #000;
+    }
+
+    a {
+        color: #000;
+        text-decoration: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   8. 配色主题切换：南大紫（默认）/ 青铜绿
+   --------------------------------------------------------------------------
+   默认 :root 已在 _han_light.scss 定为青铜绿。这里用更具体的
+   :root[data-color-theme="nju"] 在运行时把品牌色覆盖为南大紫 #5C2E83 + 鎏金
+   #c8a45c；暗色下同步提亮，保证深色背景可读性。点击调色板按钮在 nju / han
+   之间切换（见 assets/js/han.js）。
+   -------------------------------------------------------------------------- */
+
+:root[data-color-theme="nju"] {
+    --han-patina                : #5C2E83;   /* 南大紫 */
+    --han-patina-soft           : #9b6fb8;
+    --han-vermilion             : #c8a45c;   /* 鎏金，作强调色 */
+    --han-gold                  : #c8a45c;
+    --global-base-color         : #5C2E83;
+    --global-link-color         : #5C2E83;
+    --global-link-color-hover   : #c8a45c;
+    --global-link-color-visited : #8a5ca8;
+    --global-masthead-link-color-hover : #5C2E83;
+}
+
+html[data-theme="dark"][data-color-theme="nju"] {
+    --han-patina                : #b794d4;
+    --han-patina-soft           : #c9a9e0;
+    --han-vermilion             : #e0c074;
+    --han-gold                  : #e0c074;
+    --global-base-color         : #b794d4;
+    --global-link-color         : #c4a6e0;
+    --global-link-color-hover   : #e0c074;
+    --global-link-color-visited : #b794d4;
+    --global-masthead-link-color-hover : #c4a6e0;
+}
+
+/* --------------------------------------------------------------------------
+   9. 汉堡菜单（纯 CSS 图标 + 移动端折叠，行为见 assets/js/han.js）
+   -------------------------------------------------------------------------- */
+
+/* 汉堡按钮默认隐藏，仅在窄屏由 CSS 显示；脚本负责点击折叠 / 展开 */
+.greedy-nav > button {
+    display: none;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.greedy-nav .navicon {
+    position: relative;
+    display: block;
+    width: 28px;
+    height: 4px;
+    background: var(--global-text-color);
+    transition: background 0.2s ease-out;
+}
+
+.greedy-nav .navicon::before,
+.greedy-nav .navicon::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 28px;
+    height: 4px;
+    background: var(--global-text-color);
+    transition: all 0.2s ease-out;
+}
+
+.greedy-nav .navicon::before { top: -9px; }
+.greedy-nav .navicon::after  { top: 9px; }
+
+/* 展开时：中间一横消失，上下两横旋转成 X */
+.greedy-nav > button.open .navicon {
+    background: transparent;
+}
+
+.greedy-nav > button.open .navicon::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+
+.greedy-nav > button.open .navicon::after {
+    top: 0;
+    transform: rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+    /* 窄屏显示汉堡按钮，并为它预留右侧空间，避免压住末尾图标项 */
+    .greedy-nav > button {
+        display: block;
+    }
+
+    .greedy-nav {
+        padding-right: 44px;
+    }
+
+    .greedy-nav .hidden-links a {
+        margin: 0;
+        padding: 10px 20px;
+    }
+}
