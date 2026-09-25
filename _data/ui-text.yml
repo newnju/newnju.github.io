@@ -43,6 +43,9 @@ en: &DEFAULT_EN
   # --- 本站自定义键 ---
   published_in               : "Published in"
   citation_label             : "Recommended citation"
+  copy_citation_hint         : "Click the title to copy the citation (GB/T 7714)"
+  copied_label               : "Citation copied"
+  cnki_link_label            : "CNKI"
   download_paper             : "Download Paper"
   download_slides            : "Download Slides"
   download_bibtex            : "Download BibTeX"
@@ -338,6 +341,9 @@ zh: &DEFAULT_ZH
   # --- 本站自定义键 ---
   published_in               : "发表于"
   citation_label             : "引用格式"
+  copy_citation_hint         : "点击标题复制引用（GB/T 7714）"
+  copied_label               : "已复制引用"
+  cnki_link_label            : "知网"
   download_paper             : "下载论文"
   download_slides            : "下载幻灯片"
   download_bibtex            : "下载 BibTeX"

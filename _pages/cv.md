@@ -105,7 +105,7 @@ redirect_from:
 
 * **编程与数据**：Python、JavaScript、Rust、SQL、Linux、爬虫、AI Agent、RAG
 * **设计与产品**：Visio、Figma、PRD、分镜头脚本、PS、PR、AE
-* **开源项目**：安卓安全项目 DroidSeal，npm 下载量超过 1K（`droidseal`）
+* **开源项目**：安卓安全项目 DroidSeal，npm 下载量超过 1.2K（`droidseal`）
 
 论文列表
 ======

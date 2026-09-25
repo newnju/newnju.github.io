@@ -3,6 +3,7 @@ title: "四神博局镜与汉代宇宙观"
 collection: publications
 category: manuscripts
 permalink: /publication/2025-four-gods-mirror
+link: "https://wap.cnki.net/touch/web/Journal/Article/HXWH202504010.html"
 excerpt: '以中国国家博物馆藏新莽四神博局镜为例，讨论镜背纹饰的分区方式，以及博局纹与四神纹所对应的汉代宇宙观。'
 date: 2025-12-01
 venue: '华夏文化'

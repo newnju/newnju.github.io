@@ -170,3 +170,78 @@
   try { saved = localStorage.getItem(KEY); } catch (e) {}
   apply(saved || html.getAttribute("data-color-theme") || "nju");
 })();
+
+/* ==========================================================================
+   4. 期刊论文标题：点击复制 GB/T 7714 引用
+   --------------------------------------------------------------------------
+   引用文本由 _includes/archive-single.html 写入 data-citation（即 front matter
+   的 citation 字段，本身即 GB/T 7714 格式）。
+   仅做渐进增强：脚本不执行时，标题仍是普通链接，可跳转知网或站内详情页。
+   ========================================================================== */
+(function () {
+  "use strict";
+
+  /** 兜底复制：clipboard API 不可用时（http、file://、旧浏览器）走 execCommand */
+  function fallbackCopy(text, onDone) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (e) {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    if (ok) onDone();
+  }
+
+  function bindCitationCopy() {
+    var links = document.querySelectorAll(".js-copy-citation");
+    Array.prototype.forEach.call(links, function (link) {
+      link.addEventListener("click", function (event) {
+        var text = link.getAttribute("data-citation");
+        if (!text) return; // 没拿到引用文本，按普通链接跳转
+        event.preventDefault();
+
+        var doneLabel = link.getAttribute("data-label-done") || "已复制引用";
+        // 首次点击时缓存标题原文，避免连点时把「已复制引用」当成原文
+        if (!link.hasAttribute("data-label-original")) {
+          link.setAttribute("data-label-original", link.textContent);
+        }
+        var original = link.getAttribute("data-label-original");
+        var timer = null;
+
+        function flash() {
+          link.textContent = doneLabel;
+          link.classList.add("is-copied");
+          window.clearTimeout(timer);
+          timer = window.setTimeout(function () {
+            link.textContent = original;
+            link.classList.remove("is-copied");
+          }, 1800);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(flash, function () {
+            fallbackCopy(text, flash);
+          });
+        } else {
+          fallbackCopy(text, flash);
+        }
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindCitationCopy);
+  } else {
+    bindCitationCopy();
+  }
+})();

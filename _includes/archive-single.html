@@ -33,8 +33,18 @@
       </div>
     {% endif %}
 
+    {%- comment -%}
+      期刊论文（collection: publications 且有 citation）：标题点击即复制 GB/T 7714 引用。
+      href 仍保留（知网或站内页），脚本未执行时退化为普通跳转，不影响可用性。
+    {%- endcomment -%}
+    {% assign _copyable = false %}
+    {% if post.collection == 'publications' and post.citation %}{% assign _copyable = true %}{% endif %}
+    {% if post.link %}{% assign _title_href = post.link %}{% else %}{% capture _title_href %}{{ base_path }}{{ post.url }}{% endcapture %}{% endif %}
+
     <h2 class="archive__item-title" itemprop="headline">
-      {% if post.link %}
+      {% if _copyable %}
+        <a href="{{ _title_href }}" class="js-copy-citation" data-citation="{{ post.citation | escape }}" data-label-done="{{ ui.copied_label | default: '已复制引用' }}" title="{{ ui.copy_citation_hint | default: '点击标题复制引用（GB/T 7714）' }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+      {% elsif post.link %}
         <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
       {% else %}
         <a href="{{ base_path }}{{ post.url }}" rel="permalink">{{ title }}</a>
@@ -74,6 +84,13 @@
     {% if post.bibtexurl %}
       {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
       {% capture _t %}<a href="{{ post.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a>{% endcapture %}
+      {% assign _links = _links | append: _t %}
+    {% endif %}
+
+    {%- comment -%} 有外链（如知网）时，在引用格式行补一个入口，标题的复制行为不占用它 {%- endcomment -%}
+    {% if post.link %}
+      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% capture _t %}<a href="{{ post.link }}" target="_blank" rel="noopener">{{ ui.cnki_link_label | default: "知网" }}</a>{% endcapture %}
       {% assign _links = _links | append: _t %}
     {% endif %}
 

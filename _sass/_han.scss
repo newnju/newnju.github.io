@@ -155,13 +155,15 @@ h1, h2, h3, h4 {
     padding-left: 2.4em;
 }
 
+/* 轴线中心线固定在距容器左边缘 0.75em 处（本文件下所有圆点都对齐到这条线） */
 .han-timeline::before {
     content: "";
     position: absolute;
-    left: 0.7em;
+    left: 0.75em;
     top: 0.5em;
     bottom: 0.5em;
     width: 2px;
+    transform: translateX(-50%);
     background: linear-gradient(
         to bottom,
         transparent 0,
@@ -185,16 +187,20 @@ h1, h2, h3, h4 {
     margin-top: 0;
 }
 
+/* 年份大点。本元素 font-size 为 1.18em，::before 的 em 以该字号为基准，
+   故偏移量按 (0.75em - 2.4em) / 1.18 = -1.398em 换算；
+   若上方 .han-timeline__year 的字号有变动，此值需同步重算。 */
 .han-timeline__year::before {
     content: "";
     position: absolute;
-    left: -2.0em;
+    left: -1.398em;
     top: 0.42em;
     width: 0.78em;
     height: 0.78em;
     border-radius: 50%;
     background: var(--han-patina);
     box-shadow: 0 0 0 3px var(--global-bg-color);
+    transform: translateX(-50%);
 }
 
 .han-timeline__item {
@@ -203,15 +209,17 @@ h1, h2, h3, h4 {
     line-height: 1.6;
 }
 
+/* 条目小点。本元素字号与容器一致，故偏移量即 0.75em - 2.4em = -1.65em */
 .han-timeline__item::before {
     content: "";
     position: absolute;
-    left: -1.81em;
+    left: -1.65em;
     top: 0.62em;
     width: 0.42em;
     height: 0.42em;
     border-radius: 50%;
     background: var(--han-patina-soft, var(--han-patina));
+    transform: translateX(-50%);
 }
 
 .han-timeline__level {
@@ -350,8 +358,18 @@ h1, h2, h3, h4 {
    5. 顶部导航：语言切换 + 当前项朱砂下划线
    -------------------------------------------------------------------------- */
 
-.masthead__menu-item.selected > a {
-    box-shadow: inset 0 -2px 0 var(--han-vermilion);
+/* 当前页导航项的下划线：上为帝王金、下为南大紫，各 2px。
+   下面那条用 border-bottom 画（紫），上面那条用 background 画（金）——
+   background-position: left bottom 以 padding box 为基准，正好紧贴 border 上沿。
+   这样元素总高与主题默认的 border-bottom: 2px 一致，不会引起导航栏抖动。
+   必须一并覆盖 :hover 规则，其特异性高于 .selected > a。 */
+.masthead__menu-item.selected > a,
+.masthead__menu-item.selected a:hover {
+    border-bottom-color: #5C2E83;
+    background-image: linear-gradient(#c8a45c, #c8a45c);
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% 2px;
 }
 
 .lang-switch > a {
@@ -530,4 +548,52 @@ html[data-theme="dark"][data-color-theme="nju"] {
         margin: 0;
         padding: 10px 20px;
     }
+}
+
+/* --------------------------------------------------------------------------
+   10. 文本选中色
+   --------------------------------------------------------------------------
+   主题默认（_sass/layout/_reset.scss）是白字黑底，这里改为南大紫底白字。
+   暗色模式用同色系提亮版，保证深色背景上选中区域仍清晰可辨。
+   -------------------------------------------------------------------------- */
+
+::-moz-selection {
+    color: #fff;
+    background: #5C2E83;
+}
+
+::selection {
+    color: #fff;
+    background: #5C2E83;
+}
+
+html[data-theme="dark"] ::-moz-selection {
+    color: #fff;
+    background: #7a4aa0;
+}
+
+html[data-theme="dark"] ::selection {
+    color: #fff;
+    background: #7a4aa0;
+}
+
+/* --------------------------------------------------------------------------
+   11. 期刊论文标题：点击复制引用
+   --------------------------------------------------------------------------
+   虚线下划线与 copy 光标提示「这里点了会复制，不是跳转」；
+   复制成功后短暂变成主色，与 JS 里的文案替换（见 han.js 第 4 节）配合。
+   -------------------------------------------------------------------------- */
+
+.archive__item-title .js-copy-citation {
+    cursor: copy;
+    border-bottom: 1px dashed var(--global-border-color);
+}
+
+.archive__item-title .js-copy-citation:hover {
+    border-bottom-color: var(--han-patina);
+}
+
+.archive__item-title .js-copy-citation.is-copied {
+    color: var(--han-patina);
+    border-bottom-color: transparent;
 }
