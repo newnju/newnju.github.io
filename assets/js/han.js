@@ -245,3 +245,95 @@
     bindCitationCopy();
   }
 })();
+
+/* ==========================================================================
+   5. 页面缩略图导航（右侧 minimap）
+   --------------------------------------------------------------------------
+   做法：克隆整页 DOM，用 transform: scale() 缩到窄条里，再用一个半透明方块
+   标出当前视口位置。滚动时只更新方块的 transform，不重排，开销很小。
+   仅作渐进增强，窄屏不启用；脚本不执行时页面完全不受影响。
+   ========================================================================== */
+(function () {
+  "use strict";
+
+  var MIN_WIDTH = 1200; // 窄于此宽度不显示，避免遮挡正文
+
+  function initMinimap() {
+    if (window.innerWidth < MIN_WIDTH) return;
+    if (document.querySelector(".han-minimap")) return;
+
+    var shell = document.createElement("div");
+    shell.className = "han-minimap";
+    shell.innerHTML =
+      '<div class="han-minimap__clip"><div class="han-minimap__inner"></div></div>' +
+      '<div class="han-minimap__view"></div>';
+    var inner = shell.querySelector(".han-minimap__inner");
+    var view = shell.querySelector(".han-minimap__view");
+
+    var clone = document.body.cloneNode(true);
+
+    // 克隆体里的 fixed / sticky 元素会脱离缩略图容器，统一压回普通流。
+    // 必须在删除节点之前做：两棵树的元素顺序此时才一一对应。
+    var origAll = document.body.querySelectorAll("*");
+    var cloneAll = clone.querySelectorAll("*");
+    for (var i = 0; i < origAll.length && i < cloneAll.length; i++) {
+      var pos = window.getComputedStyle(origAll[i]).position;
+      if (pos === "fixed" || pos === "sticky") cloneAll[i].style.position = "static";
+    }
+
+    // 顶部导航是 fixed，缩略图里没有意义；脚本与样式表也一并去掉
+    Array.prototype.forEach.call(
+      clone.querySelectorAll(".masthead, .han-minimap, script, link, noscript"),
+      function (n) { n.parentNode.removeChild(n); }
+    );
+
+    var pageW = document.documentElement.clientWidth;
+    var pageH = document.documentElement.scrollHeight;
+    var scale = shell.clientWidth / pageW || 0.1;
+
+    clone.style.width = pageW + "px";
+    clone.style.transform = "scale(" + scale + ")";
+    clone.style.transformOrigin = "top left";
+    inner.style.height = pageH * scale + "px";
+    inner.appendChild(clone);
+
+    document.body.appendChild(shell);
+
+    var ticking = false;
+    function sync() {
+      ticking = false;
+      var vh = window.innerHeight;
+      view.style.height = Math.max(14, vh * scale) + "px";
+      view.style.transform = "translateY(" + window.scrollY * scale + "px)";
+    }
+    function requestSync() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(sync);
+    }
+
+    window.addEventListener("scroll", requestSync, { passive: true });
+    window.addEventListener("resize", function () {
+      // 尺寸变化后比例失效，重建比原地修正更简单可靠
+      shell.parentNode.removeChild(shell);
+      initMinimap();
+    });
+
+    // 点击缩略图跳到对应位置
+    shell.addEventListener("click", function (event) {
+      var rect = shell.getBoundingClientRect();
+      var ratio = (event.clientY - rect.top) / rect.height;
+      var target = ratio * pageH - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    });
+
+    sync();
+  }
+
+  if (document.readyState === "complete") {
+    initMinimap();
+  } else {
+    // 等图片等资源就位，否则页面总高度会偏小
+    window.addEventListener("load", initMinimap);
+  }
+})();

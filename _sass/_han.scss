@@ -57,10 +57,11 @@ h1, h2, h3, h4 {
     width: 272px;
     max-width: 43%;
     margin: 0.2em 0 1.2em 1.6em;
-    color: var(--han-patina);
+    color: #2f6b5a;
     transition: color 0.5s ease;
-    /* 呼吸渐变色：在品牌色与朱砂色间缓慢往复，默认生效、无需悬浮 */
-    animation: han-mirror-breathe 12s ease-in-out infinite;
+    /* 颜色呼吸：在五个色相间缓慢往复，默认生效、无需悬浮。
+       具体色值见文件末尾的四套 @keyframes（按配色与明暗切换）。 */
+    animation: han-mirror-breathe 18s ease-in-out infinite;
 }
 
 .han-mirror svg {
@@ -70,26 +71,36 @@ h1, h2, h3, h4 {
     overflow: visible;
 }
 
-/* 外区分三圈反向缓慢旋转：最外圈顺时针、锯齿与栉齿逆时针、铭文带顺时针 */
+/* 外区分三圈反向旋转：最外圈顺时针、锯齿与栉齿逆时针、铭文带顺时针。
+   transform-origin 用 center 而不是 200px 200px：本图三组都是圆环状，
+   包围盒中心恰好与镜心重合，于是
+     · 现代浏览器（识别 transform-box，50% 相对 view-box 解析）
+     · 旧浏览器（不认 transform-box，50% 相对元素包围盒解析）
+   两种行为算出来的旋转中心都落在镜心，不再依赖 transform-box 的支持度。 */
 .han-mirror .mirror-outer,
 .han-mirror .mirror-sawtooth,
 .han-mirror .mirror-inscription {
     transform-box: view-box;
-    transform-origin: 200px 200px;
+    -webkit-transform-origin: center;
+    transform-origin: center;
 }
 
 .han-mirror .mirror-outer {
     /* 旋转 + 外圈极轻的呼吸感（呼吸只动 opacity，不冲突） */
-    animation: han-spin 240s linear infinite,
+    -webkit-animation: han-spin 60s linear infinite,
+                       han-breathe 9s ease-in-out infinite;
+    animation: han-spin 60s linear infinite,
                han-breathe 9s ease-in-out infinite;
 }
 
 .han-mirror .mirror-sawtooth {
-    animation: han-spin-rev 180s linear infinite;
+    -webkit-animation: han-spin-rev 45s linear infinite;
+    animation: han-spin-rev 45s linear infinite;
 }
 
 .han-mirror .mirror-inscription {
-    animation: han-spin 300s linear infinite;
+    -webkit-animation: han-spin 75s linear infinite;
+    animation: han-spin 75s linear infinite;
 }
 
 .han-mirror__caption {
@@ -118,22 +129,61 @@ h1, h2, h3, h4 {
     50%      { opacity: 1; }
 }
 
-/* 博局镜纹样整体颜色的呼吸渐变：青铜绿 → 鎏金 → 朱砂 → 青铜绿，随主题联动 */
+/* 博局镜纹样的颜色呼吸：每轮走五个色相，末色回到首色以无缝衔接。
+   --------------------------------------------------------------------------
+   色值刻意写死、不用 var()：CSS 变量在 @keyframes 内的插值在较旧的 Safari
+   上不可靠（表现为突变而非渐变）。代价是失去「一处改色、全局联动」，
+   因此下面按 配色(han/nju) × 明暗 备了四套关键帧，由文件末尾的选择器切换。
+   改色时四套都要同步，否则切换配色会出现色系错配。
+   -------------------------------------------------------------------------- */
+
+/* han 配色 · 亮：铜锈绿 → 靛青 → 鎏金 → 赭石 → 朱砂 */
 @keyframes han-mirror-breathe {
-    0%, 100% { color: var(--han-patina); }
-    33%      { color: var(--han-gold); }
-    66%      { color: var(--han-vermilion); }
+    0%, 100% { color: #2f6b5a; }
+    20%      { color: #3d6a7a; }
+    40%      { color: #b08d3f; }
+    60%      { color: #9a5b3f; }
+    80%      { color: #9e2b25; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .han-mirror {
-        animation: none;
-    }
-    .han-mirror .mirror-outer,
-    .han-mirror .mirror-sawtooth,
-    .han-mirror .mirror-inscription {
-        animation: none;
-    }
+/* han 配色 · 暗（整体提亮，保证深底可辨） */
+@keyframes han-mirror-breathe-dark {
+    0%, 100% { color: #7cbfa2; }
+    20%      { color: #7fb6c9; }
+    40%      { color: #d4b06a; }
+    60%      { color: #cf9270; }
+    80%      { color: #e0776a; }
+}
+
+/* nju 配色 · 亮：南大紫 → 紫罗兰 → 藕荷 → 鎏金 → 淡金 */
+@keyframes han-mirror-breathe-nju {
+    0%, 100% { color: #5C2E83; }
+    20%      { color: #7a4aa0; }
+    40%      { color: #9b6fb8; }
+    60%      { color: #c8a45c; }
+    80%      { color: #d9bc7a; }
+}
+
+/* nju 配色 · 暗 */
+@keyframes han-mirror-breathe-nju-dark {
+    0%, 100% { color: #b794d4; }
+    20%      { color: #c9a9e0; }
+    40%      { color: #d3b0e8; }
+    60%      { color: #e0c074; }
+    80%      { color: #ecd49a; }
+}
+
+/* 按当前配色与明暗挑一套。特异性依次递增，暗色版压过同名亮色版。 */
+:root[data-color-theme="nju"] .han-mirror {
+    animation-name: han-mirror-breathe-nju;
+}
+
+html[data-theme="dark"] .han-mirror {
+    animation-name: han-mirror-breathe-dark;
+}
+
+html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
+    animation-name: han-mirror-breathe-nju-dark;
 }
 
 @media (max-width: 600px) {
@@ -596,4 +646,85 @@ html[data-theme="dark"] ::selection {
 .archive__item-title .js-copy-citation.is-copied {
     color: var(--han-patina);
     border-bottom-color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   12. 页面缩略图导航（右侧 minimap，逻辑见 assets/js/han.js 第 5 节）
+   --------------------------------------------------------------------------
+   半透明底用伪元素实现，避免直接给容器设 opacity 时把缩略内容一起变淡。
+   窄屏由脚本直接不生成，这里再用媒体查询兜一层，防止样式残留占位。
+   -------------------------------------------------------------------------- */
+
+.han-minimap {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 132px;
+    height: 100vh;
+    z-index: 30;
+    overflow: hidden;
+    cursor: pointer;
+    border-left: 1px solid var(--global-border-color);
+}
+
+.han-minimap::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: var(--global-bg-color);
+    opacity: 0.86;
+}
+
+.han-minimap__clip {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.han-minimap__inner {
+    width: 132px;
+}
+
+/* 缩略图只呈现正文：侧栏原为 fixed + 100vh（贴视口），在缩略容器里
+   既会脱离文档流、又会占满整屏高度，直接隐藏最干净。 */
+.han-minimap__inner .sidebar {
+    display: none !important;
+}
+
+.han-minimap__inner .page {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    float: none !important;
+}
+
+/* 缩略内容只作视觉参考，不接收任何交互 */
+.han-minimap__inner,
+.han-minimap__inner * {
+    pointer-events: none !important;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.han-minimap__view {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: rgba(92, 46, 131, 0.13);
+    background: color-mix(in srgb, var(--han-patina) 16%, transparent);
+    border: 1px solid var(--han-patina);
+    border-radius: 2px;
+    opacity: 0.85;
+}
+
+@media (max-width: 1199px) {
+    .han-minimap {
+        display: none;
+    }
 }
