@@ -25,14 +25,14 @@ Education
     * Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships
 * **Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03
 * **B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06
-    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%
+    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships
 
 Publications
 ======
 
 * Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." *Huaxia Wenhua*, 2025, (04): 27–32.
 * Wu, Jiawen. "How to Trust: Rethinking Responsibility for Trust in the News and Communication System in the Age of Large Language Models." *Rongmei*, 2026, (9): 4–11.
-* "Zhi and Wen in Four-Deity TLV Mirror Ornament," Fifth Mao Jiaqi History Forum, School of History, Nanjing University — Award of Excellence
+* “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror,” Fifth Mao Jiaqi History Forum, School of History, Nanjing University — Award of Excellence
 
 Appointments and Service
 ======
@@ -41,6 +41,7 @@ Appointments and Service
     * Led LLM application competitions, the Smart Liberal Arts Forum, and school-level AI-for-humanities projects
 
 * 2022.09 – 2023.09: Head of the Organisation Department, Youth League Committee, School of Arts, Nanjing University
+    * Ran the League's organisational work, organised themed events, and kept membership records
 
 * 2022.09 – 2023.09: Head of the Technology Department, 3D Printing Society, Nanjing University
 
@@ -73,17 +74,20 @@ Honours
 Awards
 ======
 
-* 2026.06 — First Prize (Category A, Screenwriting), 4th "Yi Yun China" Art Education Innovation and Practice Exhibition
+* 2026.06 — First Prize (Category A, Screenwriting), 4th “Yi Yun China” Art Education Innovation and Practice Exhibition
 * 2026.04 — Second Prize, 3rd Young Scholars Forum on Cultural Communication and Media Development
+    * Paper: *Sustaining the Character of Nanjing Baiju and Its Contemporary Construction from the Perspective of Cultural Ecology*
 * 2025.11 — Award of Excellence, Fifth Mao Jiaqi History Forum, School of History, Nanjing University
-* 2022.08 — Outstanding Course Design, Peking University Visualisation Summer School
+    * Paper: *Zhi and Wen in the Ornament of the Four-Deity TLV Mirror*
+* 2022.08 — Outstanding Course Project, Peking University Visualisation Summer School
+* Award of Excellence for Public Service by Postgraduate Students, Nanjing University (social practice)
 * 2021.06 — Outstanding Completion, Jiangsu Provincial Undergraduate Innovation Training Programme
 * 2021.02 — Second Prize, Jiangsu Division, China Creative & National Digital Art Design Competition
 * 2021 – 2024 — Nanjing University academic scholarships (second and third class, three consecutive years)
 * 2020.12 — Award of Excellence, Jiangsu Division, 12th National College Student Advertising Art Competition
 * 2019.07 — Jiangsu Provincial Government Scholarship for Overseas Study
 * 2018.08 — Third Prize (National), China College Student Computer Design Competition
-* 2018.05 — First Prize (Institutional), Jiangsu Provincial Computer Design Competition
+* 2018.05 — First Prize (University Level), Jiangsu Provincial Computer Design Competition
 
 Certificates
 ======
@@ -92,7 +96,8 @@ Certificates
 * National Computer Level 2 (Office)
 * CET-6 473 / CET-4 580 / Duolingo 120
 * Putonghua Level 2A
-* AI Trainer (Advanced); Fine-tuning Engineer; Agent Engineer
+* AI Trainer (Advanced)
+* Fine-tuning Engineer; Agent Engineer
 
 Skills
 ======

@@ -1,6 +1,8 @@
 ---
 title: "《乐动斋微电影网站建设》"
+title_en: "Ledongzhai Micro-film Website"
 excerpt: "校级重点大学生创新训练计划项目（2018XSKY017），**项目负责人**，2018.05 – 2019.05。"
+excerpt_en: "University-level Key Undergraduate Innovation Training Programme (2018XSKY017), **project lead**, 2018.05 – 2019.05."
 collection: portfolio
 permalink: /portfolio/microfilm-website
 ---

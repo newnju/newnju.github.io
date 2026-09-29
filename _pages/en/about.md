@@ -1,6 +1,6 @@
 ---
 permalink: /en/
-title: "Jiawen Wu · Academic Website"
+title: "Home"
 locale: en
 author_profile: true
 mirror: true
@@ -15,7 +15,7 @@ Research Interests
 
 * **Visual history**: historical imagery of the Chinese nation (doctoral work)
 * **Art archaeology**: Han-dynasty material culture and imagery (master's work); thesis on the ornament of the four-deity TLV mirror and Han cosmology
-* **AI applications and ethics**: trust and responsible reconstruction of communication in the age of large language models; lightweight LLM applications in the humanities
+* **AI applications and ethics**
 
 Education
 ======
@@ -27,7 +27,7 @@ Education
     * Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*
     * Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships
 * **B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06
-    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%
+    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships
 * **Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03
 
 {% assign _honours = site.data.awards | where: "key", "honours" | first %}
@@ -41,7 +41,7 @@ Selected Work
 
 * Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." *Huaxia Wenhua*, 2025, (04): 27–32.
 * Wu, Jiawen. "How to Trust: Rethinking Responsibility for Trust in the News and Communication System in the Age of Large Language Models." *Rongmei*, 2026, (9): 4–11.
-* "Zhi and Wen in Four-Deity TLV Mirror Ornament" won the Award of Excellence at the Fifth Mao Jiaqi History Forum, School of History, Nanjing University (2025.11)
+* “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror” won the Award of Excellence at the Fifth Mao Jiaqi History Forum, School of History, Nanjing University (2025.11)
 * The publication list is on the [Publications](/en/publications/) page; the full record is in the [CV](/en/cv/).
 
 Projects

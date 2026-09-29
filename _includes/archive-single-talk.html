@@ -15,8 +15,16 @@
   {% assign teaser = site.teaser %}
 {% endif %}
 
-{% assign title = post.title_en | default: post.title %}
-{% assign _excerpt = post.excerpt_en | default: post.excerpt %}
+{%- comment -%}
+  标题与摘要的英文字段只在英文页启用（与 archive-single.html 同一套判断），
+  否则中文 /talks/ 与首页会议清单一补上 title_en 就会变成英文。
+{%- endcomment -%}
+{% assign title = post.title %}
+{% assign _excerpt = post.excerpt %}
+{% if _en %}
+  {% assign title = post.title_en | default: post.title %}
+  {% assign _excerpt = post.excerpt_en | default: post.excerpt %}
+{% endif %}
 {% assign _type = post.type %}
 {% assign _venue = post.venue %}
 {% assign _loc = post.location %}

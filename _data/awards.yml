@@ -24,59 +24,79 @@
       text_en: "First Prize (Category A, Screenwriting), 4th \"Yi Yun China\" Art Education Innovation and Practice Exhibition"
       level: national
       note: "面向全国各高等院校征集（简称“国艺展”）"
+      note_en: "Open to higher-education institutions nationwide (known as the National Art Exhibition)"
     - text: "获第三届新时代文化传播与媒介发展青年学者论坛二等奖"
       text_en: "Second Prize, 3rd Young Scholars Forum on Cultural Communication and Media Development"
       level: national
       note: "论文《文化生态视域下南京白局的个性维系与当代建构》；面向海内外公开征稿"
+      note_en: "Paper: “Sustaining the Character of Nanjing Baiju and Its Contemporary Construction from the Perspective of Cultural Ecology”; open call for submissions in China and abroad"
 
 - year: "2025"
   items:
     - text: "获南京大学历史学院第五届茅家琦史学论坛优秀奖《四神博局纹饰的质与文》"
-      text_en: "Award of Excellence, Fifth Mao Jiaqi History Forum, School of History, Nanjing University — \"Zhi and Wen in Four-Deity TLV Mirror Ornament\""
+      text_en: "Award of Excellence, Fifth Mao Jiaqi History Forum, School of History, Nanjing University — “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror”"
       level: school
       note: "2025.11，论文《四神博局纹饰的质与文》"
+      note_en: "2025.11, paper: “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror”"
 
 - year: "2022"
   items:
     - text: "获北京大学可视化暑期学校优秀课程设计"
+      text_en: "Outstanding Course Project, Peking University Visualisation Summer School"
       level: other
       note: "北京大学"
+      note_en: "Peking University"
     - text: "获南京大学研究生公益服务优秀奖"
+      text_en: "Award of Excellence for Public Service by Postgraduate Students, Nanjing University"
       level: school
       note: "社会实践"
+      note_en: "Social practice"
 
 - year: "2021"
   items:
     - text: "获江苏省大学生创新训练计划优秀结项"
+      text_en: "Outstanding Completion, Jiangsu Provincial Undergraduate Innovation Training Programme"
       level: provincial
       note: "江苏省教育厅"
+      note_en: "Jiangsu Provincial Department of Education"
     - text: "获中国好创意暨全国数字艺术设计大赛江苏赛区二等奖"
+      text_en: "Second Prize, Jiangsu Division, China Creative & National Digital Art Design Competition"
       level: provincial
       note: "中国好创意暨全国数字艺术设计大赛组委会"
+      note_en: "Organising Committee, China Creative & National Digital Art Design Competition"
     - text: "连续三年获南京大学校级二、三等奖学金"
+      text_en: "Nanjing University academic scholarships (second and third class), three years in a row"
       level: school
       note: "2021 – 2024"
 
 - year: "2020"
   items:
     - text: "获第十二届全国大学生广告艺术大赛江苏赛区优秀奖"
+      text_en: "Award of Excellence, Jiangsu Division, 12th National College Student Advertising Art Competition"
       level: provincial
       note: "全国大学生广告艺术大赛江苏赛区"
+      note_en: "Jiangsu Division, National College Student Advertising Art Competition"
 
 - year: "2019"
   items:
     - text: "获江苏高校学生境外学习政府奖学金"
+      text_en: "Jiangsu Provincial Government Scholarship for Overseas Study"
       level: provincial
       note: "江苏省教育厅"
+      note_en: "Jiangsu Provincial Department of Education"
 
 - year: "2018"
   items:
     - text: "获中国大学生计算机设计大赛全国三等奖"
+      text_en: "Third Prize (National), China College Student Computer Design Competition"
       level: national
       note: "中国大学生计算机设计大赛组委会"
+      note_en: "Organising Committee, China College Student Computer Design Competition"
     - text: "获江苏省计算机设计大赛校级一等奖"
+      text_en: "First Prize (University Level), Jiangsu Provincial Computer Design Competition"
       level: school
       note: "南京晓庄学院"
+      note_en: "Nanjing Xiaozhuang University"
 
 - year: "荣誉"
   year_en: "Honours"

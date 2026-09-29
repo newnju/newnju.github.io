@@ -14,11 +14,13 @@
   {% assign teaser = site.teaser %}
 {% endif %}
 
-{% assign title = post.title_en | default: post.title %}
+{% assign title = post.title %}
 {% assign _type = post.type %}
 {% assign _venue = post.venue %}
 {% assign _loc = post.location %}
+{%- comment -%} 英文字段只在英文页启用，中文页始终用中文字段 {%- endcomment -%}
 {% if _en %}
+  {% assign title = post.title_en | default: post.title %}
   {% assign _type = post.type_en | default: post.type %}
   {% assign _venue = post.venue_en | default: post.venue %}
   {% assign _loc = post.location_en | default: post.location %}

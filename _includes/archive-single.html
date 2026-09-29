@@ -7,6 +7,18 @@
   标题与摘要支持可选英文字段 title_en / excerpt_en，未填时回落中文。
 {%- endcomment -%}
 {% assign ui = site.data.ui-text[page.locale] | default: site.data.ui-text[site.locale] %}
+{%- comment -%}
+  期刊名与引用也有英文版（venue_en / citation_en），英文页优先取它们、缺省回落中文。
+  条目没有独立的语言标记，因此这里按当前页面的 locale 判断。
+{%- endcomment -%}
+{% assign _en = false %}
+{% if page.locale contains 'en' %}{% assign _en = true %}{% endif %}
+{% assign _venue = post.venue %}
+{% assign _citation = post.citation %}
+{% if _en %}
+  {% assign _venue = post.venue_en | default: post.venue %}
+  {% assign _citation = post.citation_en | default: post.citation %}
+{% endif %}
 
 {% if post.header.teaser %}
   {% capture teaser %}{{ post.header.teaser }}{% endcapture %}
@@ -14,7 +26,12 @@
   {% assign teaser = site.teaser %}
 {% endif %}
 
-{% assign title = post.title_en | default: post.title %}
+{%- comment -%}
+  标题与摘要的英文字段只在英文页启用。此前写成 title_en | default: title，
+  中文页也会优先显示英文标题 —— 一旦条目补上 title_en，中文列表就整排变英文。
+{%- endcomment -%}
+{% assign title = post.title %}
+{% if _en %}{% assign title = post.title_en | default: post.title %}{% endif %}
 {% if post.id %}
   {% assign title = title | markdownify | remove: "<p>" | remove: "</p>" %}
 {% endif %}
@@ -43,7 +60,7 @@
 
     <h2 class="archive__item-title" itemprop="headline">
       {% if _copyable %}
-        <a href="{{ _title_href }}" class="js-copy-citation" data-citation="{{ post.citation | escape }}" data-label-done="{{ ui.copied_label | default: '已复制引用' }}" title="{{ ui.copy_citation_hint | default: '点击标题复制引用（GB/T 7714）' }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+        <a href="{{ _title_href }}" class="js-copy-citation" data-citation="{{ _citation | escape }}" data-label-done="{{ ui.copied_label | default: '已复制引用' }}" title="{{ ui.copy_citation_hint | default: '点击标题复制引用（GB/T 7714）' }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
       {% elsif post.link %}
         <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
       {% else %}
@@ -56,14 +73,25 @@
     {% endif %}
 
     {% if post.collection == 'teaching' %}
-      <p> {{ post.type }}{{ ui.sep_comma | default: "，" }}<i>{{ post.venue }}</i>{% if post.datetext %}{{ ui.sep_comma | default: "，" }}{{ post.datetext }}{% endif %} </p>
+      {%- comment -%}
+        教学的「类型 / 单位」也备了英文字段（type_en / venue_en），缺省回落中文。
+        条目没有独立的语言标记，因此这里按当前页面的 locale 判断。
+      {%- endcomment -%}
+      {% assign _t_type = post.type %}
+      {% assign _t_venue = post.venue %}
+      {% if page.locale contains 'en' %}
+        {% assign _t_type = post.type_en | default: post.type %}
+        {% assign _t_venue = post.venue_en | default: post.venue %}
+      {% endif %}
+      <p> {{ _t_type }}{{ ui.sep_comma | default: "，" }}<i>{{ _t_venue }}</i>{% if post.datetext %}{{ ui.sep_comma | default: "，" }}{{ post.datetext }}{% endif %} </p>
     {% elsif post.collection == 'publications' %}
-      <p>{{ ui.published_in | default: "发表于" }} <i>{{ post.venue }}</i>{{ ui.year_open | default: "（" }}{{ post.date | date: "%Y" }}{{ ui.year_suffix | default: " 年）" }}</p>
+      <p>{{ ui.published_in | default: "发表于" }} <i>{{ _venue }}</i>{{ ui.year_open | default: "（" }}{{ post.date | date: "%Y" }}{{ ui.year_suffix | default: " 年）" }}</p>
     {% elsif post.date %}
       <p class="page__date"><strong><i class="fa fa-fw fa-calendar" aria-hidden="true"></i> {{ ui.date_label | default: "发布时间：" }}</strong> <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time></p>
     {% endif %}
 
-    {% assign _excerpt = post.excerpt_en | default: post.excerpt %}
+    {% assign _excerpt = post.excerpt %}
+    {% if _en %}{% assign _excerpt = post.excerpt_en | default: post.excerpt %}{% endif %}
     {% if _excerpt and site.read_more != 'enabled' %}
     <div class="archive__item-excerpt" itemprop="description">{{ _excerpt | markdownify }}</div>
     {% elsif _excerpt and site.read_more == 'enabled' %}
@@ -95,9 +123,9 @@
     {% endif %}
 
     {% if post.citation and _links != "" %}
-      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ post.citation }}<br />{{ _links }}</p>
+      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ _citation }}<br />{{ _links }}</p>
     {% elsif post.citation %}
-      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ post.citation }}</p>
+      <p>{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ _citation }}</p>
     {% elsif _links != "" %}
       <p>{{ _links }}</p>
     {% endif %}

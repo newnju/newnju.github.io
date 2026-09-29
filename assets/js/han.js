@@ -287,8 +287,16 @@
       function (n) { n.parentNode.removeChild(n); }
     );
 
+    // 先入文档再量宽度：脱离文档的元素没有布局，shell.clientWidth 恒为 0，
+    // 下面这行于是永远落到兜底值 0.1。窄条固定 132px，只有在 1320px 视口下
+    // 才恰好等于 10vw —— 更宽时缩略图比窄条宽、右缘被裁，更窄时右侧留白。
+    // 先 appendChild 拿到真实宽度，比例才与窄条严丝合缝（固定定位元素不参与排版，
+    // 因此这一步不会改变下面量到的页面宽高）。
+    document.body.appendChild(shell);
+
     var pageW = document.documentElement.clientWidth;
     var pageH = document.documentElement.scrollHeight;
+    // 「按宽适配」：整页横向压进窄条；宽度异常为 0 时才退回 0.1
     var scale = shell.clientWidth / pageW || 0.1;
 
     clone.style.width = pageW + "px";
@@ -297,37 +305,105 @@
     inner.style.height = pageH * scale + "px";
     inner.appendChild(clone);
 
-    document.body.appendChild(shell);
+    // 缩略图是整页 DOM 的克隆，读屏软件再读一遍毫无意义，而它本身也不可键盘操作，
+    // 因此整块对辅助技术隐藏
+    shell.setAttribute("aria-hidden", "true");
 
-    var ticking = false;
-    function sync() {
-      ticking = false;
-      var vh = window.innerHeight;
-      view.style.height = Math.max(14, vh * scale) + "px";
-      view.style.transform = "translateY(" + window.scrollY * scale + "px)";
-    }
-    function requestSync() {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(sync);
+    var vh = window.innerHeight;
+    view.style.height = Math.max(14, vh * scale) + "px";
+
+    // 视口方块的跟随方式分两种：
+    //  · 支持 animation-timeline 的浏览器（Chrome 115+ 等）交给 CSS 滚动驱动动画，
+    //    方块在合成线程上跟随滚动条，与拖动完全同步，也不必监听 scroll；
+    //  · 其余浏览器回退到 JS，且**不做 rAF 节流** —— 节流会让方块比滚动条慢一帧，
+    //    拖动滚动条时肉眼可见滞后。每次滚动只写一次 transform，开销可以接受。
+    var cssDriven =
+      window.CSS && CSS.supports && CSS.supports("animation-timeline", "scroll()");
+
+    if (cssDriven) {
+      // 方块从顶部走到「可滚动距离 × 缩放比」
+      shell.style.setProperty("--han-minimap-travel", (pageH - vh) * scale + "px");
+    } else {
+      var sync = function () {
+        view.style.transform = "translateY(" + window.scrollY * scale + "px)";
+      };
+      window.addEventListener("scroll", sync, { passive: true });
+      sync();
     }
 
-    window.addEventListener("scroll", requestSync, { passive: true });
     window.addEventListener("resize", function () {
       // 尺寸变化后比例失效，重建比原地修正更简单可靠
       shell.parentNode.removeChild(shell);
       initMinimap();
     });
 
-    // 点击缩略图跳到对应位置
-    shell.addEventListener("click", function (event) {
+    // 按下即定位、拖动即跟随。
+    // 这里必须用「即时定位」，不能用 scrollTo({behavior:"smooth"})：
+    // smooth 会把拖动途中的每个目标位置排进一段动画，指针已经移开、画面还在慢慢追，
+    // 于是拖动缩略图明显滞后；原生滚动条之所以跟手，正是因为它没有动画队列。
+    //
+    // 另外主题在 html 上写了 scroll-behavior: smooth（见 _sass/layout/_base.scss），
+    // 这条规则会让不带参数的 scrollTo(0, y) 也走动画，等于把滞后又请了回来。
+    // 所以定位时临时把根元素的 scroll-behavior 压成 auto，滚完立刻还原，
+    // 既不破坏页内锚点的平滑滚动，也保证这里的拖动逐帧跟手。
+    var scrollRoot = document.documentElement;
+    var maxScroll = Math.max(0, pageH - window.innerHeight);
+
+    function scrollToPoint(clientY) {
       var rect = shell.getBoundingClientRect();
-      var ratio = (event.clientY - rect.top) / rect.height;
+      var ratio = (clientY - rect.top) / rect.height;
+      if (ratio < 0) ratio = 0;
+      if (ratio > 1) ratio = 1;
+      // 让指针落在视口方块的中心，而不是让方块顶边对齐指针
       var target = ratio * pageH - window.innerHeight / 2;
-      window.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+      if (target < 0) target = 0;
+      if (target > maxScroll) target = maxScroll;
+
+      var prev = scrollRoot.style.scrollBehavior;
+      scrollRoot.style.scrollBehavior = "auto";
+      window.scrollTo(0, target);
+      scrollRoot.style.scrollBehavior = prev;
+    }
+
+    var dragPointer = null;
+
+    shell.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) return; // 只接主键，右键 / 中键不介入
+      dragPointer = event.pointerId;
+      shell.classList.add("is-dragging");
+      // 捕获指针：拖出这条窄条后仍然收得到 pointermove，
+      // 手指在触控板上移出窗口边缘、鼠标划出屏幕也不会「丢」掉这次拖动
+      if (shell.setPointerCapture) {
+        try {
+          shell.setPointerCapture(dragPointer);
+        } catch (e) {
+          /* 指针已失效等情况忽略即可 */
+        }
+      }
+      scrollToPoint(event.clientY);
+      event.preventDefault(); // 拖动时不要顺手选中页面文字
     });
 
-    sync();
+    shell.addEventListener("pointermove", function (event) {
+      if (dragPointer === null || event.pointerId !== dragPointer) return;
+      scrollToPoint(event.clientY);
+    });
+
+    function endDrag(event) {
+      if (dragPointer === null || event.pointerId !== dragPointer) return;
+      if (shell.releasePointerCapture) {
+        try {
+          shell.releasePointerCapture(dragPointer);
+        } catch (e) {
+          /* 指针已被系统回收时忽略 */
+        }
+      }
+      dragPointer = null;
+      shell.classList.remove("is-dragging");
+    }
+
+    shell.addEventListener("pointerup", endDrag);
+    shell.addEventListener("pointercancel", endDrag);
   }
 
   if (document.readyState === "complete") {

@@ -1,6 +1,8 @@
 ---
 title: "《运用新媒体推动非遗项目南京白局的传承与发展》"
+title_en: "Using New Media to Sustain Nanjing Baiju as Intangible Cultural Heritage"
 excerpt: "江苏省大学生创新训练计划项目（201911460038Y），**项目负责人**，2019.09 – 2021.09，**获省级优秀结项**。通过短视频与社交媒体推广南京白局，累计触达 1 万以上受众，并策划执导纪录片。"
+excerpt_en: "Jiangsu Provincial Undergraduate Innovation Training Programme (201911460038Y), **project lead**, 2019.09 – 2021.09, **graded Excellent at provincial level**. Promoted Nanjing Baiju through short video and social media, reaching more than 10,000 viewers, and planned and directed a documentary."
 collection: portfolio
 permalink: /portfolio/nanjing-baiju
 ---

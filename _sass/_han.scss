@@ -54,6 +54,12 @@ h1, h2, h3, h4 {
 
 .han-mirror {
     float: right;
+    /* 相对正常位置略向上挪一点，让图更贴近页面右上角。
+       用 relative 偏移而非 margin：float 的布局占位不变，
+       正文的环绕宽度不受影响，只是图本身挪位。
+       横向的 60px 另有条件，见紧随其后的媒体查询。 */
+    position: relative;
+    top: -30px;
     width: 272px;
     max-width: 43%;
     margin: 0.2em 0 1.2em 1.6em;
@@ -62,6 +68,17 @@ h1, h2, h3, h4 {
     /* 颜色呼吸：在五个色相间缓慢往复，默认生效、无需悬浮。
        具体色值见文件末尾的四套 @keyframes（按配色与明暗切换）。 */
     animation: han-mirror-breathe 18s ease-in-out infinite;
+}
+
+/* 再往右 60px，只在大屏（≥ $large = 925px）生效：
+   此宽度起 .page 用 span(10 of 12) + suffix(2 of 12)，正文栏右侧空出
+   约 2/12 宽的空白栏（925px 时约 150px），图右移后仍落在栏内、不顶出视口；
+   而 925px 以下 .page 占满整行，图本来就离视口右缘只剩 ~19px，
+   强行右移会把页面撑出横向滚动条。 */
+@media (min-width: 57.8125em) {
+    .han-mirror {
+        right: -60px;
+    }
 }
 
 .han-mirror svg {
@@ -192,6 +209,10 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
         width: 200px;
         max-width: 70%;
         margin: 0 auto 1.4em;
+        /* 窄屏上图为居中块级元素，把桌面端的上移归零，免得它往上贴住标题；
+           右移本就在大屏才生效，这里一并写 0，留作兜底 */
+        top: 0;
+        right: 0;
     }
 }
 
@@ -663,8 +684,22 @@ html[data-theme="dark"] ::selection {
     height: 100vh;
     z-index: 30;
     overflow: hidden;
-    cursor: pointer;
+    /* 整条都是拖动区：按下即定位、拖动即跟随（逻辑见 assets/js/han.js 第 5 节） */
+    cursor: grab;
+    /* 触屏上别把这次按下当成翻页手势，否则拖动缩略图会与页面滚动互抢 */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
     border-left: 1px solid var(--global-border-color);
+}
+
+/* 拖动中的状态：光标换成抓住的手，方块提亮一档作为反馈 */
+.han-minimap.is-dragging {
+    cursor: grabbing;
+}
+
+.han-minimap.is-dragging .han-minimap__view {
+    opacity: 1;
 }
 
 .han-minimap::before {
@@ -721,6 +756,22 @@ html[data-theme="dark"] ::selection {
     border: 1px solid var(--han-patina);
     border-radius: 2px;
     opacity: 0.85;
+    will-change: transform;
+}
+
+/* 滚动驱动动画：方块从顶部走到「可滚动距离 × 缩放比」（脚本写入该变量）。
+   支持的浏览器由合成线程跟随滚动条，拖动时与内容完全同步、没有 JS 那一帧的滞后；
+   不支持的浏览器走 han.js 里的回退分支（直接监听 scroll 同步更新）。 */
+@keyframes han-minimap-track {
+    from { transform: translateY(0); }
+    to   { transform: translateY(var(--han-minimap-travel, 0px)); }
+}
+
+@supports (animation-timeline: scroll()) {
+    .han-minimap__view {
+        animation: han-minimap-track linear both;
+        animation-timeline: scroll(root block);
+    }
 }
 
 @media (max-width: 1199px) {

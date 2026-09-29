@@ -1,10 +1,32 @@
 {% include base_path %}
 
+{%- comment -%}
+  页脚
+  --------------------------------------------------------------------------
+  文案按 page.locale 取（缺省回落 site.locale），于是 /en/ 下的英文页显示
+  Follow / Feed / Sitemap，中文页一切照旧。此前固定取 site.locale，
+  英文页页脚会冒出「关注：」「订阅」。
+  版权行的署名同理：英文页用 author.name_en（写法与 _includes/author-profile.html
+  一致，_locale 含 'en' 即取英文名），中文页仍是 site.name。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _owner = site.name | default: site.title -%}
+{%- if _locale contains 'en' -%}
+  {%- assign _owner = site.author.name_en | default: _owner -%}
+{%- endif -%}
+{%- comment -%}
+  站点地图也分两份：英文页指向 /en/sitemap/，中文页仍是 /sitemap/，
+  否则英文页脚显示 Sitemap 却跳到中文页。
+{%- endcomment -%}
+{%- assign _sitemap_path = "/sitemap/" -%}
+{%- if _locale contains 'en' -%}{%- assign _sitemap_path = "/en/sitemap/" -%}{%- endif -%}
+
 {% if site.author.github or site.author.bitbucket or site.atom_feed.hide != true %}
 <div class="page__footer-follow">
   <ul class="social-icons">
-    {% if site.data.ui-text[site.locale].follow_label %}
-      <li><strong>{{ site.data.ui-text[site.locale].follow_label }}</strong></li>
+    {% if _ui.follow_label %}
+      <li><strong>{{ _ui.follow_label }}</strong></li>
     {% endif %}
     {% if site.author.github %}
       <li><a href="https://github.com/{{ site.author.github }}"><i class="fab fa-github" aria-hidden="true"></i> GitHub</a></li>
@@ -13,13 +35,13 @@
       <li><a href="https://bitbucket.org/{{ site.author.bitbucket }}"><i class="fab fa-bitbucket" aria-hidden="true"></i> Bitbucket</a></li>
     {% endif %}
     {% if site.atom_feed.hide != true %}
-    <li><a href="{% if site.atom_feed.path %}{{ site.atom_feed.path }}{% else %}{{ base_path }}/feed.xml{% endif %}"><i class="fa fa-fw fa-rss-square" aria-hidden="true"></i> {{ site.data.ui-text[site.locale].feed_label | default: "Feed" }}</a></li>
+    <li><a href="{% if site.atom_feed.path %}{{ site.atom_feed.path }}{% else %}{{ base_path }}/feed.xml{% endif %}"><i class="fa fa-fw fa-rss-square" aria-hidden="true"></i> {{ _ui.feed_label | default: "Feed" }}</a></li>
     {% endif %}
   </ul>
 </div>
 {% endif %}
 
 <div class="page__footer-copyright">
-  &copy; {{ site.time | date: '%Y' }} {{ site.name | default: site.title }}, {{ site.data.ui-text[site.locale].powered_by | default: "Powered by" }} <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://github.com/academicpages/academicpages.github.io">AcademicPages</a>, a fork of <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.<br />
-  Site last updated {{ "now" | date: '%Y-%m-%d' }}, <a href="/sitemap/" style="text-transform: uppercase;">{{ site.data.ui-text[site.locale].site_map | default: "Sitemap" }}</a>
+  &copy; {{ site.time | date: '%Y' }} {{ _owner }}, {{ _ui.powered_by | default: "Powered by" }} <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://github.com/academicpages/academicpages.github.io">AcademicPages</a>, a fork of <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.<br />
+  Site last updated {{ "now" | date: '%Y-%m-%d' }}, <a href="{{ _sitemap_path }}" style="text-transform: uppercase;">{{ _ui.site_map | default: "Sitemap" }}</a>
 </div>

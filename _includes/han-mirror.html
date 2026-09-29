@@ -15,9 +15,17 @@
        .mirror-inscription 铭文带                      顺时针
      内区（方框、TLV、乳钉、十二辰、镜钮）不转。
      ========================================================================== -->
+{%- comment -%}
+  图注与无障碍描述按 page.locale 取（键见 _data/ui-text.yml 的 mirror_caption /
+  mirror_aria，缺省回落中文），因此 /en/ 下首页显示的是英文图注。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _mirror_aria = _ui.mirror_aria | default: "四神博局镜图式：镜钮与柿蒂纹钮座，双线方框内十二乳钉与十二辰铭，方框外为 TLV 博局纹与青龙、白虎、朱雀、玄武四神，外区依次为铭文带、栉齿纹、锯齿纹、云气纹与素缘" -%}
+{%- assign _mirror_caption = _ui.mirror_caption | default: "博局镜纹样结构 · 依新莽四神博局镜拓片摹绘" -%}
 <div class="han-mirror">
   <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img"
-       aria-label="四神博局镜图式：镜钮与柿蒂纹钮座，双线方框内十二乳钉与十二辰铭，方框外为 TLV 博局纹与青龙、白虎、朱雀、玄武四神，外区依次为铭文带、栉齿纹、锯齿纹、云气纹与素缘">
+       aria-label="{{ _mirror_aria }}">
     <defs>
       <path id="han-petal"
             d="M0 0 C 8 -6 13 -16 11 -25 C 9.5 -31 4.8 -35 0 -36.5 C -4.8 -35 -9.5 -31 -11 -25 C -13 -16 -8 -6 0 0 Z"/>
@@ -286,5 +294,5 @@
       <circle r="7.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>
     </g>
   </svg>
-  <span class="han-mirror__caption">博局镜纹样结构 · 依新莽四神博局镜拓片摹绘</span>
+  <span class="han-mirror__caption">{{ _mirror_caption }}</span>
 </div>

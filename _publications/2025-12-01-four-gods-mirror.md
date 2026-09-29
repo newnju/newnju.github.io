@@ -1,13 +1,17 @@
 ---
 title: "四神博局镜与汉代宇宙观"
+title_en: "The Four-Deity TLV Mirror and Han Cosmology"
 collection: publications
 category: manuscripts
 permalink: /publication/2025-four-gods-mirror
 link: "https://wap.cnki.net/touch/web/Journal/Article/HXWH202504010.html"
 excerpt: '以中国国家博物馆藏新莽四神博局镜为例，讨论镜背纹饰的分区方式，以及博局纹与四神纹所对应的汉代宇宙观。'
+excerpt_en: 'Taking a Xin-dynasty four-deity TLV mirror in the National Museum of China as its case, this paper examines how the reverse is divided into zones, and how the TLV and four-deity motifs map onto Han cosmological thought.'
 date: 2025-12-01
 venue: '华夏文化'
+venue_en: 'Huaxia Wenhua'
 citation: '武嘉文. 四神博局镜与汉代宇宙观[J]. 华夏文化, 2025, (04): 27–32.'
+citation_en: 'Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." Huaxia Wenhua, 2025, (04): 27–32.'
 bibtex: |
   @article{wu2025sigods,
     author   = {武嘉文},

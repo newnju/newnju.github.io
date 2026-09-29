@@ -43,7 +43,7 @@ en: &DEFAULT_EN
   # --- 本站自定义键 ---
   published_in               : "Published in"
   citation_label             : "Recommended citation"
-  copy_citation_hint         : "Click the title to copy the citation (GB/T 7714)"
+  copy_citation_hint         : "Click the title to copy the citation"
   copied_label               : "Citation copied"
   cnki_link_label            : "CNKI"
   download_paper             : "Download Paper"
@@ -66,6 +66,8 @@ en: &DEFAULT_EN
   award_level_other          : "Other"
   follow_btn                 : "Follow"
   sep_pipe                   : " | "
+  mirror_caption             : "Structure of a TLV mirror · traced from a rubbing of a Xin-dynasty four-deity mirror"
+  mirror_aria                : "Diagram of a four-deity TLV mirror: a knob on a persimmon-calyx seat; inside a double-line square, twelve nipples alternating with the twelve earthly-branch characters; outside it, TLV guides and the four deities; and an outer zone of inscription band, comb pattern, sawtooth band, cloud scrolls and a plain rim"
 en-US:
   <<: *DEFAULT_EN
 en-CA:
@@ -364,6 +366,8 @@ zh: &DEFAULT_ZH
   award_level_other          : "其他"
   follow_btn                 : "关注"
   sep_pipe                   : "｜"
+  mirror_caption             : "博局镜纹样结构 · 依新莽四神博局镜拓片摹绘"
+  mirror_aria                : "四神博局镜图式：镜钮与柿蒂纹钮座，双线方框内十二乳钉与十二辰铭，方框外为 TLV 博局纹与青龙、白虎、朱雀、玄武四神，外区依次为铭文带、栉齿纹、锯齿纹、云气纹与素缘"
 zh-CN:
   <<: *DEFAULT_ZH
 

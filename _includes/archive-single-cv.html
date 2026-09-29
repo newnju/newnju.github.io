@@ -14,10 +14,14 @@
   {% assign teaser = site.teaser %}
 {% endif %}
 
-{% assign title = post.title_en | default: post.title %}
+{% assign title = post.title %}
 {% assign _citation = post.citation %}
 {% assign _type = post.type %}
+{%- comment -%}
+  英文字段只在英文页启用：中文履历页若优先取 title_en，条目一补英文就整排变英文。
+{%- endcomment -%}
 {% if _en %}
+  {% assign title = post.title_en | default: post.title %}
   {% assign _citation = post.citation_en | default: post.citation %}
   {% assign _type = post.type_en | default: post.type %}
 {% endif %}
@@ -50,7 +54,7 @@
     {% if post.read_time %}
       <p class="page__meta"><i class="fa fa-clock" aria-hidden="true"></i> {% include read-time.html %}</p>
     {% endif %}
-    {% if post.venue %}<p class="archive__item-excerpt" itemprop="description">{% if _citation %}{{ _citation }}{% else %}{{ _type }}{{ _ui.sep_pipe | default: "｜" }}{{ post.venue }}{% endif %}</p>{% endif %}
+    {% if post.venue %}<p class="archive__item-excerpt" itemprop="description">{% if _citation %}{{ _citation }}{% else %}{{ _type }}{{ _ui.sep_pipe | default: "｜" }}{% if _en %}{{ post.venue_en | default: post.venue }}{% else %}{{ post.venue }}{% endif %}{% endif %}</p>{% endif %}
     </li>
  </article>
 </div>
