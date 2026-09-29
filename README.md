@@ -211,6 +211,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 - 导航栏目名：`_data/navigation.yml` 每项的 `title_en`
 - 侧栏姓名 / 简介 / 单位：`_config.yml` 的 `author.name_en` / `bio_en` / `location_en` / `employer_en`
 - 论文分类名：`_config.yml` 的 `publication_category.*.title_en`
+- 搜索与社交预览里的站点简介：`_config.yml` 的 `description_en`（`_includes/seo.html` 的 `<meta name="description">`；缺了回落中文）
 
 条目内容也可以有英文版，**全都是选填，缺了自动回落中文**：
 
@@ -219,6 +220,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 | `title` | `title_en` |
 | `excerpt` | `excerpt_en` |
 | `citation` | `citation_en` |
+| `description`（页面级简介） | `description_en` |
 | `type` / `venue` / `location`（会议条目） | `type_en` / `venue_en` / `location_en` |
 | `text` / `note` / `year`（获奖数据，`_data/awards.yml`） | `text_en` / `note_en` / `year_en` |
 
