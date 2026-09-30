@@ -161,6 +161,29 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 实现方式是克隆整页 DOM，用 `transform: scale()` 缩进 132px 宽的窄条里，只动视口方块的位置，不触发重排。
 
+**出现时机**：目标是「解析一结束就出现」。线上原本要 2.5 秒起步，外链慢时要十几秒（实测 14–19 秒），三处一起改：
+
+- `_includes/scripts.html` 里 han.js 用 `async` 而不是 `defer`：defer 脚本严格按文档顺序执行，
+  页脚里 defer 的 MathJax 来自 jsDelivr，一慢就把排在它后面的 han.js 一起拖住；
+- 脚本内部按「解析完成」起步（`whenParsed`：看 `readyState` 翻到 interactive），不等 `DOMContentLoaded`；
+- 建图前只等**同源** `link[rel~="stylesheet"]`（`whenStyled`）：检查那一刻这类链接只有 head 里的
+  main.css，同源样式一到就有；jsDelivr 的 academicons 跨域，被 `location.host` 这条判断直接跳过，
+  不等它 —— 它只管图标字形，慢起来没边；另加 1.2 秒上限兜底，超时就先建，
+  缺的图标由 `load` 后的重建补齐；
+- 之后 `load` 再校正一次比例、`document.fonts.ready` 再一次（字体换了行高会变）。
+
+离线镜像实测（把 MathJax 推迟 2.5 秒模拟慢外链；数字是其中一次运行，逐次有几毫秒浮动）：
+
+| 组合 | 解析完 | load | 缩略图首次出现 |
+| --- | --- | --- | --- |
+| `defer` + 旧脚本（线上原状） | 15ms | 2557ms | 2562ms |
+| `async` + 旧脚本 | 16ms | 2564ms | 2571ms |
+| `async` + 现脚本 | 19ms | 2559ms | **369ms** |
+
+第二行说明光把 `defer` 换成 `async` 没用 —— 旧脚本自己等 `load`，必须两边一起改。
+末行同时验证了「首建时样式已就位」：克隆宽 132px ≈ 窄条 131px，且 `load` 之后又建了一次
+（`建图=2次`，第二次是校正比例）。
+
 **「按宽适配」的比例必须在 `appendChild` 之后量。** 缩放比取 `shell.clientWidth / 页面宽`，
 而脱离文档的元素没有布局、`clientWidth` 恒为 0，于是 `|| 0.1` 这个兜底值会被一直用下去。
 窄条固定 132px，只有视口恰好 1320px 时 `132 / 1320` 才等于 0.1：再宽缩略图比窄条宽、
@@ -193,7 +216,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
   否则原树与克隆树的元素索引会错位，定位修正整体失效
 - 侧栏 `.sidebar` 在宽屏下是 `position: fixed` + `height: 100vh`，在缩略容器里既脱离文档流
   又占满整屏，因此缩略图内直接隐藏，只呈现正文
-- 等 `load` 而非 `DOMContentLoaded` 再初始化，否则图片未就位、页面总高度偏小，比例会算错
+- 初始化不等 `load` 才第一次建图（图片与字体就位后再校正比例），而是「解析完成 + 同源样式就位」即建，见上面的「出现时机」；否则外链一慢，缩略图要等十几秒
 - 比例按宽度定，缩略图通常比窄条矮（1440px 下首页 320px、最长的一页 cv 370px，都远低于 800px 的窄条）；
   页高超过「窄条可视宽 × 窄条高 / 视口宽」时缩略图才会高出窄条，方块会跑出可视区，改版后留意
 - 窗口尺寸变化时销毁重建，比原地修正比例更简单可靠
@@ -241,6 +264,30 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 `post.title_en | default: post.title` 这种「无条件优先取英文」的写法 ——
 那样中文页也会优先显示英文，条目一补英译，中文列表就整排变英文。
 中文页的中文标题/摘要/期刊/引用与英文页的英文版本，两边都要抽查。
+
+### 7. 页脚（跟随正文，位于页面最下面）
+
+页脚**不再钉在视口底部**。它原本是 `position: fixed; bottom: 0`，于是从头滚到尾都占着视口最下面一条；
+现在回到正常文档流，只在滚到页面末尾时出现（`_sass/layout/_footer.scss`）。
+
+配套要去掉两处「给固定页脚让位」的旧安排，否则页面末尾会多出一段空档：
+
+- `_sass/layout/_base.scss` 里 `body` 的 `padding-bottom: 9em` —— 已删；
+- 主题 JS 的 `bumpIt()`（`assets/js/_main.js`）：每次加载与窗口变化时给 `body` 内联
+  `margin-bottom = 页脚高度`。它已从源码删除，但线上加载的是 uglify 产物 `main.min.js`
+  （`npm run build:js` 生成，见 `package.json`），暂未重新构建，因此在
+  `_sass/layout/_footer.scss` 里补一条 `body { margin-bottom: 0 !important; }` 兜住 ——
+  作者样式的 `!important` 能压过「不带 `!important` 的内联样式」，与 JS 何时运行无关。
+  将来若重新构建了 bundle，这条规则可以删。
+
+实测（1400px 视口，离线镜像里「线上样式」与「改后样式」对照）：
+
+| | `position` | 页面顶部时可见 | 滚到底：页脚底边 / 页高 |
+| --- | --- | --- | --- |
+| 改前 | `fixed` | 是（贴在视口下沿，top=689） | 3512 / 3512 |
+| 改后 | `static` | 否（top=3400） | 3512 / 3512 |
+
+判断标准很直白：**在页面顶部看不到页脚，滚到最底下才看到**，页脚之下不留空白。
 
 ---
 

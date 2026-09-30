@@ -257,8 +257,15 @@
   "use strict";
 
   var MIN_WIDTH = 1200; // 窄于此宽度不显示，避免遮挡正文
+  var lastGeo = "";     // 上次建图时的「视口宽 x 页面高」，用来判断是否需要重建
+  var syncScale = 0.1;  // JS 回退路径下当前用的缩放比，建图时更新
+  var syncBound = false; // scroll 监听是否已挂（只挂一次，避免重建时叠加）
 
-  function initMinimap() {
+  function geometryKey() {
+    return document.documentElement.clientWidth + "x" + document.documentElement.scrollHeight;
+  }
+
+  function buildMinimap() {
     if (window.innerWidth < MIN_WIDTH) return;
     if (document.querySelector(".han-minimap")) return;
 
@@ -320,22 +327,26 @@
     var cssDriven =
       window.CSS && CSS.supports && CSS.supports("animation-timeline", "scroll()");
 
+    function syncView() {
+      var el = document.querySelector(".han-minimap__view");
+      if (el) el.style.transform = "translateY(" + window.scrollY * syncScale + "px)";
+    }
+
     if (cssDriven) {
       // 方块从顶部走到「可滚动距离 × 缩放比」
       shell.style.setProperty("--han-minimap-travel", (pageH - vh) * scale + "px");
     } else {
-      var sync = function () {
-        view.style.transform = "translateY(" + window.scrollY * scale + "px)";
-      };
-      window.addEventListener("scroll", sync, { passive: true });
-      sync();
+      syncScale = scale;
+      if (!syncBound) {
+        syncBound = true;
+        window.addEventListener("scroll", syncView, { passive: true });
+      }
+      syncView();
     }
 
-    window.addEventListener("resize", function () {
-      // 尺寸变化后比例失效，重建比原地修正更简单可靠
-      shell.parentNode.removeChild(shell);
-      initMinimap();
-    });
+    // 记下这次的量测结果：load / 字体就位后若尺寸没变，就省掉一次重建
+    // （重建 = 再克隆一遍整页 DOM，不便宜）
+    lastGeo = geometryKey();
 
     // 按下即定位、拖动即跟随。
     // 这里必须用「即时定位」，不能用 scrollTo({behavior:"smooth"})：
@@ -406,10 +417,112 @@
     shell.addEventListener("pointercancel", endDrag);
   }
 
-  if (document.readyState === "complete") {
-    initMinimap();
-  } else {
-    // 等图片等资源就位，否则页面总高度会偏小
-    window.addEventListener("load", initMinimap);
+  function destroyMinimap() {
+    var old = document.querySelector(".han-minimap");
+    if (old && old.parentNode) old.parentNode.removeChild(old);
   }
+
+  /* 重建：窄屏/尺寸没变时不动，必要时拆掉旧的重建一次 */
+  function rebuildMinimap(force) {
+    if (window.innerWidth < MIN_WIDTH) {
+      destroyMinimap();
+      lastGeo = "";
+      return;
+    }
+    if (!force && document.querySelector(".han-minimap") && geometryKey() === lastGeo) return;
+    destroyMinimap();
+    buildMinimap();
+  }
+
+  /* 「解析完成」的判定：readyState 由 loading 翻到 interactive 正在解析结束那一刻，
+     早于任何 defer 脚本（实测 Chromium：解析完 4ms 置位，而 1.2s 才能到的 defer
+     脚本到 1229ms 才执行），因此不受页脚里 defer 的 MathJax 拖累。DOMContentLoaded
+     只作兜底。缩略图只依赖 DOM 结构，DOM 就绪即可建图。 */
+  function whenParsed(fn) {
+    if (document.readyState !== "loading") {
+      fn();
+      return;
+    }
+    var done = false;
+    function go() {
+      if (done) return;
+      done = true;
+      document.removeEventListener("readystatechange", onState);
+      document.removeEventListener("DOMContentLoaded", go);
+      fn();
+    }
+    function onState() {
+      if (document.readyState !== "loading") go();
+    }
+    document.addEventListener("readystatechange", onState);
+    document.addEventListener("DOMContentLoaded", go);
+  }
+
+  /* 「样式就位」的判定：样式表还没到就克隆，缩略图会是没上妆的素页、页面高度也偏小；
+     而 load（本来能兜住这一切）可能被 MathJax 拖到十几秒后，等不得。
+     只等**同源**样式表（本站是 head 里的 main.css 与 fontawesome.css，与页面同源、
+     本地就有），不等跨域图标字体（custom.html 里 jsDelivr 的 academicons）——
+     它只管图标字形，慢起来没边；克隆里缺的图标由 load 后的重建补齐。
+     最多等 1.2s，超时就先建 —— 反正 load 之后还会再校正一次。 */
+  function whenStyled(fn) {
+    var pending = [];
+    var links = document.querySelectorAll('link[rel~="stylesheet"]');
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i];
+      if (link.sheet) continue; // 已就位
+      var href = link.getAttribute("href") || "";
+      var host = /^[a-z][a-z0-9+.-]*:\/\/([^/]+)/i.exec(href);
+      if (host && host[1] !== location.host) continue; // 跨域，不等
+      pending.push(link);
+    }
+    if (pending.length === 0) {
+      fn();
+      return;
+    }
+    var done = false;
+    var left = pending.length;
+    var timer = window.setTimeout(go, 1200);
+    function go() {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      fn();
+    }
+    for (var k = 0; k < pending.length; k++) {
+      pending[k].addEventListener("load", one);
+      pending[k].addEventListener("error", one);
+    }
+    function one() {
+      if (--left <= 0) go();
+    }
+  }
+
+  /* 尽早出现，再在资源就位后校正一次比例：
+       · 起点是「解析完成 + 样式就位」，见上面两个函数 —— 不等 load，避免被外链拖住；
+         （han.js 在 scripts.html 里用 async 加载，也不排在慢脚本后面）
+       · load 后再校正一次，此时图片都已就位、页面总高度才定型；
+       · 再等 document.fonts.ready —— 字体换了会改变文字行高，页面高度随之变。 */
+  function bootMinimap() {
+    rebuildMinimap(true);
+    window.addEventListener("load", function () {
+      rebuildMinimap(false);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () {
+          rebuildMinimap(false);
+        });
+      }
+    });
+    // resize 只注册一次：以前写在构建函数里，每次重建都会再叠一个监听，
+    // 而旧监听抓着已经移除的 shell，会反复重建、叠出好几条缩略图
+    window.addEventListener("resize", function () {
+      rebuildMinimap(true);
+    });
+  }
+
+  /* 入口：解析完成 + 样式表就位即建图，不等窗口 load，也不等 DOMContentLoaded。
+     另外 rebuildMinimap 会在 READY 前调 geometryKey()，那里量的是 documentElement.scrollHeight，
+     interactive 阶段文档结构已完整，量得到（之前注释里断言「interactive 时量不到」是错的）。 */
+  whenParsed(function () {
+    whenStyled(bootMinimap);
+  });
 })();

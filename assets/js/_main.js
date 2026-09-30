@@ -155,21 +155,12 @@ $(document).ready(function () {
   // Enable the theme toggle
   $('#theme-toggle').on('click', toggleTheme);
 
-  // Enable the sticky footer
-  var bumpIt = function () {
-    $("body").css("padding-bottom", "0");
-    $("body").css("margin-bottom", $(".page__footer").outerHeight(true));
-  }
-  $(window).resize(function () {
-    didResize = true;
-  });
-  setInterval(function () {
-    if (didResize) {
-      didResize = false;
-      bumpIt();
-    }}, 250);
-  var didResize = false;
-  bumpIt();
+  // 页脚已回归文档流（见 _sass/layout/_footer.scss）：
+  // 这里原有一段 bumpIt()，在每次加载与窗口变化时给 body 内联
+  // padding-bottom: 0 / margin-bottom: 页脚高度，为「钉在视口底部的固定页脚」预留空间。
+  // 那个布局已不存在，这段逻辑随之删除。
+  // 注意 main.min.js 是 uglify 的产物（npm run build:js），本文件改动需重新构建才会生效；
+  // 在重新构建之前，由 _sass/layout/_footer.scss 里一条 body{margin-bottom:0 !important} 兜住。
 
   // Follow menu drop down
   $(".author__urls-wrapper button").on("click", function () {

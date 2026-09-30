@@ -16,7 +16,8 @@ body {
 
   margin: 0;
   padding: $masthead-height 0 0;
-  padding-bottom: 9em;
+  /* 这里本有 padding-bottom: 9em，是给「钉在视口底部的固定页脚」让位用的。
+     页脚已回归文档流（见 layout/_footer.scss），再留着就成了每页末尾 9em 空档。 */
   font-family: $global-font-family;
   line-height: 1.5;
 
