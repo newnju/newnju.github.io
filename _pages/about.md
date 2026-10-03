@@ -49,9 +49,9 @@ redirect_from:
 项目
 ======
 
-  <ul>{% for post in site.portfolio %}
+  <div>{% for post in site.portfolio %}
     {% include archive-single.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 获奖
 ======
@@ -63,16 +63,16 @@ redirect_from:
 教学
 ======
 
-  <ul>{% for post in site.teaching reversed %}
+  <div>{% for post in site.teaching reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 会议与暑期学校
 ======
 
-  <ul>{% for post in site.talks %}
+  <div>{% for post in site.talks %}
     {% include archive-single-talk-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 联系方式
 ======

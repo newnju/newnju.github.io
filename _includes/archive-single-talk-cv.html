@@ -38,7 +38,6 @@
 
 <div class="{{ include.type | default: "list" }}__item">
   <article class="archive__item" itemscope itemtype="http://schema.org/CreativeWork">
-    <li>
     {% if include.type == "grid" and teaser %}
       <div class="archive__item-teaser">
         <img src=
@@ -59,6 +58,5 @@
     </h3>
     {% if post.datetext %}<p class="page__meta"><i class="fa fa-clock" aria-hidden="true"></i> {{ post.datetext }}</p>{% endif %}
     {% if _meta != "" %}<p class="archive__item-excerpt" itemprop="description">{{ _meta }}</p>{% endif %}
-    </li>
   </article>
 </div>

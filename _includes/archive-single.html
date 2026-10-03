@@ -100,24 +100,25 @@
 
     {%- comment -%} 汇总可下载的附件链接，避免原来十四个分支的组合爆炸 {%- endcomment -%}
     {% assign _links = "" %}
+    {% assign _pipe = ui.sep_pipe | default: " | " %}
     {% if post.paperurl %}
       {% capture _t %}<a href="{{ post.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{% endcapture %}
       {% assign _links = _links | append: _t %}
     {% endif %}
     {% if post.slidesurl %}
-      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% if _links != "" %}{% assign _links = _links | append: _pipe %}{% endif %}
       {% capture _t %}<a href="{{ post.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a>{% endcapture %}
       {% assign _links = _links | append: _t %}
     {% endif %}
     {% if post.bibtexurl %}
-      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% if _links != "" %}{% assign _links = _links | append: _pipe %}{% endif %}
       {% capture _t %}<a href="{{ post.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a>{% endcapture %}
       {% assign _links = _links | append: _t %}
     {% endif %}
 
     {%- comment -%} 有外链（如知网）时，在引用格式行补一个入口，标题的复制行为不占用它 {%- endcomment -%}
     {% if post.link %}
-      {% if _links != "" %}{% assign _links = _links | append: " | " %}{% endif %}
+      {% if _links != "" %}{% assign _links = _links | append: _pipe %}{% endif %}
       {% capture _t %}<a href="{{ post.link }}" target="_blank" rel="noopener">{{ ui.cnki_link_label | default: "知网" }}</a>{% endcapture %}
       {% assign _links = _links | append: _t %}
     {% endif %}

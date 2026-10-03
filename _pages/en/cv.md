@@ -109,20 +109,20 @@ Skills
 Publication List
 ======
 
-  <ul>{% for post in site.publications reversed %}
+  <div>{% for post in site.publications reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 Talks and Summer Schools
 ======
 
-  <ul>{% for post in site.talks reversed %}
+  <div>{% for post in site.talks reversed %}
     {% include archive-single-talk-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 Teaching
 ======
 
-  <ul>{% for post in site.teaching reversed %}
+  <div>{% for post in site.teaching reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>

@@ -10,12 +10,16 @@
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _en = false -%}
 {%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+{%- comment -%} 条目分隔符：中文用全角分号，英文取 ui-text 的 sep_comma（", "） {%- endcomment -%}
+{%- assign _sep = "；" -%}
+{%- if _en -%}{%- assign _sep = _ui.sep_comma | default: ", " -%}{%- endif -%}
 <ul class="han-awards">
 {%- for group in site.data.awards %}
 {%- unless group.key == "honours" %}
   {%- assign _year = group.year -%}
   {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}
-  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{{ _t }}{% unless forloop.last %}；{% endunless %}{% endfor %}</li>
+  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{{ _t }}{% unless forloop.last %}{{ _sep }}{% endunless %}{% endfor %}</li>
 {%- endunless %}
 {%- endfor %}
 </ul>

@@ -47,9 +47,9 @@ Selected Work
 Projects
 ======
 
-  <ul>{% for post in site.portfolio %}
+  <div>{% for post in site.portfolio %}
     {% include archive-single.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 Awards
 ======
@@ -61,16 +61,16 @@ The full version with level tags is on the [Awards and Honours](/en/timeline/) p
 Teaching
 ======
 
-  <ul>{% for post in site.teaching reversed %}
+  <div>{% for post in site.teaching reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 Talks and Summer Schools
 ======
 
-  <ul>{% for post in site.talks %}
+  <div>{% for post in site.talks %}
     {% include archive-single-talk-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 Contact
 ======

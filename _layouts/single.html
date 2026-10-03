@@ -54,22 +54,24 @@ layout: default
         {% if page.mirror %}{% include han-mirror.html %}{% endif %}
         {{ content }}
 
+        {%- comment -%} 附件链接的分隔符走 _data/ui-text.yml 的 sep_pipe（中文「｜」、英文「 | 」） {%- endcomment -%}
+        {%- assign _pipe = ui.sep_pipe | default: ' | ' -%}
         {% if page.citation and page.paperurl and page.slidesurl and page.bibtexurl %}
-          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{{ _pipe }}<a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a>{{ _pipe }}<a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.citation and page.paperurl and page.slidesurl %}
-          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{{ _pipe }}<a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
         {% elsif page.citation and page.paperurl and page.bibtexurl %}
-          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{{ _pipe }}<a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.citation and page.paperurl %}
           <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a></p>
         {% elsif page.citation and page.slidesurl and page.bibtexurl %}
-          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+          <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a>{{ _pipe }}<a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.citation and page.slidesurl %}
           <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a></p>
         {% elsif page.slidesurl and page.bibtexurl %}
-          <p style="font-size: smaller"><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+          <p style="font-size: smaller"><a href="{{ page.slidesurl }}">{{ ui.download_slides | default: "下载幻灯片" }}</a>{{ _pipe }}<a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.paperurl and page.bibtexurl %}
-          <p style="font-size: smaller"><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a> | <a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
+          <p style="font-size: smaller"><a href="{{ page.paperurl }}">{{ ui.download_paper | default: "下载论文" }}</a>{{ _pipe }}<a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.citation and page.bibtexurl %}
           <p style="font-size: smaller">{{ ui.citation_label | default: "引用格式" }}{{ ui.sep_colon | default: "：" }}{{ page.citation }}<br /><a href="{{ page.bibtexurl }}">{{ ui.download_bibtex | default: "下载 BibTeX" }}</a></p>
         {% elsif page.citation %}

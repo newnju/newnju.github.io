@@ -110,20 +110,20 @@ redirect_from:
 论文列表
 ======
 
-  <ul>{% for post in site.publications reversed %}
+  <div>{% for post in site.publications reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 会议与暑期学校
 ======
 
-  <ul>{% for post in site.talks reversed %}
+  <div>{% for post in site.talks reversed %}
     {% include archive-single-talk-cv.html  %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
 
 教学与助教
 ======
 
-  <ul>{% for post in site.teaching reversed %}
+  <div>{% for post in site.teaching reversed %}
     {% include archive-single-cv.html %}
-  {% endfor %}</ul>
+  {% endfor %}</div>
