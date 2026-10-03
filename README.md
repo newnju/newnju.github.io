@@ -224,8 +224,9 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 - 克隆体里的 `fixed` / `sticky` 元素必须压回普通流，且**这一步要在删除节点之前做**，
   否则原树与克隆树的元素索引会错位，定位修正整体失效
-- 侧栏 `.sidebar` 在宽屏下是 `position: fixed` + `height: 100vh`，在缩略容器里既脱离文档流
-  又占满整屏，因此缩略图内直接隐藏，只呈现正文
+- 侧栏 `.sidebar` 默认文档流、装得下一屏才由 `han.js` 第 9 节加 `.is-fit` 变
+  `position: fixed` + `height: 100vh`；克隆时固定态在删除节点前被压回普通流，
+  两种状态在缩略图里都呈现为左侧窄栏，正文比例不受影响
 - 初始化不等 `load` 才第一次建图（图片与字体就位后再校正比例），而是「解析完成 + 同源样式就位」即建，见上面的「出现时机」；否则外链一慢，缩略图要等十几秒
 - 比例按宽度定，缩略图通常比窄条矮（1440px 下首页 320px、最长的一页 cv 370px，都远低于 800px 的窄条）；
   页高超过「窄条可视宽 × 窄条高 / 视口宽」时缩略图才会高出窄条，方块会跑出可视区，改版后留意
@@ -317,7 +318,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **hover 微交互**（第 16 节）：卡片上浮 3px、时间轴与荣誉条目右移 4px 并染品牌色，仅限有指针且不介意动效的设备（`@media (hover: hover)` 门控）。
 
-**侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。
+**侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。线稿看得见、动得了的前提是侧栏能滚进视口 —— 宽屏侧栏由 `han.js` 第 9 节做 fit 门控：装得下一屏才固定（`.is-fit`），装不下就保持文档流随页滚动，否则左列多出内层滚动条、`inViewport` 永不触发。
 
 **减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显）；打印时两层装饰不印、渐显元素直接给完整不透明度，不会打出来一片空白。
 
@@ -355,6 +356,7 @@ git push
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显**（第 13–17 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节 |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
+| **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控） |
 | **首页自我介绍** | `_pages/about.md` |
 | **教育背景、联系方式、工作与任职**（主页与履历、中英四处同步更新） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`，履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」一节已改由 `_data` 与集合驱动，见上下几行 |

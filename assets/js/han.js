@@ -667,3 +667,70 @@
     start: "inViewport",
   });
 })();
+
+/* ==========================================================================
+   9. 侧栏 fit 门控（_sidebar.scss 的 .is-fit）
+   --------------------------------------------------------------------------
+   宽屏侧栏不再无条件固定：默认文档流，只有内容装得下一屏才加
+   .is-fit 恢复固定（fixed + 100vh + padding-top:70，top 来自
+   .sticky 工具类的 2em）。装不下（英文版联系方式更长 + 线稿）或
+   脚本没跑时保持流式 —— 左列不出现内层滚动条，底部线稿随页滚动
+   进视口，vivus 的 inViewport 监听的是窗口滚动，固定侧栏永远
+   触发不了它。
+   预算：内容高 + masthead 让位 + 固定态 top + 余量 ≤ 一屏。
+   resize / load / 字体就位后重新判定（rAF 节流；脱类-测量-回加
+   在同一回调内完成，不会有中间绘制闪跳）。
+   ========================================================================== */
+(function () {
+  var sidebar = document.querySelector(".sidebar.sticky");
+  if (!sidebar) return;
+
+  var mqPin = window.matchMedia("(min-width: 925px)"); // 与 _themes.scss 的 $large 对齐
+  var CLEARANCE = 70; // 与 _sass 下的 $masthead-height 对齐
+  var GUTTER = 8;
+  var rafId = 0;
+
+  function apply() {
+    if (!mqPin.matches) {
+      sidebar.classList.remove("is-fit");
+      return;
+    }
+    // 先脱掉 .is-fit 量流式真实高度（固定态的 padding-top 会把量高撑大 70px）
+    sidebar.classList.remove("is-fit");
+    var pinTop = parseFloat(window.getComputedStyle(sidebar).top) || 0;
+    if (
+      sidebar.scrollHeight + CLEARANCE + pinTop + GUTTER <=
+      window.innerHeight
+    ) {
+      sidebar.classList.add("is-fit");
+    }
+  }
+
+  function schedule() {
+    if (rafId) return;
+    rafId = window.requestAnimationFrame(function () {
+      rafId = 0;
+      apply();
+    });
+  }
+
+  function boot() {
+    apply();
+    window.addEventListener("resize", schedule, { passive: true });
+    window.addEventListener("load", schedule);
+    if (mqPin.addEventListener) {
+      mqPin.addEventListener("change", schedule);
+    } else if (mqPin.addListener) {
+      mqPin.addListener(schedule);
+    }
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(schedule);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
