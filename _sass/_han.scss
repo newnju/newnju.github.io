@@ -539,11 +539,12 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
     --global-link-color-hover   : #c8a45c;
     --global-link-color-visited : #8a5ca8;
     --global-masthead-link-color-hover : #5C2E83;
-    /* 流光背景与光斑（§13–14）随之切成紫金调 */
+    /* 流光背景与光斑（§13–14）、点击涟漪（§21）随之切成紫金调 */
     --han-aurora-a              : rgba(92, 46, 131, 0.14);
     --han-aurora-b              : rgba(200, 164, 92, 0.15);
     --han-aurora-c              : rgba(47, 107, 90, 0.10);
     --han-spot-color            : rgba(92, 46, 131, 0.09);
+    --han-ripple                : rgba(92, 46, 131, 0.25);
 }
 
 html[data-theme="dark"][data-color-theme="nju"] {
@@ -557,11 +558,12 @@ html[data-theme="dark"][data-color-theme="nju"] {
     --global-link-color-visited : #b794d4;
     --global-masthead-link-color-hover : #c4a6e0;
     /* 暗底紫金：色斑提亮但透明度压低保证正文对比度；光斑（鼠标跟随）
-       原 0.10 在暗底上几乎看不出，单独加浓到 0.18 */
+       原 0.10 在暗底上几乎看不出，单独加浓到 0.18；涟漪同理提亮 */
     --han-aurora-a              : rgba(183, 148, 212, 0.15);
     --han-aurora-b              : rgba(224, 192, 116, 0.13);
     --han-aurora-c              : rgba(124, 191, 162, 0.10);
     --han-spot-color            : rgba(183, 148, 212, 0.18);
+    --han-ripple                : rgba(183, 148, 212, 0.30);
 }
 
 /* --------------------------------------------------------------------------
@@ -971,10 +973,11 @@ html[data-reveal] .han-reveal.is-visible {
 /* --------------------------------------------------------------------------
    17. 动效总开关：减少动效偏好（reduced-motion）与打印
    --------------------------------------------------------------------------
-   系统开了「减少动态效果」时：新老动效一并静止（博局镜旋转/呼吸、缩略图
-   进度、流光漂移、光斑跟随、滚动渐显），只保留颜色等非位移变化。
-   打印时：装饰层不印、渐显元素直接给完整不透明度，避免打出来一片空白。
-   -------------------------------------------------------------------------- */
+    系统开了「减少动态效果」时：新老动效一并静止（博局镜旋转/呼吸、缩略图
+    进度、流光漂移、光斑跟随、滚动渐显），只保留颜色等非位移变化；点击
+    涟漪（§21）由 han.js 第 10 节在 JS 层直接不监听，这里再兜底隐藏。
+    打印时：装饰层不印、渐显元素直接给完整不透明度，避免打出来一片空白。
+    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
 
@@ -987,7 +990,8 @@ html[data-reveal] .han-reveal.is-visible {
         animation: none !important;
     }
 
-    .han-spotlight {
+    .han-spotlight,
+    .han-ripple {
         display: none !important;
     }
 
@@ -1008,7 +1012,8 @@ html[data-reveal] .han-reveal.is-visible {
 @media print {
 
     .han-aurora,
-    .han-spotlight {
+    .han-spotlight,
+    .han-ripple {
         display: none !important;
     }
 
@@ -1108,4 +1113,30 @@ html[data-reveal] .han-reveal.is-visible {
     stroke: var(--han-patina);
     stroke-width: 4;
     stroke-miterlimit: 10;
+}
+
+/* --------------------------------------------------------------------------
+   21. 点击涟漪（han.js 第 10 节生成的临时节点）
+   --------------------------------------------------------------------------
+   按下可点击元素时，以指针为圆心泛一圈涟漪再淡出。节点 position: fixed
+   挂在 body 上 —— 不依赖任何祖先定位、不参与布局，零抖动；pointer-events:
+   none 不挡点击。颜色走 --han-ripple（§8 随明暗主题切换，带青铜绿兜底）。
+   reduced-motion 下 JS 不生成节点，CSS 这里再兜底隐藏（§17）。
+   -------------------------------------------------------------------------- */
+
+.han-ripple {
+    position: fixed;
+    z-index: 60; // 高于正文 / masthead(20) / 缩略图(30)，低于导航下拉(100)
+    pointer-events: none;
+    border-radius: 50%;
+    background: var(--han-ripple, rgba(47, 107, 90, 0.22));
+    transform: translate(-50%, -50%) scale(0);
+    animation: han-ripple 560ms ease-out forwards;
+}
+
+@keyframes han-ripple {
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
 }
