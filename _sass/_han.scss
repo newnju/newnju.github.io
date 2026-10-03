@@ -429,13 +429,14 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
    5. 顶部导航：语言切换 + 当前项南大紫下划线
    -------------------------------------------------------------------------- */
 
-/* 当前页导航项的下划线：单线南大紫 2px（用户反馈：原先「上金下紫」两条线
-   观感多余，去掉金色那条，只留紫线）。元素总高与主题默认的
-   border-bottom: 2px 一致，不会引起导航栏抖动。
+/* 当前页导航项的下划线：单线南大紫，视觉粗细 3px —— 2px 的
+   border-bottom 再用 box-shadow 贴 1px 拼在正下方（用户反馈：
+   2px 偏细，要粗一点）。阴影不参与布局，导航栏与文字零抖动。
    必须一并覆盖 :hover 规则，其特异性高于 .selected > a。 */
 .masthead__menu-item.selected > a,
 .masthead__menu-item.selected a:hover {
     border-bottom-color: #5C2E83;
+    box-shadow: 0 1px 0 #5C2E83;
 }
 
 .lang-switch > a {

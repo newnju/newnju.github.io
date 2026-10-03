@@ -13,7 +13,7 @@ title                    : "武嘉文 / Jiawen Wu"
 title_separator          : "-"
 name                     : &name "武嘉文"
 description              : &description "武嘉文的学术主页。南京大学新闻传播学院博士研究生，硕士美术考古、博士影像史学。"   # Update this with a general description of your site, this is the default if not overridden by a page
-description_en           : "Academic website of Jiawen Wu — Ph.D. student at the School of Journalism and Communication, Nanjing University. Master's work in art archaeology, doctoral work in visual history."   # 英文页用的站点简介（见 _includes/seo.html）；留空则英文页回落上面那句中文
+description_en           : "Academic website of Jiawen Wu — Ph.D. student at Nanjing University's School of Journalism and Communication. Master's work in art archaeology, doctoral work in visual history."   # 英文页用的站点简介（见 _includes/seo.html）；留空则英文页回落上面那句中文
 url                      : https://newnju.github.io # The base hostname & protocol for your site e.g. "https://[your GitHub username].github.io",
                                                            # or if you already have some other page hosted on Github then use "https://[your GitHub username].github.io/[Your Repo Name]"
 baseurl                  : "" # the subpath of your site, e.g. "/blog"
@@ -29,7 +29,7 @@ author:
   name_en          : "Jiawen Wu"
   pronouns         : # example: "she/her"  
   bio              : "南京大学新闻传播学院博士研究生。硕士美术考古，博士影像史学。"
-  bio_en           : "Ph.D. student at the School of Journalism and Communication, Nanjing University. Master's work in art archaeology (Han material culture and imagery); doctoral work in visual history (historical imagery of the Chinese nation)."
+  bio_en           : "Ph.D. student at Nanjing University's School of Journalism and Communication. Master's work in art archaeology (Han material culture and imagery); doctoral work in visual history (historical imagery of the Chinese nation)."
   location         : "中国 · 南京"
   location_en      : "Nanjing, China"
   employer         : "南京大学 新闻传播学院"
