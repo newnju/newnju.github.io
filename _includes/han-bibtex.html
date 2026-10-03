@@ -21,7 +21,7 @@
     <summary>
       <span class="han-bibtex__caret" aria-hidden="true"></span>
       <button type="button" class="han-bibtex__btn" data-bibtex-copy
-              data-label-done="{{ _ui.copied_label | default: '已复制' }}">{{ _ui.copy_bibtex_label | default: '复制 BibTeX' }}</button>
+              data-label-done="{{ _ui.copied_bibtex_label | default: '已复制' }}">{{ _ui.copy_bibtex_label | default: '复制 BibTeX' }}</button>
       <span class="han-bibtex__label">BibTeX</span>
     </summary>
     <pre class="han-bibtex__pre">{{ _bib | strip | escape }}</pre>

@@ -66,18 +66,26 @@ git push -u origin main
 
 ### 1. 汉·明 / 汉·暗 主题
 
-配色取自汉代青铜镜与同期漆器：
+配色取自汉代青铜镜与同期漆器，分两层，别混：
+
+1. `_config.yml` 的 `site_theme: "han"` 选定主题文件（`_sass/theme/_han_light.scss` / `_han_dark.scss`），页面底色与默认品牌色在这里定义；
+2. `<html data-color-theme>` 在其上覆盖品牌色，**当前默认 `"nju"`（南大紫）**，值写死在 `_layouts/default.html` 第 8 行，由 `_sass/_han.scss` 第 8 节生效。
+
+所以**线上跑的是南大紫，不是铜锈绿**：
 
 | 颜色 | 色值 | 用途 |
 | --- | --- | --- |
-| 铜锈绿 | `#2f6b5a` | 主色：链接、时间轴节点、镜图 |
-| 朱砂 | `#9e2b25` | 强调：标题左侧竖线、当前导航项下划线、国家级标签 |
-| 宣纸 | `#fbf8f1` | 页面底色（不是纯白） |
-| 错金 | `#b08d3f` | 国际级标签 |
+| 南大紫 | `#5C2E83` | **nju（当前默认）**：链接、页面 base、镜图主色、当前导航项下划线、文字选中底色 |
+| 鎏金 | `#c8a45c` | **nju（当前默认）**：链接悬停、标题左侧竖线、时间轴年份、国家级与国际级标签 |
+| 铜锈绿 | `#2f6b5a` | **han**：`_han_light.scss` 里的 base 与链接色，`data-color-theme="han"` 时生效 |
+| 朱砂 | `#9e2b25` | **han**：强调色（标题竖线、时间轴年份、国家级标签、链接悬停） |
+| 宣纸 | `#fbf8f1` | 两种配色的页面底色（不是纯白） |
+| 错金 | `#b08d3f` | **han**：国际级标签 |
 
-- 主题由 `_config.yml` 的 `site_theme: "han"` 启用，对应 `_sass/theme/_han_light.scss` 与 `_han_dark.scss`
-- 明暗切换用右上角的太阳 / 月亮图标（跟随系统偏好，也可手动固定）
-- 想要别的颜色，只改这两个文件顶部那十几行色值即可；深绿在暗背景上不可读，所以暗色版把铜锈绿提亮成了 `#7cbfa2`
+- 明暗切换用右上角的太阳 / 月亮图标（跟随系统偏好，也可手动固定）；暗色下两套配色都自动提亮以保证可读性（han 的铜锈绿提到 `#7cbfa2`，nju 的南大紫提到 `#b794d4`）
+- **想换配色**：改 `_layouts/default.html` 第 8 行的 `data-color-theme="nju"` 为 `"han"`。没有配色切换按钮（旧的调色板按钮已移除），`assets/js/han.js` 第 3 节只在启动时读 localStorage 里存过的 `color-theme`，读不到就用默认值
+- **想改色值**：改 `_sass/theme/_han_light.scss` / `_han_dark.scss` 顶部那十几行，nju 配色的覆盖值改 `_sass/_han.scss` 第 8 节
+- 镜图呼吸色与文字选中色在 `_sass/_han.scss` 里是写死的十六进制（`var()` 在关键帧内插值在较旧 Safari 上不可靠），换配色要同步改那几处
 - 其余装饰（宋体标题、时间轴、BibTeX、打印样式）都在 `_sass/_han.scss`，这个文件刻意只写纯 CSS，改起来不用懂 Sass
 
 ### 2. 首页的博局镜纹样结构
@@ -164,7 +172,9 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 **出现时机**：目标是「解析一结束就出现」。线上原本要 2.5 秒起步，外链慢时要十几秒（实测 14–19 秒），三处一起改：
 
 - `_includes/scripts.html` 里 han.js 用 `async` 而不是 `defer`：defer 脚本严格按文档顺序执行，
-  页脚里 defer 的 MathJax 来自 jsDelivr，一慢就把排在它后面的 han.js 一起拖住；
+  当时页脚里 defer 的 MathJax 来自 jsDelivr，一慢就把排在它后面的 han.js 一起拖住
+  （MathJax 已在后续清理中删除，页脚不再加载它；但这条改动保留 —— 任何排在前面的慢
+  defer 外链都会造成同样的拖累）；
 - 脚本内部按「解析完成」起步（`whenParsed`：看 `readyState` 翻到 interactive），不等 `DOMContentLoaded`；
 - 建图前只等**同源** `link[rel~="stylesheet"]`（`whenStyled`）：检查那一刻这类链接只有 head 里的
   main.css，同源样式一到就有；jsDelivr 的 academicons 跨域，被 `location.host` 这条判断直接跳过，
@@ -172,7 +182,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
   缺的图标由 `load` 后的重建补齐；
 - 之后 `load` 再校正一次比例、`document.fonts.ready` 再一次（字体换了行高会变）。
 
-离线镜像实测（把 MathJax 推迟 2.5 秒模拟慢外链；数字是其中一次运行，逐次有几毫秒浮动）：
+离线镜像实测（当时把页脚的 MathJax 推迟 2.5 秒模拟慢外链；数字是其中一次运行，逐次有几毫秒浮动）：
 
 | 组合 | 解析完 | load | 缩略图首次出现 |
 | --- | --- | --- | --- |
@@ -274,11 +284,9 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 - `_sass/layout/_base.scss` 里 `body` 的 `padding-bottom: 9em` —— 已删；
 - 主题 JS 的 `bumpIt()`（`assets/js/_main.js`）：每次加载与窗口变化时给 `body` 内联
-  `margin-bottom = 页脚高度`。它已从源码删除，但线上加载的是 uglify 产物 `main.min.js`
-  （`npm run build:js` 生成，见 `package.json`），暂未重新构建，因此在
-  `_sass/layout/_footer.scss` 里补一条 `body { margin-bottom: 0 !important; }` 兜住 ——
-  作者样式的 `!important` 能压过「不带 `!important` 的内联样式」，与 JS 何时运行无关。
-  将来若重新构建了 bundle，这条规则可以删。
+  `margin-bottom = 页脚高度`。源码里已删除，产物 `main.min.js` 也已用
+  `npm run build:js` 重建（见 `package.json`），所以当初临时补在
+  `_sass/layout/_footer.scss` 里的 `body { margin-bottom: 0 !important; }` 也一并删了。
 
 实测（1400px 视口，离线镜像里「线上样式」与「改后样式」对照）：
 
@@ -288,6 +296,16 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 | 改后 | `static` | 否（top=3400） | 3512 / 3512 |
 
 判断标准很直白：**在页面顶部看不到页脚，滚到最底下才看到**，页脚之下不留空白。
+
+### 8. 404 页面、RSS feed 与仓库瘦身
+
+**404 分中英两套**（`_pages/404.md`）。GitHub Pages 只用根目录 `/404.html` 兜底，`/en/xxx` 打不开时返回的也是它，所以页面按中文渲染，再用一小段脚本判断 `location.pathname` 是否以 `/en` 开头：是就换正文块、改 `<html lang>` 与 `<title>`（连带 `<h1>`），并把顶部导航、侧栏、页脚的文案与链接换成英文页那一套 —— 配对数据是页内那块 JSON，取自 `_data/navigation.yml`、`_data/ui-text.yml` 与 `_config.yml` 的 author 字段，与 `masthead.html` / `footer.html` / `author-profile.html` 的取值一一对应。关掉 JS 就是原来的中文 404，不影响可用性。
+
+**RSS 是自建的**（`_pages/feed.xml`）。`jekyll-feed` 只聚合 posts，本站没有 posts，原来的 `/feed.xml` 一直是 0 条；现在 `_config.yml` 的 `plugins` / `whitelist` 与 `Gemfile` 里都拿掉了 jekyll-feed，改由这一页输出，收录 `_publications`（四条 collection 里只有它带 `date`，talks / teaching / portfolio 没有日期，塞进去会被按构建时间顶到最前面）。页脚的 Feed 链接因此指向一份真有内容的 feed，`<head>` 里的 `<link rel="alternate">` 也指向它。
+
+**robots.txt 与社交预览**（根目录 `robots.txt`、`_config.yml` 的 `og_image`）。robots.txt 直接声明 `Sitemap: https://newnju.github.io/sitemap.xml`（由 jekyll-sitemap 生成）；`og_image: avatar.png` 让每页的 `og:image` / `twitter:image` 都指向 `/images/avatar.png`，分享出去才带预览图 —— `twitter:card` 那几行同时从 `twitter.username` 的 if 里挪了出来（本站没填账号，原先整块被跳过，连卡片类型都不输出）。没有 `excerpt` 的页面也会发 `og:description`。
+
+**顺手清掉的死代码**：`_includes/paginator.html`、`_layouts/splash.html`、`_layouts/archive-taxonomy.html` 全站零引用；14 个 Sass 文件从入口不可达（Font Awesome 的 `regular` / `v4-shims` / `_shims`，Susy 遗留的 `_su` / `_susy` / `_susyone` 与 `susyone/*`）；随之永远不会有 `@font-face` 引用的 `fa-regular-400.*`、`fa-v4compatibility.*` 四个 webfont 也删了（约 106 KB）；`jekyll-gist`（无 `{% gist %}`）、`jemoji`（无 emoji 短码）、`jekyll-paginate`（`paginate` 注释着）三个插件从 `plugins` / `whitelist` 移除；`assets/js/theme.js` 只是 uglify 的输入源，已进 `exclude` 不再被部署；`files/` 空目录（只有 `.gitkeep`）连同 `_config.yml` 的 `include: files` 一起去掉。另修两处小毛病：`_data/ui-text.yml` 里重复的 `copied_label`（引文复制与 BibTeX 复制各需要一条，后者改名 `copied_bibtex_label`），以及 `_config.yml` portfolio 默认值写错的 `comment` → `comments`。
 
 ---
 
@@ -331,7 +349,7 @@ git push
 | **英文版页面** | `_pages/en/` 下的同名文件 |
 | 首页的博局镜图 | `_includes/han-mirror.html` |
 | 头像 | `images/avatar.png`（400×400、正方形、背景已抠透明）。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片本体 152px、圆圈（含光圈）162px，整体上移 22px、左移 8px。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
-| 项目配图 | `images/portfolio/` 下的 SVG 封面 |
+| 项目配图 | 没有默认封面。想加就把图放进 `images/portfolio/`，在条目 front matter 里用 `excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"` 引它（模板自带的示例 SVG 已删除，目录是空的） |
 
 ### 新增条目
 
@@ -367,7 +385,7 @@ bibtex: |
 ---
 title: "项目名称"
 title_en: "Project Name"          # 选填
-excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"
+excerpt: "一句话简介"            # 想配图就写 "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"
 collection: portfolio
 permalink: /portfolio/my-project
 ---
@@ -436,7 +454,7 @@ bundle exec jekyll serve
 ├── _talks/              会议与暑期学校条目
 ├── _teaching/           教学与助教条目
 ├── assets/              样式与脚本（han.js 为本站自定义脚本：BibTeX 复制、引用复制、缩略图导航）
-├── files/               放 PDF 等附件（如论文全文）
+├── robots.txt           允许全站抓取，并声明 Sitemap 位置
 └── images/              图片与头像
 ```
 

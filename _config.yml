@@ -151,7 +151,7 @@ facebook:
   username               :
   app_id                 :
   publisher              :
-og_image                 :  # Social media default site image
+og_image                 : "avatar.png" # 社交预览图：seo.html 会补成 /images/avatar.png（Twitter 卡片与 og:image 都用它）
 og_description           :  # Social media default site image description
 # For specifying social profiles
 # - https://developers.google.com/structured-data/customize/social-profiles
@@ -172,7 +172,6 @@ analytics:
 include:
   - .htaccess
   - _pages
-  - files
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
@@ -182,6 +181,7 @@ exclude:
   - .jekyll-assets-cache
   - .sass-cache
   - assets/js/_main.js
+  - assets/js/theme.js
   - assets/js/plugins
   - assets/js/vendor
   - CHANGELOG
@@ -289,7 +289,7 @@ defaults:
       layout: single
       author_profile: true
       share: true
-      comment: true
+      comments: true
   # _talks
   - scope:
       path: ""
@@ -314,22 +314,18 @@ timezone: Etc/UTC # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 
 # Plugins
+# jekyll-feed 已移除：它只聚合 posts（本站没有 posts），线上 feed.xml 一直是 0 条，
+# 现在改由自建页 _pages/feed.xml 输出（收录 _publications）。
+# 同时移除 jekyll-gist（无 {% gist %} 用法）、jekyll-paginate（paginate 未启用，
+# paginator 相关模板已删）、jemoji（正文没有 emoji 短码）——三者此前一直空转。
 plugins:
-  - jekyll-feed
-  - jekyll-gist
-  - jekyll-paginate
   - jekyll-sitemap
   - jekyll-redirect-from
-  - jemoji
 
 # Mimic GitHub Pages with --safe
 whitelist:
-  - jekyll-feed
-  - jekyll-gist
-  - jekyll-paginate
   - jekyll-sitemap
   - jekyll-redirect-from
-  - jemoji
 
 
 # Archives
@@ -348,17 +344,6 @@ category_archive:
 tag_archive:
   type: liquid
   path: /tags/
-# https://github.com/jekyll/jekyll-archives
-# jekyll-archives:
-#   enabled:
-#     - categories
-#     - tags
-#   layouts:
-#     category: archive-taxonomy
-#     tag: archive-taxonomy
-#   permalinks:
-#     category: /categories/:name/
-#     tag: /tags/:name/
 
 
 # HTML Compression
