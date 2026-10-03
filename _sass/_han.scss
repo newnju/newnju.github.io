@@ -1016,3 +1016,33 @@ html[data-reveal] .han-reveal.is-visible {
         transform: none !important;
     }
 }
+
+/* --------------------------------------------------------------------------
+   18. 正文列表：纯缩进、不带任何标记
+   --------------------------------------------------------------------------
+   用户反馈首页圆点不好看。作用于 .page__content（主页、履历、英文页共用
+   同一套），去掉 disc / circle / decimal 标记，层级只靠缩进表达：
+   顶层贴左，嵌套行（教育背景的注释）再缩进一档。
+   li 里的段落（kramdown 遇到空行会把条目包成 <p>，近期成果的最后一条
+   就出现过）自带 1em 外距，会让条目忽宽忽窄，这里归零。
+   侧栏、页脚的列表不在 .page__content 内，不受影响。
+   -------------------------------------------------------------------------- */
+.page__content ul,
+.page__content ol {
+    list-style: none;
+    padding-left: 0;
+}
+
+.page__content li {
+    margin: 0.3em 0;
+}
+
+.page__content li ul,
+.page__content li ol {
+    padding-left: 1.4em;
+    margin: 0.15em 0;
+}
+
+.page__content li > p {
+    margin: 0;
+}

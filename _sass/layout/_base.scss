@@ -12,7 +12,11 @@ html {
 body {
   /* Set via _themes.scss */
   color: var(--global-text-color);
-  background-color: var(--global-bg-color);
+  /* 这里不能写 background-color：画布底色由 _reset.scss 的 html 提供。
+     body 一旦自带背景，就会按绘制顺序（root 背景 → z-index:-1 的子层 →
+     块级后代背景）盖住 _han.scss 第 13/14 节的流光背景与光标光斑，
+     只剩页面最底端 body 盒之外的缝隙能露出 —— 之前「渐变只在页面最下面
+     出现」就是这么来的。html 与 body 用的是同一个变量，去掉后底色不变。 */
 
   margin: 0;
   padding: $masthead-height 0 0;
