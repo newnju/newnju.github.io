@@ -13,35 +13,22 @@ My work moves from Han-dynasty objects to historical imagery. My master's thesis
 Research Interests
 ======
 
-* **Visual history**: historical imagery of the Chinese nation (doctoral work)
-* **Art archaeology**: Han-dynasty material culture and imagery (master's work); thesis on the ornament of the four-deity TLV mirror and Han cosmology
-* **AI applications and ethics**
+{% include han-research.html %}
 
 Education
 ======
 
-* **Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300), 2026.09 – present
-    * Research: visual history · historical imagery of the Chinese nation
-* **M.A.**, School of Arts, Nanjing University — Art History (130400), 2021.09 – 2024.06
-    * Research: art archaeology · Han-dynasty material culture and imagery
-    * Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*
-    * Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships
-* **B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06
-    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships
-* **Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03
+{% include han-education.html %}
 
-{% assign _honours = site.data.awards | where: "key", "honours" | first %}
 Honours
 ======
 
-{% if _honours %}{% for item in _honours.items %}* {{ item.text_en | default: item.text }}
-{% endfor %}{% endif %}
+{% include han-honours.html %}
+
 Selected Work
 ======
 
-* Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." *Huaxia Wenhua*, 2025, (04): 27–32.
-* Wu, Jiawen. "How to Trust: Rethinking Responsibility for Trust in the News and Communication System in the Age of Large Language Models." *Rongmei*, 2026, (9): 4–11.
-* “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror” won the Award of Excellence at the Fifth Mao Jiaqi History Forum, School of History, Nanjing University (2025.11)
+{% include han-recent-pubs.html %}
 * The publication list is on the [Publications](/en/publications/) page; the full record is in the [CV](/en/cv/).
 
 Projects
@@ -75,5 +62,4 @@ Talks and Summer Schools
 Contact
 ======
 
-* Email: [wujiawen@smail.nju.edu.cn](mailto:wujiawen@smail.nju.edu.cn)
-* Location: Nanjing, China
+{% include han-contact.html %}

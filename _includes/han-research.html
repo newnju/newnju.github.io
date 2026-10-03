@@ -1,0 +1,10 @@
+{%- comment -%}
+研究方向（数据源 _data/profile.yml），主页中英两版共用：
+  {% include han-research.html %}
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- for item in site.data.profile.research %}
+* {% if _en and item.text_en %}{{ item.text_en }}{% else %}{{ item.text }}{% endif %}
+{%- endfor %}

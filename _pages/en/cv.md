@@ -11,28 +11,12 @@ author_profile: true
 Contact
 ======
 
-* Email: wujiawen@smail.nju.edu.cn
-* Location: Nanjing, China
+{% include han-contact.html %}
 
 Education
 ======
 
-* **Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300), 2026.09 – present
-    * Research: visual history · historical imagery of the Chinese nation
-* **M.A.**, School of Arts, Nanjing University — Art History (130400), 2021.09 – 2024.06
-    * Research: art archaeology · Han-dynasty material culture and imagery
-    * Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*
-    * Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships
-* **Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03
-* **B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06
-    * Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships
-
-Publications
-======
-
-* Wu, Jiawen. "The Four-Deity TLV Mirror and Han Cosmology." *Huaxia Wenhua*, 2025, (04): 27–32.
-* Wu, Jiawen. "How to Trust: Rethinking Responsibility for Trust in the News and Communication System in the Age of Large Language Models." *Rongmei*, 2026, (9): 4–11.
-* “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror,” Fifth Mao Jiaqi History Forum, School of History, Nanjing University — Award of Excellence
+{% include han-education.html %}
 
 Appointments and Service
 ======
@@ -65,29 +49,12 @@ Appointments and Service
 Honours
 ======
 
-* Outstanding Graduate, Nanjing University
-* Outstanding Postgraduate, Nanjing University
-* Outstanding Communist Youth League Cadre, Nanjing University
-* Reader of the Year, Nanjing University Library
-* Delegate, Fifth Graduate Students' Congress, Nanjing University
+{% include han-honours.html %}
 
 Awards
 ======
 
-* 2026.06 — First Prize (Category A, Screenwriting), 4th “Yi Yun China” Art Education Innovation and Practice Exhibition
-* 2026.04 — Second Prize, 3rd Young Scholars Forum on Cultural Communication and Media Development
-    * Paper: *Sustaining the Character of Nanjing Baiju and Its Contemporary Construction from the Perspective of Cultural Ecology*
-* 2025.11 — Award of Excellence, Fifth Mao Jiaqi History Forum, School of History, Nanjing University
-    * Paper: *Zhi and Wen in the Ornament of the Four-Deity TLV Mirror*
-* 2022.08 — Outstanding Course Project, Peking University Visualisation Summer School
-* Award of Excellence for Public Service by Postgraduate Students, Nanjing University (social practice)
-* 2021.06 — Outstanding Completion, Jiangsu Provincial Undergraduate Innovation Training Programme
-* 2021.02 — Second Prize, Jiangsu Division, China Creative & National Digital Art Design Competition
-* 2021 – 2024 — Nanjing University academic scholarships (second and third class, three consecutive years)
-* 2020.12 — Award of Excellence, Jiangsu Division, 12th National College Student Advertising Art Competition
-* 2019.07 — Jiangsu Provincial Government Scholarship for Overseas Study
-* 2018.08 — Third Prize (National), China College Student Computer Design Competition
-* 2018.05 — First Prize (University Level), Jiangsu Provincial Computer Design Competition
+{% include han-awards.html %}
 
 Certificates
 ======

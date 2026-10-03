@@ -1,0 +1,14 @@
+{%- comment -%}
+荣誉（数据源 _data/awards.yml 里 key 为 honours 的那一组）。
+主页、履历页与它们的英文版共用，替换此前散落在各页的硬编码列表：
+  {% include han-honours.html %}
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _honours = site.data.awards | where: "key", "honours" | first -%}
+{%- if _honours -%}
+{%- for item in _honours.items %}
+* {% if _en and item.text_en %}{{ item.text_en }}{% else %}{{ item.text }}{% endif %}
+{%- endfor -%}
+{%- endif %}

@@ -307,6 +307,18 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **顺手清掉的死代码**：`_includes/paginator.html`、`_layouts/splash.html`、`_layouts/archive-taxonomy.html` 全站零引用；14 个 Sass 文件从入口不可达（Font Awesome 的 `regular` / `v4-shims` / `_shims`，Susy 遗留的 `_su` / `_susy` / `_susyone` 与 `susyone/*`）；随之永远不会有 `@font-face` 引用的 `fa-regular-400.*`、`fa-v4compatibility.*` 四个 webfont 也删了（约 106 KB）；`jekyll-gist`（无 `{% gist %}`）、`jemoji`（无 emoji 短码）、`jekyll-paginate`（`paginate` 注释着）三个插件从 `plugins` / `whitelist` 移除；`assets/js/theme.js` 只是 uglify 的输入源，已进 `exclude` 不再被部署；`files/` 空目录（只有 `.gitkeep`）连同 `_config.yml` 的 `include: files` 一起去掉。另修两处小毛病：`_data/ui-text.yml` 里重复的 `copied_label`（引文复制与 BibTeX 复制各需要一条，后者改名 `copied_bibtex_label`），以及 `_config.yml` portfolio 默认值写错的 `comment` → `comments`。
 
+### 9. 动态背景与微交互（流光、光斑、滚动渐显）
+
+**流光渐变背景**（`_includes/han-effects.html` + `_sass/_han.scss` 第 13–14 节）：三团大色斑在内容层下方以 47–64 秒的周期缓慢漂移。配色是三个变量 `--han-aurora-a/b/c`，在 `_sass/theme/_han_light.scss` / `_han_dark.scss` 按明暗各定义一套，`_han.scss` 第 8 节的南大紫配色再覆盖一层 —— 切暗色、换配色，背景跟着走。实现上只用 radial-gradient（没有 `filter: blur`，省掉一整屏的模糊开销），`@keyframes` 只动 `transform`，颜色不进关键帧（延续本文件对旧 Safari 的约定）；变量都带兜底值，换 `site_theme` 也不至于空白。
+
+**光标光斑**（`assets/js/han.js` 第 7 节 + 第 14 节样式）：一团 420px 的柔光跟着指针走。只在精细指针（`hover: hover and pointer: fine`）上启用，`requestAnimationFrame` 节流每帧最多写一次坐标；没有这段脚本时色斑停在默认坐标，不影响任何内容。
+
+**滚动渐显**（`_includes/head/custom.html` 内联引导 + `han.js` 第 6 节 + 第 15 节样式）：列表卡片、时间轴条目、荣誉条目、内容区小标题进入视口时轻微上浮淡入，只触发一次。三重兜底保证「动效坏了也不藏内容」：隐藏态只在 `<html data-reveal>` 与 `.han-reveal` 同时存在时才生效（引导脚本没跑、用户开了减少动效，正文照常可见）；`han.js` 里没有 IntersectionObserver 或没选中元素会立刻撤销标记；内联脚本 3 秒没等到 `han.js` 的就绪标记 `__hanRevealReady` 也自动撤销。
+
+**hover 微交互**（第 16 节）：卡片上浮 3px、时间轴与荣誉条目右移 4px 并染品牌色，仅限有指针且不介意动效的设备（`@media (hover: hover)` 门控）。
+
+**减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显）；打印时两层装饰不印、渐显元素直接给完整不透明度，不会打出来一片空白。
+
 ---
 
 ## 四、日常维护
@@ -339,10 +351,12 @@ git push
 | 顶部导航栏的栏目与顺序 | `_data/navigation.yml` |
 | 界面按钮文案（中文 / 英文） | `_data/ui-text.yml` 的 `zh` / `en` 段 |
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
+| **动态背景、光斑、滚动渐显**（第 13–17 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节 |
 | **首页自我介绍** | `_pages/about.md` |
-| **履历页（教育、工作、荣誉、获奖、证书、技能）** | `_pages/cv.md` |
-| **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」与「获奖」两节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页「荣誉」小节；其余年份分组显示在首页「获奖」小节与时间轴页 |
-| 论文条目 | `_publications/` 下的 Markdown 文件 |
+| **教育背景、研究方向、联系方式**（主页与履历、中英四处同步更新） | `_data/profile.yml`。渲染逻辑在 `_includes/han-education.html` / `han-research.html` / `han-contact.html`，一般不用动 |
+| **履历页（工作与任职、证书、技能）** | `_pages/cv.md`。教育、荣誉、获奖、联系方式已改为取数据，见上下两行 |
+| **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」「获奖」两节 + 履历页「荣誉」「获奖」两节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页与履历页的「荣誉」小节；其余年份分组显示在「获奖」小节与时间轴页 |
+| 论文条目 | `_publications/` 下的 Markdown 文件。论文页、履历页「论文列表」、主页「近期成果」（自动取最新 3 篇）与 RSS feed 全部随它更新，不用手改页面 |
 | 项目与作品条目 | `_portfolio/` 下的 Markdown 文件 |
 | 会议与暑期学校条目 | `_talks/` 下的 Markdown 文件 |
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
@@ -378,6 +392,8 @@ bibtex: |
 
 正文可以在这里写，会显示在条目详情页。
 ```
+
+加完这一篇，论文列表页、履历页「论文列表」、主页「近期成果」（按 `date` 自动取最新 3 篇）与 RSS feed 全部同步更新 —— 主页与履历页不再手抄论文清单，不存在「加了论文、主页忘了改」。
 
 **一个项目** —— 在 `_portfolio/` 下新建文件，文件名以 `portfolio-6-`、`portfolio-7-` 递增开头，就会排在列表末尾：
 

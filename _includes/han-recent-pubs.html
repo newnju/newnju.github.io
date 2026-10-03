@@ -1,0 +1,14 @@
+{%- comment -%}
+近期成果：按 date 取最新 N 篇论文的引用格式，数据源就是 _publications/ 本身。
+  往 _publications/ 加文件即自动上榜（论文页、feed、履历页同理），
+  彻底消灭「加了论文、主页手抄清单忘了改」的双写。
+  用法：{% include han-recent-pubs.html limit=3 %}
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _limit = include.limit | default: 3 -%}
+{%- assign _pubs = site.publications | sort: "date" | reverse -%}
+{%- for post in _pubs limit: _limit %}
+* {% if _en %}{{ post.citation_en | default: post.citation }}{% else %}{{ post.citation }}{% endif %}
+{%- endfor %}

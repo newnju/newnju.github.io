@@ -1,0 +1,52 @@
+# ==========================================================================
+# 个人结构化数据：教育背景 / 研究方向 / 联系方式 —— 单一数据源
+# --------------------------------------------------------------------------
+# 主页（_pages/about.md）、履历（_pages/cv.md）与两者的英文版都从这里取数，
+# 渲染逻辑在对应的 _includes/han-*.html：
+#   教育背景 → han-education.html    研究方向 → han-research.html
+#   联系方式 → han-contact.html
+# 改本文件一处，四个页面同步更新；中英同条目用 text / text_en 成对维护，
+# 英文页优先取 *_en 字段、缺省回落中文。
+#
+# 维护方法：复制任意一条改文字即可。education 的数组顺序就是显示顺序。
+# ==========================================================================
+
+contact:
+  email: wujiawen@smail.nju.edu.cn
+  location: 中国 · 南京
+  location_en: Nanjing, China
+
+research:
+  - text: "**影像史学**：中华民族历史影像（博士阶段）"
+    text_en: "**Visual history**: historical imagery of the Chinese nation (doctoral work)"
+  - text: "**美术考古**：汉代物质文化与图像（硕士阶段），学位论文做四神博局镜纹饰与汉代宇宙观"
+    text_en: "**Art archaeology**: Han-dynasty material culture and imagery (master's work); thesis on the ornament of the four-deity TLV mirror and Han cosmology"
+  - text: "**AI 应用与伦理研究**"
+    text_en: "**AI applications and ethics**"
+
+# 顺序即显示顺序：博士 → 硕士 → 本科 → 学期交换（主页与履历页统一按此渲染）
+education:
+  - text: "**博士研究生**，南京大学新闻传播学院，新闻传播学（050300），2026.09 – 至今"
+    text_en: "**Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300), 2026.09 – present"
+    notes:
+      - "研究方向：影像史学 · 中华民族历史影像"
+    notes_en:
+      - "Research: visual history · historical imagery of the Chinese nation"
+  - text: "**硕士研究生**，南京大学艺术学院，美术学（130400），2021.09 – 2024.06"
+    text_en: "**M.A.**, School of Arts, Nanjing University — Art History (130400), 2021.09 – 2024.06"
+    notes:
+      - "研究方向：美术考古 · 汉代物质文化与图像"
+      - "学位论文：《四神博局镜纹饰及相关问题研究》"
+      - "修读美术史、考古学、中国古代文学等课程，排名 10%，多次获学业奖学金"
+    notes_en:
+      - "Research: art archaeology · Han-dynasty material culture and imagery"
+      - "Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*"
+      - "Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships"
+  - text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305），2017.09 – 2021.06"
+    text_en: "**B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06"
+    notes:
+      - "修读影视后期制作、数字媒体、纪录片、广告、电影与电视剧研究等课程，排名 10%，多次获学业奖学金"
+    notes_en:
+      - "Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships"
+  - text: "**学期交换**，德国图宾根大学，校际合作，2023.10 – 2024.03"
+    text_en: "**Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03"
