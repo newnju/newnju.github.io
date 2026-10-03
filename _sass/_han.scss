@@ -1081,3 +1081,34 @@ html[data-reveal] .han-reveal.is-visible {
 .page__content .han-cv-period__head:first-of-type {
     margin-top: 1.2em;
 }
+
+/* --------------------------------------------------------------------------
+   20. 主页侧栏线稿自绘（.han-drawline + #svgpx，素材取自南大官网）
+   --------------------------------------------------------------------------
+   素材：www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline，
+   viewBox 815.99 × 752.24），由 _includes/author-profile.html 内联在
+   侧栏联系方式列表之后，仅主页（page.url 为 / 或 /en/）渲染；
+   动画见 assets/js/han.js 第 8 节：vivus.js 滚进视口逐笔错峰描线，
+   reduced-motion 用户不创建 Vivus，SVG 停在完整线稿的静态状态。
+   stroke-width 取用户单位 4：侧栏可用宽约 175px（189px − 14px 内边距），
+   换算系数约 0.21，4 × 0.21 ≈ 0.86px，接近南大官网近 1:1 尺寸下的 1px 细线。
+   颜色走 --han-patina，南大紫 / 青铜绿 / 暗色三套主题自动跟随。
+   -------------------------------------------------------------------------- */
+.han-drawline {
+    max-width: 175px;
+    margin-top: 12px;
+}
+
+.han-drawline svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+}
+
+.han-drawline .cls-1 {
+    fill: none;
+    stroke: var(--han-patina);
+    stroke-width: 4;
+    stroke-miterlimit: 10;
+}
