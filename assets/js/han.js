@@ -71,60 +71,10 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", bindCopyButtons);
   } else {
-    boot();
+    bindCopyButtons();
   }
-})();
-
-/* ==========================================================================
-   10. 点击涟漪（_han.scss §21）
-   --------------------------------------------------------------------------
-   在可点击元素（a / button / summary / role=button）上按下时，以指针坐标
-   为圆心铺一圈涟漪，半径取指针到元素四角的最大距离，560ms 扩散淡出后
-   自回收。节点 position: fixed 挂 body —— 不依赖祖先定位、不参与布局，
-   pointer-events: none 不挡点击。
-   reduced-motion 或没有 PointerEvent 时直接不监听，一个节点都不会生成；
-   样式层（§17）另有 display:none 兜底。缩略图（.han-minimap）是拖拽
-   导航不是普通点击，排除在外。
-   ========================================================================== */
-(function () {
-  if (!window.matchMedia) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  if (!window.PointerEvent) return;
-
-  var HIT =
-    "a, button, summary, [role='button'], input[type='button'], input[type='submit']";
-
-  document.addEventListener(
-    "pointerdown",
-    function (event) {
-      if (event.button !== 0 || event.defaultPrevented) return;
-      var target = event.target;
-      if (!target || !target.closest) return;
-      var hit = target.closest(HIT);
-      if (!hit || hit.closest(".han-minimap")) return;
-
-      var rect = hit.getBoundingClientRect();
-      var dx = Math.max(event.clientX - rect.left, rect.right - event.clientX);
-      var dy = Math.max(event.clientY - rect.top, rect.bottom - event.clientY);
-      var radius = Math.max(Math.sqrt(dx * dx + dy * dy), 24);
-
-      var dot = document.createElement("span");
-      dot.className = "han-ripple";
-      dot.style.width = radius * 2 + "px";
-      dot.style.height = radius * 2 + "px";
-      dot.style.left = event.clientX + "px";
-      dot.style.top = event.clientY + "px";
-      var kill = function () {
-        if (dot.parentNode) dot.parentNode.removeChild(dot);
-      };
-      dot.addEventListener("animationend", kill);
-      setTimeout(kill, 900); // 动画没跑起来（样式缺失等）也不残留节点
-      document.body.appendChild(dot);
-    },
-    { passive: true }
-  );
 })();
 
 /* ==========================================================================
@@ -783,4 +733,54 @@
   } else {
     boot();
   }
+})();
+
+/* ==========================================================================
+   10. 点击涟漪（_han.scss §21）
+   --------------------------------------------------------------------------
+   在可点击元素（a / button / summary / role=button）上按下时，以指针坐标
+   为圆心铺一圈涟漪，半径取指针到元素四角的最大距离，560ms 扩散淡出后
+   自回收。节点 position: fixed 挂 body —— 不依赖祖先定位、不参与布局，
+   pointer-events: none 不挡点击。
+   reduced-motion 或没有 PointerEvent 时直接不监听，一个节点都不会生成；
+   样式层（§17）另有 display:none 兜底。缩略图（.han-minimap）是拖拽
+   导航不是普通点击，排除在外。
+   ========================================================================== */
+(function () {
+  if (!window.matchMedia) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!window.PointerEvent) return;
+
+  var HIT =
+    "a, button, summary, [role='button'], input[type='button'], input[type='submit']";
+
+  document.addEventListener(
+    "pointerdown",
+    function (event) {
+      if (event.button !== 0 || event.defaultPrevented) return;
+      var target = event.target;
+      if (!target || !target.closest) return;
+      var hit = target.closest(HIT);
+      if (!hit || hit.closest(".han-minimap")) return;
+
+      var rect = hit.getBoundingClientRect();
+      var dx = Math.max(event.clientX - rect.left, rect.right - event.clientX);
+      var dy = Math.max(event.clientY - rect.top, rect.bottom - event.clientY);
+      var radius = Math.max(Math.sqrt(dx * dx + dy * dy), 24);
+
+      var dot = document.createElement("span");
+      dot.className = "han-ripple";
+      dot.style.width = radius * 2 + "px";
+      dot.style.height = radius * 2 + "px";
+      dot.style.left = event.clientX + "px";
+      dot.style.top = event.clientY + "px";
+      var kill = function () {
+        if (dot.parentNode) dot.parentNode.removeChild(dot);
+      };
+      dot.addEventListener("animationend", kill);
+      setTimeout(kill, 900); // 动画没跑起来（样式缺失等）也不残留节点
+      document.body.appendChild(dot);
+    },
+    { passive: true }
+  );
 })();
