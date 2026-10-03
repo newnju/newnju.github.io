@@ -61,14 +61,10 @@
    html 的 position: relative / min-height: 100%（上游主题自带的 sticky-footer 写法）
    留着无妨，与这里的 fixed 无关。 */
 
-/* 残迹清理：主题 JS（assets/js/_main.js 的 bumpIt，编译进 main.min.js）会给 body
-   内联一条 margin-bottom = 页脚高度，是当年为「固定页脚」预留空间用的。
-   页脚回到文档流后这条内联样式已无意义，而且在部分浏览器里会在页脚下方留出空白。
-   即便 _main.js 里的那段已删除，main.min.js 仍是旧的产物，所以这里补一条规则兜住：
-   `!important` 的作者样式能压过「不带 !important 的内联样式」，从而与 JS 何时运行无关。 */
-body {
-  margin-bottom: 0 !important;
-}
+/* 曾经在这里补过一条 `body { margin-bottom: 0 !important; }`，用来压住主题 JS
+   bumpIt() 写进 body 的内联样式（为当年的固定页脚预留空间）。
+   bumpIt 已从 _main.js 删除，main.min.js 也已用 `npm run build:js` 重建，
+   产物里不再有那段代码，所以这条兜底规则也删了。 */
 
 .page__footer-copyright {
   font-family: $global-font-family;

@@ -25,6 +25,18 @@ function determineComputedTheme() {
   return browserPref ? "dark" : "light";
 }
 
+// 同步 <meta name="theme-color">（浏览器地址栏配色）。
+// 这个 meta 不认 CSS 变量，写死 var(--global-bg-color) 无效，因此改成每次
+// 切主题时取 body 的实际背景色回填，暗色下自动跟着变成深色。
+function syncThemeColor() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const bg = window.getComputedStyle(document.body).backgroundColor;
+  if (bg && bg !== "transparent") {
+    meta.setAttribute("content", bg);
+  }
+}
+
 // Set the theme on page load or when explicitly called
 function setTheme(theme) {
   const use_theme = theme ||
@@ -39,6 +51,7 @@ function setTheme(theme) {
     $("html").removeAttr("data-theme");
     $("#theme-icon").removeClass("fa-moon").addClass("fa-sun");
   }
+  syncThemeColor();
 }
 
 // Toggle the theme manually
@@ -158,9 +171,7 @@ $(document).ready(function () {
   // 页脚已回归文档流（见 _sass/layout/_footer.scss）：
   // 这里原有一段 bumpIt()，在每次加载与窗口变化时给 body 内联
   // padding-bottom: 0 / margin-bottom: 页脚高度，为「钉在视口底部的固定页脚」预留空间。
-  // 那个布局已不存在，这段逻辑随之删除。
-  // 注意 main.min.js 是 uglify 的产物（npm run build:js），本文件改动需重新构建才会生效；
-  // 在重新构建之前，由 _sass/layout/_footer.scss 里一条 body{margin-bottom:0 !important} 兜住。
+  // 那个布局已不存在，这段逻辑随之删除（main.min.js 已用 npm run build:js 重建）。
 
   // Follow menu drop down
   $(".author__urls-wrapper button").on("click", function () {

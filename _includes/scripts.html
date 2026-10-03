@@ -2,10 +2,11 @@
 <script type="module" src="{{ base_path }}/assets/js/main.min.js"></script>
 
 <!-- 本站脚本：BibTeX 复制、引用复制、缩略图导航等渐进增强。
-     用 async 而不是 defer：defer 脚本严格按文档顺序执行，而页脚里 defer 的 MathJax
-     来自 jsDelivr，外链一慢就把排在它后面的 han.js 一起拖住（实测缩略图要等 14～19 秒）。
-     async 不受这条队列约束，脚本一到位就能跑；脚本内部按「解析完成」起步（见 han.js 第 5 节），
-     不依赖 DOMContentLoaded，因此缩略图能在解析一结束就出现。 -->
+     用 async 而不是 defer：defer 脚本严格按文档顺序执行，页脚里曾经有一条
+     defer 的 MathJax（jsDelivr），外链一慢就把排在它后面的 han.js 一起拖住
+     （实测缩略图要等 14～19 秒，见 README 第三章第 5 节）。MathJax 现已移除，
+     但 async 保留 —— han.js 不依赖其他脚本、也不等 DOMContentLoaded，
+     脚本内部按「解析完成」起步（见 han.js 第 5 节），缩略图能在解析一结束就出现。 -->
 <script src="{{ base_path }}/assets/js/han.js" async></script>
 
 {% include analytics.html %}
