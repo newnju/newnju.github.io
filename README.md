@@ -353,7 +353,7 @@ git push
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显**（第 13–17 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节 |
 | **首页自我介绍** | `_pages/about.md` |
-| **教育背景、研究方向、联系方式、工作与任职**（主页与履历、中英四处同步更新） | `_data/profile.yml`（education / work / contact / research；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-research.html` / `han-contact.html`，履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
+| **教育背景、联系方式、工作与任职**（主页与履历、中英四处同步更新） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`，履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」一节已改由 `_data` 与集合驱动，见上下几行 |
 | **履历时间轴的分期与内容**（博士 / 过渡期 / 硕士 / 本科四个大块，块内嵌任职、项目、获奖） | `_data/profile.yml` 的 `period`（phd / gap / master / bachelor）与 `gap`（过渡期标题）块、`_data/awards.yml` 各条目的 `period`、`_portfolio/*` 的 `period`；标题与小节样式在 `_sass/_han.scss` 第 19 节 |
 | **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」「获奖」两节 + 履历时间轴与「荣誉」节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页与履历页的「荣誉」小节（不参与分期）；其余年份分组显示在「获奖」小节、时间轴页，并按 `period` 进履历时期块 |

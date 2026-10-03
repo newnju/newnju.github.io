@@ -1,10 +1,9 @@
 # ==========================================================================
-# 个人结构化数据：教育背景 / 研究方向 / 联系方式 / 工作与任职 —— 单一数据源
+# 个人结构化数据：教育背景 / 联系方式 / 工作与任职 —— 单一数据源
 # --------------------------------------------------------------------------
 # 主页（_pages/about.md）、履历（_pages/cv.md）与两者的英文版都从这里取数，
 # 渲染逻辑在对应的 _includes/han-*.html：
-#   教育背景 → han-education.html    研究方向 → han-research.html
-#   联系方式 → han-contact.html
+#   教育背景 → han-education.html    联系方式 → han-contact.html
 #   履历合并时间轴（学历大块 + 按时期嵌入任职/项目/获奖）
 #                        → han-cv-timeline.html
 # 改本文件一处，四个页面同步更新；中英同条目用 text / text_en 成对维护，
@@ -27,14 +26,6 @@ contact:
   email: wujiawen@smail.nju.edu.cn
   location: 中国 · 南京
   location_en: Nanjing, China
-
-research:
-  - text: "**影像史学**：中华民族历史影像（博士阶段）"
-    text_en: "**Visual history**: historical imagery of the Chinese nation (doctoral work)"
-  - text: "**美术考古**：汉代物质文化与图像（硕士阶段），学位论文做四神博局镜纹饰与汉代宇宙观"
-    text_en: "**Art archaeology**: Han-dynasty material culture and imagery (master's work); thesis on the ornament of the four-deity TLV mirror and Han cosmology"
-  - text: "**AI 应用与伦理研究**"
-    text_en: "**AI applications and ethics**"
 
 # 顺序即显示顺序：博士 → 硕士 → 本科 → 学期交换（主页与履历页统一按此渲染）
 # 履历合并时间轴里，学期交换（period: master）会随硕士条目一起进硕士大块

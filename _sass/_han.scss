@@ -460,12 +460,11 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
    6. 侧栏头像
    --------------------------------------------------------------------------
    侧栏内容宽度实测 189.2px（wrapper 上限 925px，侧栏占 2/12）。
-   主题原本是 max-width: 175px + 5px 内边距 + 1px 描边 + 4px 光圈，
-   总宽会到 197px，比侧栏还宽 8px。
-   这里总宽定为 158px：
-       照片本体 = 158 − 2px 内边距 ×2 − 1px 描边 ×2 = 152px
-       圆圈（含光圈）= 158 + 2px ×2 = 162px
-   即圆圈与照片一起收小（原来是 187 / 177）。max-width: 100% 保证侧栏更窄时自动缩小。
+   头像总宽定为 158px（原主题是 175px 上限 + 5px 内边距 + 1px 描边 +
+   4px 光圈，总宽 197px 比侧栏还宽 8px）。max-width: 100% 保证侧栏更窄时自动缩小。
+   用户反馈：明暗两套主题下头像外都有一圈明显的圆框（1px 描边 + 底色光圈 +
+   2px 内边距留出的缝隙），观感太重 —— 三者一并去掉，只留主题自带的
+   圆形裁切（border-radius 来自基础主题），圆的是照片本身，不再是外框。
    -------------------------------------------------------------------------- */
 
 .author__avatar img {
@@ -473,9 +472,9 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
     width: 158px;
     max-width: 100%;
     height: auto;
-    padding: 2px;
-    border: 1px solid var(--global-border-color);
-    box-shadow: 0 0 0 2px var(--global-footer-bg-color);
+    padding: 0;
+    border: 0;
+    box-shadow: none;
 }
 
 @media (min-width: 57.8125em) {
@@ -561,11 +560,12 @@ html[data-theme="dark"][data-color-theme="nju"] {
     --global-link-color-hover   : #e0c074;
     --global-link-color-visited : #b794d4;
     --global-masthead-link-color-hover : #c4a6e0;
-    /* 暗底紫金：光斑与色斑提亮，但透明度压低，保证正文对比度 */
+    /* 暗底紫金：色斑提亮但透明度压低保证正文对比度；光斑（鼠标跟随）
+       原 0.10 在暗底上几乎看不出，单独加浓到 0.18 */
     --han-aurora-a              : rgba(183, 148, 212, 0.15);
     --han-aurora-b              : rgba(224, 192, 116, 0.13);
     --han-aurora-c              : rgba(124, 191, 162, 0.10);
-    --han-spot-color            : rgba(183, 148, 212, 0.10);
+    --han-spot-color            : rgba(183, 148, 212, 0.18);
 }
 
 /* --------------------------------------------------------------------------
@@ -692,7 +692,7 @@ html[data-theme="dark"] ::selection {
     position: fixed;
     top: 0;
     right: 0;
-    width: 132px;
+    width: 100px;
     height: 100vh;
     z-index: 30;
     overflow: hidden;
@@ -733,7 +733,7 @@ html[data-theme="dark"] ::selection {
 }
 
 .han-minimap__inner {
-    width: 132px;
+    width: 100px;
 }
 
 /* 缩略图只呈现正文：侧栏原为 fixed + 100vh（贴视口），在缩略容器里
@@ -946,7 +946,8 @@ html[data-reveal] .han-reveal.is-visible {
     .archive__item,
     .archive__item-title,
     .han-timeline__item,
-    .han-awards li {
+    .han-awards li,
+    .page__content h1 + ul li {
         transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
     }
 
@@ -958,8 +959,12 @@ html[data-reveal] .han-reveal.is-visible {
         transform: translateY(-3px);
     }
 
+    /* h1 + ul 直接命中首页「教育背景 / 荣誉 / 近期成果」的正文列表
+       （章节标题紧跟 include 输出的无标记列表，见 §18）；这三个列表的
+       条目目前不参与滚动渐显，只需一条基础规则。 */
     .han-timeline__item:hover,
     .han-awards li:hover,
+    .page__content h1 + ul li:hover,
     html[data-reveal] .han-timeline__item.is-visible:hover,
     html[data-reveal] .han-awards li.is-visible:hover {
         color: var(--han-patina);
@@ -1020,30 +1025,38 @@ html[data-reveal] .han-reveal.is-visible {
 /* --------------------------------------------------------------------------
    18. 正文列表：纯缩进、不带任何标记
    --------------------------------------------------------------------------
-   用户反馈首页圆点不好看。作用于 .page__content（主页、履历、英文页共用
-   同一套），去掉 disc / circle / decimal 标记，层级只靠缩进表达：
-   顶层贴左，嵌套行（教育背景的注释）再缩进一档。
+   用户反馈首页圆点不好看。两套正文容器都要盖住：
+   .page__content —— 单页布局（主页、英文页、论文详情）；
+   .archive       —— 归档布局（履历、时间轴、论文列表页）。履历的列表
+   原先漏在 .page__content 之外，圆点残留，用户反馈后补上。
+   层级只靠缩进表达：顶层贴左，嵌套行（教育背景的注释）再缩进一档。
    li 里的段落（kramdown 遇到空行会把条目包成 <p>，近期成果的最后一条
    就出现过）自带 1em 外距，会让条目忽宽忽窄，这里归零。
-   侧栏、页脚的列表不在 .page__content 内，不受影响。
+   侧栏、页脚的列表不在两个容器内，不受影响。
    -------------------------------------------------------------------------- */
 .page__content ul,
-.page__content ol {
+.page__content ol,
+.archive ul,
+.archive ol {
     list-style: none;
     padding-left: 0;
 }
 
-.page__content li {
+.page__content li,
+.archive li {
     margin: 0.3em 0;
 }
 
 .page__content li ul,
-.page__content li ol {
+.page__content li ol,
+.archive li ul,
+.archive li ol {
     padding-left: 1.4em;
     margin: 0.15em 0;
 }
 
-.page__content li > p {
+.page__content li > p,
+.archive li > p {
     margin: 0;
 }
 

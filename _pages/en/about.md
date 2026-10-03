@@ -10,11 +10,6 @@ I am **Jiawen Wu (武嘉文)**, a Ph.D. student in Journalism and Communication 
 
 My research begins with Han-dynasty material culture and imagery: my master's thesis examined the ornament of the four-deity TLV mirror and the conceptions of direction and cosmic order it encodes. My doctoral work is in visual history, concerned with the production, circulation, and interpretation of the historical imagery of the Chinese nation. During my undergraduate studies I interned at Xiaomi and JD.com on content operations and risk management.
 
-Research Interests
-======
-
-{% include han-research.html %}
-
 Education
 ======
 
