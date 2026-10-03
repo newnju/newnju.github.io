@@ -12,7 +12,8 @@ Every page and entry on this site is listed below. There is also an [XML version
 
 <h2>Pages</h2>
 {%- comment -%}
-  只列英文页（locale 含 'en'），中文页留给 /sitemap/ 那份，避免两张地图互相重复。
+  English pages only (locale contains 'en'); the Chinese pages belong to the
+  /sitemap/ map, so the two maps do not duplicate each other.
 {%- endcomment -%}
 {% for post in site.pages %}
   {% assign _pl = post.locale | default: '' %}
