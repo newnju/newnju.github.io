@@ -46,8 +46,8 @@
           {% else %}
             "{{ teaser | prepend: "/images/" | prepend: base_path }}"
           {% endif %}
-          alt="">
-      </div>
+          alt="" loading="lazy" decoding="async">
+        </div>
     {% endif %}
 
     {%- comment -%}

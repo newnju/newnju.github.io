@@ -24,7 +24,7 @@ repository               : "newnju/newnju.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "avatar.png"
+  avatar           : "avatar.webp"
   name             : "武嘉文"
   name_en          : "Jiawen Wu"
   pronouns         : # example: "she/her"  

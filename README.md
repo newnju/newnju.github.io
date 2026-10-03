@@ -312,7 +312,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **流光渐变背景**（`_includes/han-effects.html` + `_sass/_han.scss` 第 13–14 节）：三团大色斑在内容层下方以 47–64 秒的周期缓慢漂移。配色是三个变量 `--han-aurora-a/b/c`，在 `_sass/theme/_han_light.scss` / `_han_dark.scss` 按明暗各定义一套，`_han.scss` 第 8 节的南大紫配色再覆盖一层 —— 切暗色、换配色，背景跟着走。实现上只用 radial-gradient（没有 `filter: blur`，省掉一整屏的模糊开销），`@keyframes` 只动 `transform`，颜色不进关键帧（延续本文件对旧 Safari 的约定）；变量都带兜底值，换 `site_theme` 也不至于空白。
 
-**光标光斑**（`assets/js/han.js` 第 7 节 + 第 14 节样式）：一团 420px 的柔光跟着指针走。只在精细指针（`hover: hover and pointer: fine`）上启用，`requestAnimationFrame` 节流每帧最多写一次坐标；没有这段脚本时色斑停在默认坐标，不影响任何内容。
+**光标光斑**（`assets/js/han.js` 第 7 节 + 第 14 节样式）：一团 420px 的柔光跟着指针走，图层收成 420×420 小块、位置走 `transform`（每帧只更新合成层，指针移动不整屏重绘）。只在精细指针（`hover: hover and pointer: fine`）上启用，`requestAnimationFrame` 节流每帧最多写一次坐标；没有这段脚本时色斑停在默认坐标，不影响任何内容。
 
 **滚动渐显**（`_includes/head/custom.html` 内联引导 + `han.js` 第 6 节 + 第 15 节样式）：列表卡片、时间轴条目、荣誉条目、内容区小标题进入视口时轻微上浮淡入，只触发一次。三重兜底保证「动效坏了也不藏内容」：隐藏态只在 `<html data-reveal>` 与 `.han-reveal` 同时存在时才生效（引导脚本没跑、用户开了减少动效，正文照常可见）；`han.js` 里没有 IntersectionObserver 或没选中元素会立刻撤销标记；内联脚本 3 秒没等到 `han.js` 的就绪标记 `__hanRevealReady` 也自动撤销。
 
@@ -328,7 +328,9 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **回到顶部按钮**（`han.js` 第 13 节 + 第 25 节样式）：JS 生成的右下角紫圆钮（页面 HTML 一行不动），滚过半屏才浮出、点击平滑回顶；≥1200px 自动挪到缩略图左侧不重叠（z-index 40，缩略图 30、导航下拉 100）；reduced-motion 照常显隐只是没有过渡动画，打印不印。
 
-**卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
+**卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS，每帧最多重算一次（rAF 节流）；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
+
+**性能微优化**：侧栏头像改用 `images/avatar.webp`（400×400、14KB，原 PNG 119KB 只留给 `og_image` 分享预览），`<img>` 补了 `width/height` 免加载时布局抖动；作品缩略图 `loading="lazy"` 延后屏外图片；jsDelivr 提前 `preconnect` 省一次连接；光斑、卡片倾斜、时间轴与回到顶部全部 rAF 节流、每帧最多写一次。
 
 **侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。线稿看得见、动得了的前提是侧栏能滚进视口 —— 宽屏侧栏由 `han.js` 第 9 节做 fit 门控：装得下一屏才固定（`.is-fit`），装不下就保持文档流随页滚动，否则左列多出内层滚动条、`inViewport` 永不触发。
 
@@ -381,7 +383,7 @@ git push
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
 | **英文版页面** | `_pages/en/` 下的同名文件 |
 | 首页的博局镜图 | `_includes/han-mirror.html` |
-| 头像 | `images/avatar.png`（400×400、正方形、背景已抠透明）。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片本体 152px、圆圈（含光圈）162px，整体上移 22px、左移 8px。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
+| 头像 | 侧栏显示的是 `images/avatar.webp`（400×400、正方形、背景已抠透明，14KB；由原图转出，原 `avatar.png` 119KB 只留给 `og_image` 分享预览），引用在 `_config.yml` 的 `author.avatar` 与 `_data/authors.yml` —— 换头像时两处一起改、并重转一次 WebP。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片本体 152px、圆圈（含光圈）162px，整体上移 22px、左移 8px。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
 | 项目配图 | 没有默认封面。想加就把图放进 `images/portfolio/`，在条目 front matter 里用 `excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"` 引它（模板自带的示例 SVG 已删除，目录是空的） |
 
 ### 新增条目

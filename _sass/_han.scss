@@ -880,21 +880,28 @@ html[data-theme="dark"] ::selection {
    14. 光标光斑（.han-spotlight）
    --------------------------------------------------------------------------
    柔和高光跟着指针走：位置由 assets/js/han.js 第 7 节写入 --han-spot-x/y
-   （rAF 节流、只认精细指针、reduced-motion 下不注册）。层是固定的、透明的、
-   不接事件；没 JS 时 radial-gradient 落在默认坐标（右上），也不会出错。
+   （rAF 节流、只认精细指针、reduced-motion 下不注册）。层曾经铺满整屏、把
+   径向渐变的 at 位置写在背景上 —— 指针每动一下整屏图层都要重绘；现在图层
+   收成 420×420 的小块，位置走 translate3d（calc 减去半径让圆心对准指针），
+   每帧只更新合成层、不整屏重绘，will-change 提前给它留好层。
+   层是固定的、透明的、不接事件；没 JS 时坐标变量不设，calc 用默认值把
+   光斑放在右上，也不会出错。
    -------------------------------------------------------------------------- */
 
 .han-spotlight {
     display: none;
     position: fixed;
     top: 0;
-    right: 0;
-    bottom: 0;
     left: 0;
+    width: 420px;
+    height: 420px;
     z-index: -1;
     pointer-events: none;
-    background: radial-gradient(420px circle at var(--han-spot-x, 72%) var(--han-spot-y, 22%),
+    will-change: transform;
+    background: radial-gradient(420px circle,
         var(--han-spot-color, rgba(92, 46, 131, 0.09)), transparent 70%);
+    transform: translate3d(calc(var(--han-spot-x, 72vw) - 210px),
+        calc(var(--han-spot-y, 22vh) - 210px), 0);
 }
 
 @media (hover: hover) and (pointer: fine) {

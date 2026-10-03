@@ -902,8 +902,9 @@
    --------------------------------------------------------------------------
    指针在卡片（.archive__item）内移动时按偏离中心量给一点 rotateX/Y
    （±3.5°），并保留 §16 的上浮 —— 全部写成行内 transform（优先级最高），
-   指针离开即清空、交还 CSS 过渡回位。透视用 transform 里内联的
-   perspective()，不需要动任何父容器。
+   指针离开即清空、交还 CSS 过渡回位。指针每帧最多重算一次
+   （requestAnimationFrame 节流），一帧内再密集的 move 也只写一次样式。
+   透视用 transform 里内联的 perspective()，不需要动任何父容器。
    只在「精细指针 + 有 hover + 允许动效」的设备上挂；reduced-motion 与
    触屏完全不参与，维持 §16 原有 hover 行为。
    ========================================================================== */
@@ -919,13 +920,15 @@
   var cards = document.querySelectorAll(".archive__item");
 
   function bind(card) {
-    card.addEventListener("pointerenter", function () {
-      card.style.willChange = "transform";
-    });
-    card.addEventListener("pointermove", function (event) {
+    var queued = false;
+    var cx = 0;
+    var cy = 0;
+
+    function paint() {
+      queued = false;
       var rect = card.getBoundingClientRect();
-      var nx = ((event.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
-      var ny = ((event.clientY - rect.top) / (rect.height || 1)) * 2 - 1;
+      var nx = ((cx - rect.left) / (rect.width || 1)) * 2 - 1;
+      var ny = ((cy - rect.top) / (rect.height || 1)) * 2 - 1;
       if (nx > 1) nx = 1;
       if (nx < -1) nx = -1;
       if (ny > 1) ny = 1;
@@ -936,6 +939,17 @@
         "deg) rotateY(" +
         (nx * 3.5).toFixed(2) +
         "deg)";
+    }
+
+    card.addEventListener("pointerenter", function () {
+      card.style.willChange = "transform";
+    });
+    card.addEventListener("pointermove", function (event) {
+      cx = event.clientX;
+      cy = event.clientY;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(paint);
     });
     card.addEventListener("pointerleave", function () {
       card.style.transform = "";
