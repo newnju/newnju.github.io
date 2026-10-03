@@ -788,3 +788,162 @@
     { passive: true }
   );
 })();
+
+/* ==========================================================================
+   11. 主题切换色彩渐变（_han.scss §23）
+   --------------------------------------------------------------------------
+   明暗切换的真正逻辑在 assets/js/_main.js（改 html[data-theme]），这里只
+   负责在用户点了 masthead 的主题按钮（#theme-toggle）时给 html 临时挂
+   .theme-transition 500ms：期间 §23 的规则给全站颜色补一段 0.35s 过渡，
+   深浅两套配色渐变着换过去；时段一过就摘掉类，平时的 hover、滚动渐显
+   完全不受影响。页面首载时主题落位是瞬时的（不挂类），入场不拖泥带水。
+   reduced-motion 下颜色渐变属于「只变颜色」的允许范围，照常生效。
+   ========================================================================== */
+(function () {
+  var timer = 0;
+  document.addEventListener(
+    "click",
+    function (event) {
+      var target = event.target;
+      if (!target || !target.closest) return;
+      if (!target.closest("#theme-toggle")) return;
+      var root = document.documentElement;
+      root.classList.add("theme-transition");
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        root.classList.remove("theme-transition");
+      }, 500);
+    },
+    { passive: true }
+  );
+})();
+
+/* ==========================================================================
+   12. 时间轴滚动点亮（_han.scss §24）
+   --------------------------------------------------------------------------
+   把「视口 55% 高度线」相对每条 .han-timeline 的进度（0→1）写到容器的
+   --han-timeline-progress 上，§24 的彩色 ::after 据此从上往下点亮灰轴。
+   scaleY 是纯变换、零布局；rAF 节流，只听 scroll / resize。
+   reduced-motion 下直接不跑 —— §24 的媒体查询会给出静态全彩轴。
+   页面上没有时间轴时（绝大多数页面）什么都不挂。
+   ========================================================================== */
+(function () {
+  if (!window.matchMedia) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var rails = document.querySelectorAll(".han-timeline");
+  if (!rails.length) return;
+
+  var queued = false;
+  function paint() {
+    queued = false;
+    var line = window.innerHeight * 0.55;
+    for (var i = 0; i < rails.length; i++) {
+      var rect = rails[i].getBoundingClientRect();
+      var p = (line - rect.top) / (rect.height || 1);
+      if (p < 0) p = 0;
+      if (p > 1) p = 1;
+      rails[i].style.setProperty("--han-timeline-progress", p.toFixed(4));
+    }
+  }
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(paint);
+  }
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+  paint();
+})();
+
+/* ==========================================================================
+   13. 回到顶部按钮（样式 _han.scss §25）
+   --------------------------------------------------------------------------
+   在 JS 里生成一个 .han-top 挂到 body 上（页面 HTML 一行不动），滚过
+   视口高度的一半才浮出，点击平滑回顶。≥1200px 右侧是缩略图（§12，宽
+   100px），§25 的媒体查询已把按钮挪到缩略图左侧，两者不叠。
+   reduced-motion 下照常显隐（只是没有过渡动画），print 由 §17 隐藏。
+   ========================================================================== */
+(function () {
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "han-top";
+  btn.setAttribute("aria-label", "回到顶部");
+  btn.setAttribute("aria-hidden", "true");
+  btn.tabIndex = -1;
+  btn.innerHTML = '<i class="fa-solid fa-arrow-up" aria-hidden="true"></i>';
+  document.body.appendChild(btn);
+
+  var queued = false;
+  function sync() {
+    queued = false;
+    var scrolled =
+      window.pageYOffset || document.documentElement.scrollTop || 0;
+    var on = scrolled > window.innerHeight * 0.5;
+    btn.classList.toggle("is-on", on);
+    btn.setAttribute("aria-hidden", on ? "false" : "true");
+    btn.tabIndex = on ? 0 : -1;
+  }
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(sync);
+  }
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+  sync();
+
+  btn.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+})();
+
+/* ==========================================================================
+   14. 卡片 3D 轻微倾斜（配合 §16 的 hover 上浮）
+   --------------------------------------------------------------------------
+   指针在卡片（.archive__item）内移动时按偏离中心量给一点 rotateX/Y
+   （±3.5°），并保留 §16 的上浮 —— 全部写成行内 transform（优先级最高），
+   指针离开即清空、交还 CSS 过渡回位。透视用 transform 里内联的
+   perspective()，不需要动任何父容器。
+   只在「精细指针 + 有 hover + 允许动效」的设备上挂；reduced-motion 与
+   触屏完全不参与，维持 §16 原有 hover 行为。
+   ========================================================================== */
+(function () {
+  if (!window.matchMedia) return;
+  if (
+    !window.matchMedia(
+      "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)"
+    ).matches
+  )
+    return;
+
+  var cards = document.querySelectorAll(".archive__item");
+
+  function bind(card) {
+    card.addEventListener("pointerenter", function () {
+      card.style.willChange = "transform";
+    });
+    card.addEventListener("pointermove", function (event) {
+      var rect = card.getBoundingClientRect();
+      var nx = ((event.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
+      var ny = ((event.clientY - rect.top) / (rect.height || 1)) * 2 - 1;
+      if (nx > 1) nx = 1;
+      if (nx < -1) nx = -1;
+      if (ny > 1) ny = 1;
+      if (ny < -1) ny = -1;
+      card.style.transform =
+        "translateY(-3px) perspective(900px) rotateX(" +
+        (-ny * 3.5).toFixed(2) +
+        "deg) rotateY(" +
+        (nx * 3.5).toFixed(2) +
+        "deg)";
+    });
+    card.addEventListener("pointerleave", function () {
+      card.style.transform = "";
+      card.style.willChange = "";
+    });
+  }
+
+  for (var i = 0; i < cards.length; i++) {
+    bind(cards[i]);
+  }
+})();

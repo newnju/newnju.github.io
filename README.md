@@ -320,9 +320,19 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **点击涟漪**（`assets/js/han.js` 第 10 节 + 第 21 节样式）：页面任意处按下鼠标或手指都有反馈 —— 在可点击元素（链接、按钮、`summary`、`role=button`）上以指针为圆心铺满整块（半径取指针到元素四角的最大距离，整张卡片都能铺满），在正文等普通处泛指尖大小的小圆；颜色走 `--han-ripple`（第 8 节随明暗主题切换，带青铜绿兜底）。节点 `position: fixed` 挂在 body 上、`pointer-events: none`，不参与布局也不挡点击，560ms 扩散淡出后自回收；reduced-motion 下 JS 直接不监听、第 17 节样式再兜底隐藏；缩略图拖动区（`.han-minimap`）是拖拽导航，排除在外。
 
+**链接下划线滑入**（第 22 节）：正文里的链接平时保持原生下划线，hover 或键盘聚焦时一道紫色短杠从左滑到右盖上去，纯 `background-size` 过渡、零布局位移；触屏与 reduced-motion 维持原样，按钮和包图片的链接不参与。
+
+**主题切换色彩渐变**（`han.js` 第 11 节 + 第 23 节样式）：点 masthead 明暗按钮的瞬间给 `<html>` 临时挂 `.theme-transition` 500ms，期间全站颜色（背景、文字、边框、阴影、图标填充）0.35 秒渐变换过去，时段一过摘掉类、平时的 hover 与滚动渐显不受影响；页面首载的主题落位仍是瞬时的。
+
+**时间轴滚动点亮**（`han.js` 第 12 节 + 第 24 节样式）：`/timeline/` 的灰轴上叠一条严格重合的彩色渐变（南大紫 → 金），随滚动按视口位置从上往下点亮（容器上的 `--han-timeline-progress` + `scaleY`，纯变换零布局）；reduced-motion 下 JS 不跑、直接静态全彩，打印走第 17 节保持灰轴。
+
+**回到顶部按钮**（`han.js` 第 13 节 + 第 25 节样式）：JS 生成的右下角紫圆钮（页面 HTML 一行不动），滚过半屏才浮出、点击平滑回顶；≥1200px 自动挪到缩略图左侧不重叠（z-index 40，缩略图 30、导航下拉 100）；reduced-motion 照常显隐只是没有过渡动画，打印不印。
+
+**卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
+
 **侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。线稿看得见、动得了的前提是侧栏能滚进视口 —— 宽屏侧栏由 `han.js` 第 9 节做 fit 门控：装得下一屏才固定（`.is-fit`），装不下就保持文档流随页滚动，否则左列多出内层滚动条、`inViewport` 永不触发。
 
-**减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显、点击涟漪）；打印时两层装饰不印、渐显元素直接给完整不透明度，不会打出来一片空白。
+**减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显、点击涟漪、时间轴点亮）；回到顶部按钮照常显隐、只是没有过渡动画；打印时装饰层不印（含回到顶部按钮与时间轴彩轴）、渐显元素直接给完整不透明度，不会打出来一片空白。
 
 ---
 
@@ -357,6 +367,7 @@ git push
 | 界面按钮文案（中文 / 英文） | `_data/ui-text.yml` 的 `zh` / `en` 段 |
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
+| **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜**（第 22–25 节） | `_sass/_han.scss` 第 22–25 节 + `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控） |
 | **首页自我介绍** | `_pages/about.md` |

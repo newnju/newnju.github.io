@@ -975,8 +975,11 @@ html[data-reveal] .han-reveal.is-visible {
    --------------------------------------------------------------------------
     系统开了「减少动态效果」时：新老动效一并静止（博局镜旋转/呼吸、缩略图
     进度、流光漂移、光斑跟随、滚动渐显），只保留颜色等非位移变化；点击
-    涟漪（§21）由 han.js 第 10 节在 JS 层直接不监听，这里再兜底隐藏。
-    打印时：装饰层不印、渐显元素直接给完整不透明度，避免打出来一片空白。
+    涟漪（§21）由 han.js 第 10 节在 JS 层直接不监听，这里再兜底隐藏；
+    时间轴点亮（§24）由 han.js 第 12 节不跑、直接给静态全彩轴；回到顶部
+    按钮（§25）照常显隐，只是没有过渡动画。
+    打印时：装饰层不印（含回到顶部按钮与时间轴彩轴，见 §24/§25）、
+    渐显元素直接给完整不透明度，避免打出来一片空白。
     -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1013,7 +1016,9 @@ html[data-reveal] .han-reveal.is-visible {
 
     .han-aurora,
     .han-spotlight,
-    .han-ripple {
+    .han-ripple,
+    .han-top,
+    .han-timeline::after {
         display: none !important;
     }
 
@@ -1139,5 +1144,139 @@ html[data-reveal] .han-reveal.is-visible {
     to {
         transform: translate(-50%, -50%) scale(1);
         opacity: 0;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   22. 正文链接下划线滑入（hover 微交互，只给有指针、不介意动效的设备）
+   --------------------------------------------------------------------------
+   .page__content 里的链接平时保持原生下划线（_sass/layout/_page.scss），
+   hover 或键盘聚焦时叠一道紫色短杠从左滑到右盖上去 —— 纯 background-size
+   过渡，不动文本度量、零布局位移。触屏没有 hover、reduced-motion 用户
+   维持原样。按钮（.btn）与包着图片的链接不参与。
+   -------------------------------------------------------------------------- */
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+
+    .page__content a:not(.btn):not(:has(img)) {
+        background-image: linear-gradient(#5c2e83, #5c2e83);
+        background-repeat: no-repeat;
+        background-position: left bottom;
+        background-size: 0% 2px;
+        transition: background-size 0.35s ease;
+    }
+
+    .page__content a:not(.btn):not(:has(img)):hover,
+    .page__content a:not(.btn):not(:has(img)):focus-visible {
+        background-size: 100% 2px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   23. 主题切换时的全站色彩渐变（JS：han.js 第 11 节挂 .theme-transition）
+   --------------------------------------------------------------------------
+   明暗切换靠换 CSS 变量完成，本身是一瞬的硬切。点 masthead 主题按钮的
+   瞬间给 html 临时挂 .theme-transition（500ms 后摘掉），期间这条规则给
+   所有元素补一段 background-color / color / border 过渡，全站颜色渐变换
+   过去；时段一过一切照旧，平时的 hover、滚动渐显不受影响。
+   reduced-motion 下颜色渐变属于「只变颜色」的允许范围，照常生效。
+   -------------------------------------------------------------------------- */
+
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+    transition: background-color 0.35s ease, color 0.35s ease,
+        border-color 0.35s ease, box-shadow 0.35s ease, fill 0.35s ease,
+        stroke 0.35s ease !important;
+}
+
+/* --------------------------------------------------------------------------
+   24. 时间轴滚动点亮（配合 han.js 第 12 节）
+   --------------------------------------------------------------------------
+   灰轴（§3 的 ::before）上叠一条同几何的彩色 ::after（left 0.75em、宽 2px，
+   与灰轴严格重合），高度随滚动进度走容器上的 --han-timeline-progress
+   （0→1，JS 按视口位置算）。scaleY 纯变换、零布局。
+   reduced-motion 下 JS 不跑，媒体查询直接给静态全彩轴；
+   print 走 §17 隐藏，纸上保持原来的灰轴。
+   -------------------------------------------------------------------------- */
+
+.han-timeline::after {
+    content: "";
+    position: absolute;
+    left: 0.75em;
+    top: 0.5em;
+    bottom: 0.5em;
+    width: 2px;
+    transform: translateX(-50%) scaleY(var(--han-timeline-progress, 0));
+    transform-origin: top center;
+    background: linear-gradient(to bottom, #5c2e83 0, #c8a45c 100%);
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .han-timeline::after {
+        transform: translateX(-50%) scaleY(1);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   25. 回到顶部按钮（创建与显隐见 han.js 第 13 节）
+   --------------------------------------------------------------------------
+   JS 生成的 .han-top，固定右下角的小圆钮，滚过半屏才浮出。≥1200px 右侧
+   是缩略图（§12，宽 100px），媒体查询把按钮挪到缩略图左侧，两者不叠。
+   z-index 取 40：高过缩略图（30），低于导航下拉（100）。
+   过渡只在允许动效时给（否则显隐是瞬时的、功能不受影响）；print 走 §17。
+   -------------------------------------------------------------------------- */
+
+.han-top {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 40;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #5c2e83;
+    color: #fff;
+    font-size: 16px;
+    line-height: 1;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.han-top.is-on {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.han-top:hover {
+    background: #c8a45c;
+}
+
+.han-top:focus-visible {
+    outline: 2px solid #c8a45c;
+    outline-offset: 2px;
+}
+
+@media (min-width: 1200px) {
+    .han-top {
+        right: 124px;
+    }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .han-top {
+        transition: opacity 0.3s ease, transform 0.3s ease,
+            background-color 0.25s ease;
     }
 }
