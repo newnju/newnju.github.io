@@ -1,0 +1,39 @@
+---
+layout: null
+permalink: /feed.xml
+---
+<?xml version="1.0" encoding="utf-8"?>
+{%- comment -%}
+  自建 Atom feed，替代 jekyll-feed（它只聚合 posts，本站没有 posts，
+  所以线上 feed.xml 一直是 0 条）。_config.yml 的 plugins / whitelist
+  里已移除 jekyll-feed，feed.xml 由本页输出。
+
+  目前只收录 _publications：四条 collection 里只有它带 date 字段，
+  talks / teaching / portfolio 没有日期，Atom 的 <updated> 无法填，
+  硬塞会把它们按构建时间顶到最前面，所以先不放。
+{%- endcomment -%}
+{%- assign _items = site.publications | sort: "date" | reverse -%}
+{%- assign _author = site.author.name | default: site.name -%}
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="zh-CN">
+  <title>{{ site.title | xml_escape }}</title>
+  <subtitle>{{ site.description | xml_escape }}</subtitle>
+  <link href="{{ '/feed.xml' | absolute_url }}" rel="self" />
+  <link href="{{ '/' | absolute_url }}" />
+  <updated>{{ site.time | date_to_xmlschema }}</updated>
+  <id>{{ '/feed.xml' | absolute_url }}</id>
+  <author>
+    <name>{{ _author | xml_escape }}</name>
+    <uri>{{ '/' | absolute_url }}</uri>
+  </author>
+  {%- for post in _items limit: 20 %}
+  {%- assign _excerpt = post.excerpt | default: post.description | default: "" | strip_html | normalize_whitespace | truncate: 300 %}
+  <entry>
+    <title>{{ post.title | xml_escape }}</title>
+    <link href="{{ post.url | absolute_url }}" rel="alternate" type="text/html" />
+    <id>{{ post.url | absolute_url }}</id>
+    <published>{{ post.date | date_to_xmlschema }}</published>
+    <updated>{{ post.date | date_to_xmlschema }}</updated>
+    <summary type="text">{{ _excerpt | xml_escape }}</summary>
+  </entry>
+  {%- endfor %}
+</feed>

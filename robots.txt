@@ -1,0 +1,5 @@
+# 站点地图由 jekyll-sitemap 生成：https://newnju.github.io/sitemap.xml
+User-agent: *
+Allow: /
+
+Sitemap: https://newnju.github.io/sitemap.xml
