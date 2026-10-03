@@ -4,6 +4,9 @@ title_en: "AVG-game: A Story-Driven Game Built with AIGC"
 excerpt: "2023.05，北京大学新工科黑客马拉松**第 9 名**。以 ChatGPT 作为故事推进者，由大模型根据剧情生成 Stable-Diffusion 可识别的 prompt，再生成画面，构成个性化的文字冒险（AVG）体验。"
 excerpt_en: "2023.05, Peking University New Engineering Hackathon — **9th place**. ChatGPT drives the story, turning each choice into the next plot beat and then into a Stable-Diffusion-ready prompt, so the generated images build a personalised text-adventure (AVG) experience."
 collection: portfolio
+date: 2023-05-01
+daterange: "2023.05"
+period: master
 permalink: /portfolio/aigc-avg-game
 ---
 

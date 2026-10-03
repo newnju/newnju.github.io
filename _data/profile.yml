@@ -1,14 +1,26 @@
 # ==========================================================================
-# 个人结构化数据：教育背景 / 研究方向 / 联系方式 —— 单一数据源
+# 个人结构化数据：教育背景 / 研究方向 / 联系方式 / 工作与任职 —— 单一数据源
 # --------------------------------------------------------------------------
 # 主页（_pages/about.md）、履历（_pages/cv.md）与两者的英文版都从这里取数，
 # 渲染逻辑在对应的 _includes/han-*.html：
 #   教育背景 → han-education.html    研究方向 → han-research.html
 #   联系方式 → han-contact.html
+#   履历合并时间轴（学历大块 + 按时期嵌入任职/项目/获奖）
+#                        → han-cv-timeline.html
 # 改本文件一处，四个页面同步更新；中英同条目用 text / text_en 成对维护，
 # 英文页优先取 *_en 字段、缺省回落中文。
 #
-# 维护方法：复制任意一条改文字即可。education 的数组顺序就是显示顺序。
+# 维护方法：复制任意一条改文字即可。education / work 的数组顺序就是显示顺序
+# （履历时间轴为倒序，各时期内请把最近的写在前面）。
+#
+# period 字段（履历分期，只被 han-cv-timeline.html 使用）：
+#   phd     博士阶段（2026.09 – ）
+#   gap     硕士毕业后至博士入学前的过渡期（2024.07 – 2026.08）
+#   master  硕士阶段（2021.09 – 2024.06，含 2023.10 – 2024.03 图宾根交换）
+#   bachelor 本科阶段（2017.09 – 2021.06）
+# 履历时间轴按 phd → gap → master → bachelor 倒序出块；学历条目（education）
+# 按 period 归入对应大块，块标题取 _head 字段，空档期没有学历条目、
+# 只有 head 这一行。
 # ==========================================================================
 
 contact:
@@ -25,14 +37,17 @@ research:
     text_en: "**AI applications and ethics**"
 
 # 顺序即显示顺序：博士 → 硕士 → 本科 → 学期交换（主页与履历页统一按此渲染）
+# 履历合并时间轴里，学期交换（period: master）会随硕士条目一起进硕士大块
 education:
-  - text: "**博士研究生**，南京大学新闻传播学院，新闻传播学（050300），2026.09 – 至今"
+  - period: phd
+    text: "**博士研究生**，南京大学新闻传播学院，新闻传播学（050300），2026.09 – 至今"
     text_en: "**Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300), 2026.09 – present"
     notes:
       - "研究方向：影像史学 · 中华民族历史影像"
     notes_en:
       - "Research: visual history · historical imagery of the Chinese nation"
-  - text: "**硕士研究生**，南京大学艺术学院，美术学（130400），2021.09 – 2024.06"
+  - period: master
+    text: "**硕士研究生**，南京大学艺术学院，美术学（130400），2021.09 – 2024.06"
     text_en: "**M.A.**, School of Arts, Nanjing University — Art History (130400), 2021.09 – 2024.06"
     notes:
       - "研究方向：美术考古 · 汉代物质文化与图像"
@@ -42,11 +57,74 @@ education:
       - "Research: art archaeology · Han-dynasty material culture and imagery"
       - "Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*"
       - "Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships"
-  - text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305），2017.09 – 2021.06"
+  - period: bachelor
+    text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305），2017.09 – 2021.06"
     text_en: "**B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06"
     notes:
       - "修读影视后期制作、数字媒体、纪录片、广告、电影与电视剧研究等课程，排名 10%，多次获学业奖学金"
     notes_en:
       - "Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships"
-  - text: "**学期交换**，德国图宾根大学，校际合作，2023.10 – 2024.03"
+  - period: master
+    text: "**学期交换**，德国图宾根大学，校际合作，2023.10 – 2024.03"
     text_en: "**Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03"
+
+# 履历时间轴的过渡期大块（没有学历条目，只有这一行标题）
+gap:
+  head: "**过渡期**：硕士毕业后、博士入学前，2024.07 – 2026.08"
+  head_en: "**Between degrees**: after the M.A., before the Ph.D., Jul 2024 – Aug 2026"
+
+# 工作与任职（履历按时期嵌入；顺序即各时期内的显示顺序，最近在前）
+work:
+  # —— 过渡期 ——
+  - period: gap
+    text: "2024.11 – 2025.05：上海交通大学文科建设处 科研管理（校聘）"
+    text_en: "Nov 2024 – May 2025: Research administration, Office of Liberal Arts Development, Shanghai Jiao Tong University (university appointment)"
+    notes:
+      - "主导大模型轻应用竞赛、智慧文科论坛、院系 AI 赋能文科项目等"
+    notes_en:
+      - "Led the large-model lightweight-app competition, the Smart Liberal Arts Forum, and AI-for-liberal-arts projects across departments"
+  # —— 硕士期间 ——
+  - period: master
+    text: "2022.09 – 2023.09：南京大学艺术学院 团委组织部部长"
+    text_en: "Sep 2022 – Sep 2023: Head of the Organisation Department, Communist Youth League, School of Arts, Nanjing University"
+    notes:
+      - "负责团务建设，策划主题活动，管理团员档案"
+    notes_en:
+      - "Managed league affairs, planned themed activities, and maintained member records"
+  - period: master
+    text: "2022.09 – 2023.09：南京大学 3D 打印社 技术部部长"
+    text_en: "Sep 2022 – Sep 2023: Head of Technology, 3D Printing Club, Nanjing University"
+  - period: master
+    text: "2022.05 – 2023.05：中国人民大学 数字人文学生研究员"
+    text_en: "May 2022 – May 2023: Student Researcher in Digital Humanities, Renmin University of China"
+  - period: master
+    text: "2022.04 – 2022.08：北京大学数字人文实验室 科研助理"
+    text_en: "Apr 2022 – Aug 2022: Research Assistant, Digital Humanities Laboratory, Peking University"
+  - period: master
+    text: "2021.09 – 2022.02：南京大学《创作方法与创新思维》课程助教"
+    text_en: "Sep 2021 – Feb 2022: Teaching Assistant, Creative Methods and Innovative Thinking, Nanjing University"
+  # —— 本科期间 ——
+  - period: bachelor
+    text: "2021.03 – 2021.05：北京京东世纪贸易有限公司 资质审核实习生（京东商城中台大商超事业群）"
+    text_en: "Mar 2021 – May 2021: Compliance intern, Beijing JD Century Trade Co., Ltd. (JD Marketplace, Da Shang Chao business unit)"
+    notes:
+      - "供应商与商品管理：审核自营 / POP 商家资质，分级核查商品合规"
+      - "数据驱动运营：整理商品资质数据，提供原始数据，支持可视化 BI 面板决策"
+      - "风控与算法优化：运用关键词算法模型跑宙斯盾比对识别违规内容，提升质控审核效率，终审排查商标侵权与合规风险"
+    notes_en:
+      - "Supplier and product management: vetted first-party / POP merchant qualifications with tiered compliance checks"
+      - "Data-driven operations: prepared qualification datasets as source data for a visual BI dashboard"
+      - "Risk control and algorithm tuning: ran keyword models through the Zhoudun matching pipeline to flag violations and catch trademark and compliance risks at final review"
+  - period: bachelor
+    text: "2020.12 – 2021.02：小米通讯技术有限公司 要闻运营实习生（互联网部三组内容分发部）"
+    text_en: "Dec 2020 – Feb 2021: Top-news operations intern, Xiaomi Communications Technology Co., Ltd."
+    notes:
+      - "负责信息流、PUSH 产品等内容，日均 100+ 条推送，提升分发效率"
+      - "实时监控热点事件，主导 2 次突发新闻快速响应"
+      - "优化推送文案与内容策略，CTR 提升 15%，次留率增长 8%"
+      - "基于用户画像分析 DAU、CVR 数据，参与产品优化，推动策略迭代"
+    notes_en:
+      - "Managed feeds and push products, sending 100+ notifications daily and improving distribution efficiency"
+      - "Monitored trending events in real time and led rapid responses to two breaking-news stories"
+      - "Refined push copy and content strategy: CTR up 15%, next-day retention up 8%"
+      - "Analysed DAU/CVR against user profiles to inform product optimisation and strategy iteration"

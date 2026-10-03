@@ -4,6 +4,9 @@ title_en: "DroidSeal"
 excerpt: "安卓安全开源项目，已发布到 npm，累计下载量超过 1.2K。"
 excerpt_en: "An open-source Android security project, published on npm with more than 1.2K downloads."
 collection: portfolio
+date: 2026-08-15
+daterange: "2026.08"
+period: gap
 permalink: /portfolio/droidseal
 ---
 
