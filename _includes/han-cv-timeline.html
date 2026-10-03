@@ -1,15 +1,19 @@
 {% comment %}
 履历合并时间轴（/cv/ 与 /en/cv/ 共用）：
-以学历为大块，按时期倒序（phd → gap → master → bachelor）出块，
-每块内嵌入该时期的「工作与任职」「项目」「获奖」，空子节不渲染标签。
-数据源：_data/profile.yml（education / gap / work 的 period 字段）、
+以三段学历为大块，按时期倒序（phd → master → bachelor）出块；
+过渡期（period: gap）没有自己的标题，其任职 / 项目 / 获奖直接排在
+博士块之后、硕士块之前（用户反馈：删掉「过渡期」标题行）。
+块内与块间的任职、项目、获奖都以裸列表呈现，不再渲染
+「工作与任职 / 项目 / 获奖」小节标签（用户反馈：不标这类字样）；
+条目自带日期与链接，可自明。
+数据源：_data/profile.yml（education / work 的 period 字段）、
        _data/awards.yml（各条目的 period 字段，honours 组除外）、
        _portfolio/*（front matter 的 date / daterange / period）。
 用法：页面里写 include han-cv-timeline.html（Jekyll include 语法）。
 
 渲染约定（改动时别破坏）：
-- 块标题 h2 与小节标签 h3 走 HTML（挂 class 给 _han.scss §19 样式），
-  列表走 Markdown（交给页面 kramdown 解析，加粗与嵌套缩进才生效）。
+- 块标题 h2 走 HTML（挂 class 给 _han.scss §19 样式），列表走 Markdown
+  （交给页面 kramdown 解析，加粗与嵌套缩进才生效）。
 - 每个 HTML 元素与列表之间必须留至少一个空行，否则列表被吞进 HTML 块。
 - 为此本文件统一使用「不带连字符修剪的独立标签行」：标签行自带的换行
   会多产出空行（markdown 会折叠，无害）；一旦用连字符修剪就会吃掉
@@ -19,39 +23,27 @@
 {% assign _locale = page.locale | default: site.locale %}
 {% assign _en = false %}
 {% if _locale contains 'en' %}{% assign _en = true %}{% endif %}
-{% assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] %}
 {% assign _colon = ": " %}
 {% unless _en %}{% assign _colon = "：" %}{% endunless %}
 {% assign _order = "phd,gap,master,bachelor" | split: "," %}
 {% for _pid in _order %}
-{% if _pid == "gap" %}
-{% assign _g = site.data.profile.gap %}
-<h2 class="han-cv-period__head">{% if _en and _g.head_en %}{{ _g.head_en | remove: '**' }}{% else %}{{ _g.head | remove: '**' }}{% endif %}</h2>
+{% assign _eds = site.data.profile.education | where: "period", _pid %}
+{% assign _edn = _eds | size %}
+{% assign _head = _eds | first %}
+{% assign _hn = _head.notes %}
+{% if _en and _head.notes_en %}{% assign _hn = _head.notes_en %}{% endif %}
+{% if _edn > 0 %}
+<h2 class="han-cv-period__head">{% if _en and _head.text_en %}{{ _head.text_en | remove: '**' }}{% else %}{{ _head.text | remove: '**' }}{% endif %}</h2>
 
-{% else %}
-{% assign _entered = false %}
-{% for e in site.data.profile.education %}
-{% if e.period == _pid %}
-{% if _entered %}
-* {% if _en and e.text_en %}{{ e.text_en }}{% else %}{{ e.text }}{% endif %}
-{% else %}
-<h2 class="han-cv-period__head">{% if _en and e.text_en %}{{ e.text_en | remove: '**' }}{% else %}{{ e.text | remove: '**' }}{% endif %}</h2>
-
-{% assign _entered = true %}
-{% endif %}
-{% assign _notes = e.notes %}
-{% if _en and e.notes_en %}{% assign _notes = e.notes_en %}{% endif %}
-{% for n in _notes %}
-* {{ n }}
+{% for n in _hn %}* {{ n }}
 {% endfor %}
-{% endif %}
-{% endfor %}
+{% for e in _eds offset:1 %}* {% if _en and e.text_en %}{{ e.text_en }}{% else %}{{ e.text }}{% endif %}
+{% for n in e.notes %}    * {{ n }}
+{% endfor %}{% endfor %}
 {% endif %}
 {% assign _works = site.data.profile.work | where: "period", _pid %}
 {% assign _wn = _works | size %}
 {% if _wn > 0 %}
-<h3 class="han-cv-period__sub">{{ _ui.cv_work_label }}</h3>
-
 {% for w in _works %}
 * {% if _en and w.text_en %}{{ w.text_en }}{% else %}{{ w.text }}{% endif %}
 {% assign _wnotes = w.notes %}
@@ -64,8 +56,6 @@
 {% assign _projs = site.portfolio | where: "period", _pid | sort: "date" | reverse %}
 {% assign _pn = _projs | size %}
 {% if _pn > 0 %}
-<h3 class="han-cv-period__sub">{{ _ui.cv_projects_label }}</h3>
-
 {% for p in _projs %}
 * [{% if _en and p.title_en %}{{ p.title_en }}{% else %}{{ p.title }}{% endif %}]({{ p.url | relative_url }}){% if _en %} ({% else %}（{% endif %}{{ p.daterange }}{% if _en %}){% else %}）{% endif %}
 {% assign _ex = p.excerpt %}
@@ -84,8 +74,6 @@
 {% endunless %}
 {% endfor %}
 {% if _na > 0 %}
-<h3 class="han-cv-period__sub">{{ _ui.cv_awards_label }}</h3>
-
 {% for g in site.data.awards %}
 {% unless g.key == "honours" %}
 {% for a in g.items %}

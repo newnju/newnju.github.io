@@ -1061,14 +1061,14 @@ html[data-reveal] .han-reveal.is-visible {
 }
 
 /* --------------------------------------------------------------------------
-   19. 履历时间轴：学历大块（h2）+ 时期小节标签（h3）
+   19. 履历时间轴：学历大块（h2）
    --------------------------------------------------------------------------
    _includes/han-cv-timeline.html 输出的结构，/cv/ 与 /en/cv/ 共用：
-   h2 是「学历头行」（博士 / 过渡期 / 硕士 / 本科，倒序），
-   h3 是块内小节（工作与任职 / 项目 / 获奖），列表沿用 §18 的无标记缩进。
+   h2 是「学历头行」（博士 / 硕士 / 本科，倒序；过渡期没有标题行），
+   块内与块间的任职、项目、获奖都是裸列表，不渲染小节标签
+   （用户反馈：条目自带日期与链接，可自明）。列表沿用 §18 的无标记缩进。
    左侧朱砂竖条把每个时期块「框」出来，块间距比基础 h2 的 2em 稍大，
-   让四段时间轴在长履历里一眼可分；小节标签降一级灰度压住，
-   不与学历头行抢层次。空小节（如博士块）不渲染 h3，无需特判。
+   让三段时间轴在长履历里一眼可分。
    -------------------------------------------------------------------------- */
 .page__content .han-cv-period__head {
     margin-top: 2.6em;
@@ -1080,13 +1080,4 @@ html[data-reveal] .han-reveal.is-visible {
 
 .page__content .han-cv-period__head:first-of-type {
     margin-top: 1.2em;
-}
-
-.page__content .han-cv-period__sub {
-    margin-top: 1.6em;
-    margin-bottom: 0.4em;
-    font-size: 0.95em;
-    font-weight: bold;
-    color: var(--global-text-color-light);
-    letter-spacing: 0.05em;
 }

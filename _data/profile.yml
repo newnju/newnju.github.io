@@ -14,12 +14,12 @@
 #
 # period 字段（履历分期，只被 han-cv-timeline.html 使用）：
 #   phd     博士阶段（2026.09 – ）
-#   gap     硕士毕业后至博士入学前的过渡期（2024.07 – 2026.08）
+#   gap     硕士毕业后至博士入学前的过渡期（2024.07 – 2026.08）——
+#           不设块标题，其任职 / 项目 / 获奖排在博士块之后、硕士块之前
 #   master  硕士阶段（2021.09 – 2024.06，含 2023.10 – 2024.03 图宾根交换）
 #   bachelor 本科阶段（2017.09 – 2021.06）
-# 履历时间轴按 phd → gap → master → bachelor 倒序出块；学历条目（education）
-# 按 period 归入对应大块，块标题取 _head 字段，空档期没有学历条目、
-# 只有 head 这一行。
+# 履历时间轴按 phd → gap → master → bachelor 顺序出块（倒序），块内只渲染
+# 学历头行与裸列表（任职 / 项目 / 获奖不分小节、不加标签）。
 # ==========================================================================
 
 contact:
@@ -58,11 +58,6 @@ education:
   - period: master
     text: "**学期交换**，德国图宾根大学，校际合作，2023.10 – 2024.03"
     text_en: "**Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03"
-
-# 履历时间轴的过渡期大块（没有学历条目，只有这一行标题）
-gap:
-  head: "**过渡期**：硕士毕业后、博士入学前，2024.07 – 2026.08"
-  head_en: "**Between degrees**: after the M.A., before the Ph.D., Jul 2024 – Aug 2026"
 
 # 工作与任职（履历按时期嵌入；顺序即各时期内的显示顺序，最近在前）
 work:
