@@ -1083,11 +1083,12 @@ html[data-reveal] .han-reveal.is-visible {
 }
 
 /* --------------------------------------------------------------------------
-   20. 主页侧栏线稿自绘（.han-drawline + #svgpx，素材取自南大官网）
+   20. 侧栏线稿自绘（.han-drawline + #svgpx，素材取自南大官网）
    --------------------------------------------------------------------------
    素材：www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline，
    viewBox 815.99 × 752.24），由 _includes/author-profile.html 内联在
-   侧栏联系方式列表之后，仅主页（page.url 为 / 或 /en/）渲染；
+   侧栏联系方式列表之后 —— 只要页面渲染作者侧栏就有这幅线稿（无额外
+   门控，条件即 sidebar.html 引入本 include 的条件）；
    动画见 assets/js/han.js 第 8 节：vivus.js 滚进视口逐笔错峰描线，
    reduced-motion 用户不创建 Vivus，SVG 停在完整线稿的静态状态。
    stroke-width 取用户单位 4：侧栏可用宽约 175px（189px − 14px 内边距），

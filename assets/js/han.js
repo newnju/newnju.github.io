@@ -639,11 +639,13 @@
 })();
 
 /* ==========================================================================
-   8. 主页侧栏线稿自绘（vivus.js，_han.scss §20）
+   8. 侧栏线稿自绘（vivus.js，_han.scss §20）
    --------------------------------------------------------------------------
-   只有主页会加载 vivus.js 并渲染 #svgpx（_includes/scripts.html 与
-   _includes/author-profile.html 各有一个 page.url 门控），其他页面这里
-   因 window.Vivus 不存在而直接退出，SVG 也不会出现在 DOM 里。
+   vivus.js 的加载与 #svgpx 的渲染都走 `page.author_profile or
+   layout.author_profile` 这一个条件（scripts.html 与 sidebar.html 引入
+   author-profile 的条件一致），即凡是页脚有电子邮件/GitHub 联系方式
+   列表的页面都会自绘；真正没有侧栏的页面 window.Vivus 不存在、或
+   #svgpx 不在 DOM 里，这里直接退出。
    reduced-motion 用户不创建 Vivus —— 关键在于：SVG 平时是完整线稿，
    只有 Vivus 被创建时才会先藏起来等动画，所以「不创建」= 静态全图，
    与全站「动效坏了也不藏内容」的原则一致。
