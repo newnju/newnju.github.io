@@ -68,4 +68,10 @@ html[data-theme="dark"] {
     --han-gold                          : #d4b06a;
     --han-paper                         : #1d2321;
     --han-ink                           : #e8e3d7;
+
+    /* 流光背景与光标光斑（_han.scss §13–14）：暗底上提亮降透明度，避免糊成一片 */
+    --han-aurora-a                      : rgba(124, 191, 162, 0.14);
+    --han-aurora-b                      : rgba(212, 176, 106, 0.13);
+    --han-aurora-c                      : rgba(224, 119, 106, 0.10);
+    --han-spot-color                    : rgba(124, 191, 162, 0.10);
 }

@@ -63,4 +63,10 @@ $header-font-family         : $han-serif;
     --han-gold                          : #b08d3f;
     --han-paper                         : #fbf8f1;
     --han-ink                           : #2b2723;
+
+    /* 流光背景与光标光斑（_han.scss §13–14）：青铜绿基调，南大紫配色由 §8 覆盖 */
+    --han-aurora-a                      : rgba(47, 107, 90, 0.16);
+    --han-aurora-b                      : rgba(176, 141, 63, 0.16);
+    --han-aurora-c                      : rgba(158, 43, 37, 0.09);
+    --han-spot-color                    : rgba(47, 107, 90, 0.10);
 }

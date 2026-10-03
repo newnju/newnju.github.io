@@ -19,4 +19,18 @@
 <link rel="icon" href="{{ base_path }}/images/favicon.ico"/>
 <meta name="theme-color" content="#fbf8f1"/>
 
+<!-- 滚动渐显引导（_han.scss §15）：仅当用户没有 reduced-motion 偏好才启用。
+     han.js 第 6 节就绪后会设 __hanRevealReady；3 秒没等到就自动撤销标记，
+     所以 han.js 加载失败也只会最多隐藏 3 秒，不会把正文吞掉。 -->
+<script>
+  (function () {
+    var d = document.documentElement;
+    if (!window.matchMedia || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    d.setAttribute("data-reveal", "");
+    window.setTimeout(function () {
+      if (!window.__hanRevealReady) d.removeAttribute("data-reveal");
+    }, 3000);
+  })();
+</script>
+
 <!-- end custom head snippets -->

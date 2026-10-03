@@ -544,6 +544,11 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
     --global-link-color-hover   : #c8a45c;
     --global-link-color-visited : #8a5ca8;
     --global-masthead-link-color-hover : #5C2E83;
+    /* 流光背景与光斑（§13–14）随之切成紫金调 */
+    --han-aurora-a              : rgba(92, 46, 131, 0.14);
+    --han-aurora-b              : rgba(200, 164, 92, 0.15);
+    --han-aurora-c              : rgba(47, 107, 90, 0.10);
+    --han-spot-color            : rgba(92, 46, 131, 0.09);
 }
 
 html[data-theme="dark"][data-color-theme="nju"] {
@@ -556,6 +561,11 @@ html[data-theme="dark"][data-color-theme="nju"] {
     --global-link-color-hover   : #e0c074;
     --global-link-color-visited : #b794d4;
     --global-masthead-link-color-hover : #c4a6e0;
+    /* 暗底紫金：光斑与色斑提亮，但透明度压低，保证正文对比度 */
+    --han-aurora-a              : rgba(183, 148, 212, 0.15);
+    --han-aurora-b              : rgba(224, 192, 116, 0.13);
+    --han-aurora-c              : rgba(124, 191, 162, 0.10);
+    --han-spot-color            : rgba(183, 148, 212, 0.10);
 }
 
 /* --------------------------------------------------------------------------
@@ -779,5 +789,230 @@ html[data-theme="dark"] ::selection {
 @media (max-width: 1199px) {
     .han-minimap {
         display: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   13. 流光渐变背景（.han-aurora，由 _includes/han-effects.html 输出）
+   --------------------------------------------------------------------------
+   三个大色斑在内容层下方缓慢漂移，给静态纸色底一点呼吸感：
+   · 纯 radial-gradient，不用 filter: blur —— 一整屏的模糊开销能免则免；
+   · @keyframes 只动 transform（translate3d/scale），颜色全走 CSS 变量 ——
+     变量在主题文件与 §8 里按明暗/配色成套定义，切主题即换色；
+     也延续了本文件「不在 keyframes 里插值 CSS 变量」（旧 Safari）的约定；
+   · 变量用 var(..., fallback) 带兜底：换成别的 site_theme 时不至于空。
+   减少动效偏好下的统一关闭见 §17。
+   -------------------------------------------------------------------------- */
+
+.han-aurora {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.han-aurora span {
+    position: absolute;
+    width: 58vmax;
+    height: 58vmax;
+    border-radius: 50%;
+    will-change: transform;
+}
+
+.han-aurora span:nth-child(1) {
+    top: -14%;
+    left: -10%;
+    background: radial-gradient(closest-side, var(--han-aurora-a, rgba(47, 107, 90, 0.16)), transparent 72%);
+    animation: han-aurora-a 52s ease-in-out infinite alternate;
+}
+
+.han-aurora span:nth-child(2) {
+    right: -12%;
+    bottom: -18%;
+    background: radial-gradient(closest-side, var(--han-aurora-b, rgba(176, 141, 63, 0.16)), transparent 72%);
+    animation: han-aurora-b 64s ease-in-out infinite alternate;
+    animation-delay: -21s;
+}
+
+.han-aurora span:nth-child(3) {
+    top: 34%;
+    left: 26%;
+    width: 46vmax;
+    height: 46vmax;
+    background: radial-gradient(closest-side, var(--han-aurora-c, rgba(158, 43, 37, 0.09)), transparent 74%);
+    animation: han-aurora-c 47s ease-in-out infinite alternate;
+    animation-delay: -33s;
+}
+
+@keyframes han-aurora-a {
+    from {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    to {
+        transform: translate3d(22vw, 16vh, 0) scale(1.18);
+    }
+}
+
+@keyframes han-aurora-b {
+    from {
+        transform: translate3d(0, 0, 0) scale(1.1);
+    }
+
+    to {
+        transform: translate3d(-20vw, -14vh, 0) scale(0.92);
+    }
+}
+
+@keyframes han-aurora-c {
+    from {
+        transform: translate3d(0, 0, 0) scale(0.95);
+    }
+
+    to {
+        transform: translate3d(-14vw, 20vh, 0) scale(1.22);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   14. 光标光斑（.han-spotlight）
+   --------------------------------------------------------------------------
+   柔和高光跟着指针走：位置由 assets/js/han.js 第 7 节写入 --han-spot-x/y
+   （rAF 节流、只认精细指针、reduced-motion 下不注册）。层是固定的、透明的、
+   不接事件；没 JS 时 radial-gradient 落在默认坐标（右上），也不会出错。
+   -------------------------------------------------------------------------- */
+
+.han-spotlight {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(420px circle at var(--han-spot-x, 72%) var(--han-spot-y, 22%),
+        var(--han-spot-color, rgba(92, 46, 131, 0.09)), transparent 70%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .han-spotlight {
+        display: block;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   15. 滚动渐显（.han-reveal）
+   --------------------------------------------------------------------------
+   三段式，任何一段失效都只是「不动画」，不会把内容藏住：
+   1) _includes/head/custom.html 的内联脚本：用户没有 reduced-motion 偏好时
+      给 <html> 打 data-reveal（此刻元素还没有 .han-reveal，隐藏态只认
+      html[data-reveal] .han-reveal 这个组合，缺一不可）；
+   2) han.js 第 6 节给目标元素补 .han-reveal，IntersectionObserver 进视口时
+      加 .is-visible（一次性，之后 unobserve，不来回闪）；
+   3) 兜底：内联脚本 3 秒没等到 han.js 的就绪标记 __hanRevealReady 就撤销
+      data-reveal；han.js 里没有 IntersectionObserver 或没匹配到元素，
+      也会立刻撤销。
+   -------------------------------------------------------------------------- */
+
+html[data-reveal] .han-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+}
+
+html[data-reveal] .han-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    /* 过渡清单带全 box-shadow / color：.is-visible 的优先级（0-3-1）高于 §16 的
+       基础规则，若这里只写 opacity+transform，卡片 hover 的阴影与染色会变成瞬变。 */
+    transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1),
+        box-shadow 0.3s ease, color 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   16. hover 微交互（只给有指针、不介意动效的设备）
+   --------------------------------------------------------------------------
+   卡片上浮、条目向右轻推并染品牌色；触屏与 reduced-motion 用户维持原样。
+   .archive__item 原有的「teaser 阴影 + 标题下划线」hover（_archive.scss）
+   保持不动，这里只补过渡与位移。
+   -------------------------------------------------------------------------- */
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+
+    .archive__item,
+    .archive__item-title,
+    .han-timeline__item,
+    .han-awards li {
+        transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    }
+
+    /* 渐显生效时 html[data-reveal] 一直在，.is-visible 的 transform:none
+       （0-3-1）会压过 .archive__item:hover（0-2-0），所以 hover 规则必须
+       连渐显上下文一起写、把优先级抬到 0-4-1。 */
+    .archive__item:hover,
+    html[data-reveal] .archive__item.is-visible:hover {
+        transform: translateY(-3px);
+    }
+
+    .han-timeline__item:hover,
+    .han-awards li:hover,
+    html[data-reveal] .han-timeline__item.is-visible:hover,
+    html[data-reveal] .han-awards li.is-visible:hover {
+        color: var(--han-patina);
+        transform: translateX(4px);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   17. 动效总开关：减少动效偏好（reduced-motion）与打印
+   --------------------------------------------------------------------------
+   系统开了「减少动态效果」时：新老动效一并静止（博局镜旋转/呼吸、缩略图
+   进度、流光漂移、光斑跟随、滚动渐显），只保留颜色等非位移变化。
+   打印时：装饰层不印、渐显元素直接给完整不透明度，避免打出来一片空白。
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .han-aurora span,
+    .han-mirror,
+    .han-mirror .mirror-outer,
+    .han-mirror .mirror-sawtooth,
+    .han-mirror .mirror-inscription,
+    .han-minimap__view {
+        animation: none !important;
+    }
+
+    .han-spotlight {
+        display: none !important;
+    }
+
+    html[data-reveal] .han-reveal,
+    html[data-reveal] .han-reveal.is-visible {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .archive__item:hover,
+    .han-timeline__item:hover,
+    .han-awards li:hover {
+        transform: none !important;
+    }
+}
+
+@media print {
+
+    .han-aurora,
+    .han-spotlight {
+        display: none !important;
+    }
+
+    html[data-reveal] .han-reveal {
+        opacity: 1 !important;
+        transform: none !important;
     }
 }

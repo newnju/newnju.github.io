@@ -1,0 +1,7 @@
+{% comment %}
+  装饰性视觉层：流光渐变背景（_han.scss §13）与光标光斑（_han.scss §14）。
+  两层都 aria-hidden、pointer-events:none：不进无障碍树、不拦截点击，
+  z-index:-1 沉在内容之下（body 的背景色会传播到画布，不会盖住它们）。
+{% endcomment %}
+<div class="han-aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+<div class="han-spotlight" aria-hidden="true"></div>

@@ -526,3 +526,114 @@
     whenStyled(bootMinimap);
   });
 })();
+
+/* ==========================================================================
+   6. 滚动渐显（配合 head/custom.html 的 data-reveal 引导与 _han.scss §15）
+   --------------------------------------------------------------------------
+   han.js 是 async 加载的，可能在文档还没解析完就执行，所以挂 DOMContentLoaded
+   再选元素。任何异常路径都以「撤销 data-reveal、正文立刻可见」为先：
+   · 没有标记（reduced-motion 用户 / 引导没跑）→ 直接退出，什么都不做；
+   · 没有 IntersectionObserver 或没选中元素 → 撤标记退出；
+   · 就绪即设 __hanRevealReady，让 head 里 3 秒的兜底定时器放心。
+   ========================================================================== */
+(function () {
+  var root = document.documentElement;
+  if (!root.hasAttribute("data-reveal")) return;
+
+  function revealNow() {
+    root.removeAttribute("data-reveal");
+  }
+
+  function boot() {
+    if (!("IntersectionObserver" in window)) {
+      revealNow();
+      return;
+    }
+
+    /* 目标：列表卡片、时间轴条目、荣誉条目、内容区小标题。
+       只挑「成组出现、适合依次入场」的元素，正文段落不掺和。 */
+    var selector = ".archive__item, .han-timeline__item, .han-awards li, .page__content h2";
+    var nodes = document.querySelectorAll(selector);
+    if (!nodes.length) {
+      revealNow();
+      return;
+    }
+
+    window.__hanRevealReady = true;
+
+    var io = new IntersectionObserver(
+      function (entries) {
+        Array.prototype.forEach.call(entries, function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            /* 一次性：进了视口就取消观察，此后滚动、回滚都不再动它 */
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -6% 0px" }
+    );
+
+    Array.prototype.forEach.call(nodes, function (node) {
+      node.classList.add("han-reveal");
+      io.observe(node);
+    });
+
+    /* 兜底：3 秒后若视口内的元素还没被回调点亮（observer 异常等），手动点亮。
+       视口外的不点 —— 它们本来就该等滚动到再出现。 */
+    window.setTimeout(function () {
+      Array.prototype.forEach.call(
+        document.querySelectorAll(".han-reveal:not(.is-visible)"),
+        function (node) {
+          var rect = node.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            node.classList.add("is-visible");
+          }
+        }
+      );
+    }, 3000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+
+/* ==========================================================================
+   7. 光标光斑位置（_han.scss §14）
+   --------------------------------------------------------------------------
+   只在精细指针（鼠标/触控板）且用户没有 reduced-motion 偏好时生效；
+   pointermove 每帧最多写一次坐标，用 requestAnimationFrame 节流。
+   没有这段脚本时，.han-spotlight 的 radial-gradient 停在默认坐标，也无妨。
+   ========================================================================== */
+(function () {
+  if (!window.matchMedia) return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  var x = "72%";
+  var y = "22%";
+  var queued = false;
+
+  function paint() {
+    queued = false;
+    var style = document.documentElement.style;
+    style.setProperty("--han-spot-x", x);
+    style.setProperty("--han-spot-y", y);
+  }
+
+  window.addEventListener(
+    "pointermove",
+    function (event) {
+      x = event.clientX + "px";
+      y = event.clientY + "px";
+      if (!queued) {
+        queued = true;
+        window.requestAnimationFrame(paint);
+      }
+    },
+    { passive: true }
+  );
+})();
