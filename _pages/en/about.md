@@ -6,9 +6,9 @@ author_profile: true
 mirror: true
 ---
 
-I am **Jiawen Wu (武嘉文)**, a Ph.D. student in Journalism and Communication at Nanjing University. I took my M.A. in Art History at Nanjing University's School of Arts, working on Han-dynasty material culture and imagery within art archaeology. My B.A. is in Broadcasting and Television Directing from Nanjing Xiaozhuang University, and I spent the autumn of 2023 on exchange at Eberhard Karls Universität Tübingen.
+I am **Jiawen Wu (武嘉文)**, a Ph.D. student in Journalism and Communication at Nanjing University, working on visual history and the historical imagery of the Chinese nation. I received my M.A. in Art History from Nanjing University's School of Arts (art archaeology) and my B.A. in Broadcasting and Television Directing from Nanjing Xiaozhuang University; I spent October 2023 to March 2024 on exchange at Eberhard Karls Universität Tübingen.
 
-My work moves from Han-dynasty objects to historical imagery. My master's thesis was on the four-deity TLV mirror: I started from its ornament and asked how people in the Han period used images to arrange direction and order. My doctoral work is in visual history, focused on historical imagery of the Chinese nation. During my undergraduate studies I also interned at Xiaomi and JD.com on content operations and risk review.
+My research begins with Han-dynasty material culture and imagery: my master's thesis examined the ornament of the four-deity TLV mirror and the conceptions of direction and cosmic order it encodes. My doctoral work is in visual history, concerned with the production, circulation, and interpretation of the historical imagery of the Chinese nation. During my undergraduate studies I interned at Xiaomi and JD.com on content operations and risk management.
 
 Research Interests
 ======
