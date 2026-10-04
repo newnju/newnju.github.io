@@ -197,6 +197,7 @@ exclude:
   - log
   - node_modules
   - package.json*
+  - tools
   - Rakefile
   - README.md
   - tmp
