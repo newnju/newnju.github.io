@@ -5,10 +5,9 @@
   （荣誉单独渲染，见首页的「荣誉」小节）。
   要带等级标签的完整版见 /timeline/。
   year_en / text_en 选填，英文页优先取、缺省回落中文。
-  note 里写了「YYYY.MM」的条目，日期会跟在正文后面（首页只有茅家琦论坛
-  那一年的备注带月份；「2021 – 2024」这种年份区间不带点号，不会命中）。
-  样式在 _sass/_han.scss 第 3 节。
-{%- endcomment -%}
+  条目上的 date（英文页可另写 date_en）填了就跟在正文末尾显示，中文加全角
+  括号、英文加半角括号，样式是 _han.scss 第 3 节的浅色小字。
+  {%- endcomment -%}
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _en = false -%}
 {%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
@@ -21,7 +20,7 @@
 {%- unless group.key == "honours" %}
   {%- assign _year = group.year -%}
   {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}
-  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{%- assign _n = item.note -%}{%- if _en and item.note_en -%}{%- assign _n = item.note_en -%}{%- endif -%}{%- assign _d = _n | scan: '[0-9]{4}\.[0-9]{2}' | first -%}{{ _t }}{% if _d %}<span class="han-awards__date">{% if _en %} ({{ _d }}){% else %}（{{ _d }}）{% endif %}</span>{% endif %}{% unless forloop.last %}{{ _sep }}{% endunless %}{% endfor %}</li>
+  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{%- assign _d = item.date -%}{%- if _en and item.date_en -%}{%- assign _d = item.date_en -%}{%- endif -%}{{ _t }}{% if _d %}<span class="han-awards__date">{% if _en %} ({{ _d }}){% else %}（{{ _d }}）{% endif %}</span>{% endif %}{% unless forloop.last %}{{ _sep }}{% endunless %}{% endfor %}</li>
 {%- endunless %}
 {%- endfor %}
 </ul>
