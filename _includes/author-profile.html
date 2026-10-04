@@ -28,9 +28,9 @@
 
   <div class="author__avatar">
     {% if author.avatar contains "://" %}
-    	<img src="{{ author.avatar }}" alt="{{ _name }}"  fetchpriority="high" />
+    	<img src="{{ author.avatar }}" alt="{{ _name }}" draggable="false" fetchpriority="high" />
     {% else %}
-    	<img src="{{ author.avatar | prepend: "/images/" | prepend: base_path }}" class="author__avatar" alt="{{ _name }}" width="400" height="400" fetchpriority="high" />
+    	<img src="{{ author.avatar | prepend: "/images/" | prepend: base_path }}" class="author__avatar" alt="{{ _name }}" width="400" height="400" draggable="false" fetchpriority="high" />
     {% endif %}
   </div>
 
