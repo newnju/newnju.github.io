@@ -58,13 +58,18 @@ function updateNav() {
   // Keep counter updated
   $btn.attr("count", breaks.length);
 
-  // update masthead height and the body/sidebar top padding
-  var mastheadHeight = $('.masthead').height();
-  $('body').css('padding-top', mastheadHeight + 'px');
-  if ($(".author__urls-wrapper button").is(":visible")) {
-    $(".sidebar").css("padding-top", "");
-  } else {
-    $(".sidebar").css("padding-top", mastheadHeight + "px");
+  // Update masthead height and the body/sidebar top padding
+  // 顶栏是 fit-content，真实高度随根字号与字体回退而变（18px 根字号下
+  // 约 55.6px，scss 里的 $masthead-height 只是近似兜底），所以每轮都量
+  // 一次：body 的上内边距照旧内联覆盖，另外把实测值写成 --han-masthead-h
+  // 供 CSS 取用（.sidebar.is-fit 的 padding-top 就是靠它让开顶栏）。
+  // 侧栏自身不再内联 padding —— 原主题里 .sidebar 恒为 fixed 才需要，
+  // 本站改成 fit 门控（流式 / 固定两态，见 _sidebar.scss 与 han.js 第 9 节），
+  // 无条件加这段内边距会在流式态凭空多出 55px 空白、把头像压到很低。
+  var mastheadHeight = $('.masthead').outerHeight() || 0;
+  if (mastheadHeight > 0) {
+    $('body').css('padding-top', mastheadHeight + 'px');
+    document.documentElement.style.setProperty('--han-masthead-h', mastheadHeight + 'px');
   }
 
 }

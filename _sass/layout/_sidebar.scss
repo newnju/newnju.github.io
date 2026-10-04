@@ -12,10 +12,11 @@
 
   @include clearfix();
   margin-bottom: 1em;
-  /* 头像列整体再上提 20px：流式态由负外边距上移，
-     固定态（.is-fit）由下面的 top 覆盖对齐，两态头像同在 62px，
-     fit 门控切换时不会跳动。竖屏媒体查询随后把它改回正 1em。 */
-  margin-top: -1.25em;
+  /* 侧栏盒子本身不再上提：头像的位置统一由 _han.scss 第 6 节里
+     .author__avatar 的负外边距决定（两种状态共用同一个值），
+     这里保持 0，流式态的位置就等于「顶栏让位 + #main 的 2em」。
+     竖屏媒体查询随后把它改回正 1em。 */
+  margin-top: 0;
 
   @media (orientation: portrait) {
     margin-top: 1em;
@@ -37,8 +38,15 @@
       height: 100vh;
       overflow-y: auto;             // 判定贴边 fit 时的兜底滚动条
       position: fixed;
-      padding-top: $masthead-height;
-      top: 0.75em;                  // 覆盖 .sticky 的 2em，与流式态的 -1.25em 负边距对齐
+      margin-top: 0;
+      /* 固定态脱离文档流，top 把盒子钉在距顶 2em 处（与流式态 #main
+         的 2em 上边距同值），padding-top 再把内容压到顶栏下方。
+         顶栏是 fit-content，真实高度随根字号变（18px 根字号下约 55.6px），
+         由页首脚本量出后写进 --han-masthead-h；没有脚本时回落到
+         $masthead-height。两者加上第 6 节头像的负外边距，
+         流式态与固定态的头像落在同一位置，fit 门控切换时不跳。 */
+      padding-top: var(--han-masthead-h, #{$masthead-height});
+      top: 2em;
     }
   }
 

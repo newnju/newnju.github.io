@@ -27,7 +27,11 @@ $warning-color              : #b8860b;
 $border-radius              : 2px;
 $box-shadow                 : 0 1px 1px rgba(43, 39, 35, 0.10);
 $global-transition          : all 0.2s ease-in-out;
-$masthead-height            : 50px;
+/* 顶栏让位高度。顶栏本身是 fit-content，高度由内边距与字号决定：根字号
+   18px 下实测 55.6px，所以这里写成 em（3.0889em ≈ 55.6px），换根字号
+   仍然贴合。页首脚本每轮会量出真实高度写进 --han-masthead-h 并覆盖
+   body 的上内边距，这个值只作无脚本与 CSS 变量缺省时的兜底。 */
+$masthead-height            : 3.0889em;
 $navicon-width              : 28px;
 $navicon-height             : 4px;
 $sidebar-link-max-width     : 250px;

@@ -57,7 +57,7 @@ h1, h2, h3, h4 {
     /* 相对正常位置略向上挪一点，让图更贴近页面右上角。
        用 relative 偏移而非 margin：float 的布局占位不变，
        正文的环绕宽度不受影响，只是图本身挪位。
-       横向的 110px 另有条件，见紧随其后的媒体查询。 */
+       横向的 80px 另有条件，见紧随其后的媒体查询。 */
     position: relative;
     top: -30px;
     width: 272px;
@@ -70,14 +70,14 @@ h1, h2, h3, h4 {
     animation: han-mirror-breathe 18s ease-in-out infinite;
 }
 
-/* 再往右 110px，只在大屏（≥ $large = 925px）生效：
+/* 再往右 80px，只在大屏（≥ $large = 925px）生效：
    此宽度起 .page 用 span(10 of 12) + suffix(2 of 12)，正文栏右侧空出
-   约 2/12 宽的空白栏（925px 时约 150px），图右移 110px 后仍落在栏内、
+   约 2/12 宽的空白栏（925px 时约 150px），图右移 80px 后仍落在栏内、
    不顶出视口；而 925px 以下 .page 占满整行，图本来就离视口右缘只剩 ~19px，
    强行右移会把页面撑出横向滚动条。 */
 @media (min-width: 57.8125em) {
     .han-mirror {
-        right: -110px;
+        right: -80px;
     }
 }
 
@@ -340,6 +340,13 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
     font-weight: 600;
 }
 
+/* 备注里写了月份的条目，日期跟在正文后面，用浅色区分 */
+.han-awards__date {
+    color: var(--global-text-color-light);
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
 /* --------------------------------------------------------------------------
    4. 论文页 BibTeX 复制
    -------------------------------------------------------------------------- */
@@ -461,6 +468,13 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
    用户反馈：明暗两套主题下头像外都有一圈明显的圆框（1px 描边 + 底色光圈 +
    2px 内边距留出的缝隙），观感太重 —— 三者一并去掉，只留主题自带的
    圆形裁切（border-radius 来自基础主题），圆的是照片本身，不再是外框。
+
+   纵向位置：头像顶端固定落在「顶栏下沿 + 6px」。上移量写在这里的
+   .author__avatar 负外边距上，两种侧栏状态共用 —— 顶栏高度（18px 根字号
+   下实测 55.6px，脚本量出后写入 --han-masthead-h）由 _sidebar.scss 的
+   body / .is-fit padding 让开，#main 的 2em 上边距两态相同，头像再上提
+   30px 补上这段间距，于是流式态与固定态（.is-fit）落在同一条线上，
+   fit 门控切换时不会跳。
    -------------------------------------------------------------------------- */
 
 .author__avatar img {
@@ -476,7 +490,7 @@ html[data-theme="dark"][data-color-theme="nju"] .han-mirror {
 @media (min-width: 57.8125em) {
     /* 头像整体往上、稍微靠右带一点 */
     .author__avatar {
-        margin: -22px 0 8px 4px;
+        margin: -30px 0 8px 4px;
     }
 
     /* 侧栏文字默认占满 189px，右端会紧贴内容列正文；

@@ -684,34 +684,41 @@
    9. 侧栏 fit 门控（_sidebar.scss 的 .is-fit）
    --------------------------------------------------------------------------
     宽屏侧栏不再无条件固定：默认文档流，只有内容装得下一屏才加
-    .is-fit 恢复固定（fixed + 100vh + padding-top:50，top 覆盖
-    .sticky 工具类的 2em 为 0.75em，与流式态的 -1.25em 负边距对齐）。装不下（英文版联系方式更长 + 线稿）或
-   脚本没跑时保持流式 —— 左列不出现内层滚动条，底部线稿随页滚动
-   进视口，vivus 的 inViewport 监听的是窗口滚动，固定侧栏永远
-   触发不了它。
-   预算：内容高 + masthead 让位 + 固定态 top + 余量 ≤ 一屏。
-   resize / load / 字体就位后重新判定（rAF 节流；脱类-测量-回加
-   在同一回调内完成，不会有中间绘制闪跳）。
+    .is-fit 恢复固定（fixed + 100vh + padding-top 让开顶栏，top 取 2em，
+    与流式态 #main 的 2em 上边距同值；头像本身的位置由 _han.scss 第 6 节
+    的负外边距统一决定）。装不下（英文版联系方式更长 + 线稿）或脚本没跑
+    时保持流式 —— 左列不出现内层滚动条，底部线稿随页滚动进视口，
+    vivus 的 inViewport 监听的是窗口滚动，固定侧栏永远触发不了它。
+    预算：内容高 + 顶栏让位 + 固定态 top + 余量 ≤ 一屏。顶栏是
+    fit-content、真实高度随根字号变，所以让位每轮现量，不用写死的常数。
+    resize / load / 字体就位后重新判定（rAF 节流；脱类-测量-回加
+    在同一回调内完成，不会有中间绘制闪跳）。
    ========================================================================== */
 (function () {
   var sidebar = document.querySelector(".sidebar.sticky");
   if (!sidebar) return;
 
+  var masthead = document.querySelector(".masthead");
   var mqPin = window.matchMedia("(min-width: 925px)"); // 与 _themes.scss 的 $large 对齐
-  var CLEARANCE = 50; // 与 _sass 下的 $masthead-height 对齐
   var GUTTER = 8;
+  var CLEARANCE_FALLBACK = 50; // 量不到顶栏时的兜底，与 _sass 的 $masthead-height 近似
   var rafId = 0;
+
+  function clearance() {
+    var h = masthead ? Math.round(masthead.getBoundingClientRect().height) : 0;
+    return h > 0 ? h : CLEARANCE_FALLBACK;
+  }
 
   function apply() {
     if (!mqPin.matches) {
       sidebar.classList.remove("is-fit");
       return;
     }
-    // 先脱掉 .is-fit 量流式真实高度（固定态的 padding-top 会把量高撑大 50px）
+    // 先脱掉 .is-fit 量流式真实高度（固定态的 padding-top 会把量高撑大一段）
     sidebar.classList.remove("is-fit");
     var pinTop = parseFloat(window.getComputedStyle(sidebar).top) || 0;
     if (
-      sidebar.scrollHeight + CLEARANCE + pinTop + GUTTER <=
+      sidebar.scrollHeight + clearance() + pinTop + GUTTER <=
       window.innerHeight
     ) {
       sidebar.classList.add("is-fit");

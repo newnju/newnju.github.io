@@ -32,7 +32,9 @@ $warning-color              : #e0a63c;
 $border-radius              : 2px;
 $box-shadow                 : 0 1px 1px rgba(0, 0, 0, 0.25);
 $global-transition          : all 0.2s ease-in-out;
-$masthead-height            : 50px;
+/* 与 _han_light 同一取值：顶栏让位高度写成 em，跟住根字号（18px 下约
+   55.6px），无脚本时作兜底，脚本量出的 --han-masthead-h 优先。 */
+$masthead-height            : 3.0889em;
 $navicon-width              : 28px;
 $navicon-height             : 4px;
 $sidebar-link-max-width     : 250px;

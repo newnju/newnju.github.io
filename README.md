@@ -95,8 +95,8 @@ git push -u origin main
 - 外区自外而内：**素缘 → 云气纹 → 锯齿纹 → 栉齿纹 → 铭文带 → 弦纹**
 - 铭文取尚方镜常见吉语，**字头朝内**、字距紧密（与实物一致）
 - 内区：镜钮 + 柿蒂纹钮座；双线方框内为**十二乳钉与十二辰铭相间**；方框外 **T 纹**在四边正中向外伸出、**反 L 纹**在四方轴线上且位于 T 纹之外、**V 纹**在四角且尖角朝镜心
-- 图相对常规浮动位置**上移 30px**；大屏（≥925px，即主题的 `$large`）再**右移 110px**（`_sass/_han.scss` 第 2 节的 `top` 与紧随其后的媒体查询），更贴近页面右缘；窄屏（≤600px）上移归零、恢复居中
-- 右移要设 925px 这道门槛，是因为该宽度起 `.page` 才用 `span(10 of 12) + suffix(2 of 12)`、正文栏右侧空出约 2/12 宽的空白栏，右移 110px 仍落在栏内（925px 时空栏约 150px，留 40 余 px 余量）；而 925px 以下 `.page` 占满整行，图离视口右缘只剩约 19px，硬移会把整页撑出横向滚动条（实测 700 / 900px 各溢出 40 余 px）
+- 图相对常规浮动位置**上移 30px**；大屏（≥925px，即主题的 `$large`）再**右移 80px**（`_sass/_han.scss` 第 2 节的 `top` 与紧随其后的媒体查询），更贴近页面右缘；窄屏（≤600px）上移归零、恢复居中
+- 右移要设 925px 这道门槛，是因为该宽度起 `.page` 才用 `span(10 of 12) + suffix(2 of 12)`、正文栏右侧空出约 2/12 宽的空白栏，右移 80px 仍落在栏内（925px 时空栏约 150px，留 70 余 px 余量）；而 925px 以下 `.page` 占满整行，图离视口右缘只剩约 19px，硬移会把整页撑出横向滚动条（实测 700 / 900px 各溢出 40 余 px）
 - 颜色随主题联动，并在五个色相间缓慢呼吸（一轮 18 秒）。nju 配色下依次为
   南大紫 → 紫罗兰 → 藕荷 → 鎏金 → 淡金，han 配色下为铜锈绿 → 靛青 → 鎏金 → 赭石 → 朱砂
 - **外区分三圈反向旋转**（由 `_sass/_han.scss` 控制）：
@@ -129,6 +129,7 @@ git push -u origin main
 其中带 `key: honours` 的那一组（显示名「荣誉」）会**单独渲染到首页的「荣誉」小节**，所以那几条就是主页上显示的内容；
 其余年份分组则渲染到首页的「获奖」小节（紧凑版，不带等级标签）。首页与时间轴都按 `key` 取这一组，
 所以改 `year` 的显示文字不会影响首页。条目的 `text_en`、补充说明的 `note_en` 与分组的 `year_en` 都是选填，英文页优先取它们、缺省回落中文。
+首页的紧凑清单还会把 `note` 里形如 `2025.11` 的月份提到条目末尾（浅色小字，中文加全角括号、英文加半角括号），所以备注里写上月份，首页就能看到具体时间；「2021 – 2024」这类年份区间没有点号，不会被当成月份。
 
 ### 4. 论文条目：BibTeX、引用复制与知网链接
 
@@ -376,7 +377,8 @@ git push
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
 | **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜、项目页字号**（第 22–26 节） | `_sass/_han.scss` 第 22–26 节（第 26 节纯样式、无 JS，包装层在 `_pages/portfolio.html` 与 en 版）+ `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
-| **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控） |
+| **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
+| **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 55.6px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白 |
 | **首页自我介绍** | `_pages/about.md` |
 | **教育背景、联系方式、工作与任职**（主页中英两版；履历页的「联系方式」章节已按需求删除，不再 include `han-contact.html`） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`（现只剩主页在用），履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」标题已按需求删除（合并时间轴直接跟在页题下）；「荣誉」节排在合并时间轴之后、证书之前（时间轴主体先行，荣誉紧邻证书）。该节内容已改由 `_data` 与集合驱动，见上下几行 |
@@ -388,7 +390,7 @@ git push
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
 | **英文版页面** | `_pages/en/` 下的同名文件 |
 | 首页的博局镜图 | `_includes/han-mirror.html` |
-| 头像 | 侧栏显示的是 `images/avatar.webp`（400×400、正方形、背景已抠透明，14KB；由原图转出，原 `avatar.png` 119KB 只留给 `og_image` 分享预览），引用在 `_config.yml` 的 `author.avatar` 与 `_data/authors.yml` —— 换头像时两处一起改、并重转一次 WebP。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片本体 152px、圆圈（含光圈）162px，整体上移 22px、左移 8px。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
+| 头像 | 侧栏显示的是 `images/avatar.webp`（400×400、正方形、背景已抠透明，14KB；由原图转出，原 `avatar.png` 119KB 只留给 `og_image` 分享预览），引用在 `_config.yml` 的 `author.avatar` 与 `_data/authors.yml` —— 换头像时两处一起改、并重转一次 WebP。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片 158px 见方、不加外框（描边 / 光圈 / 内边距都去掉了），大屏下整块**上移 30px**、右移 4px，头像顶端因此固定落在「顶栏下沿 + 6px」。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
 | 项目配图 | 没有默认封面。想加就把图放进 `images/portfolio/`，在条目 front matter 里用 `excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"` 引它（模板自带的示例 SVG 已删除，目录是空的） |
 
 ### 新增条目
