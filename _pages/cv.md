@@ -9,9 +9,6 @@ redirect_from:
 
 {% include base_path %}
 
-学历与经历
-======
-
 {% include han-cv-timeline.html %}
 
 荣誉

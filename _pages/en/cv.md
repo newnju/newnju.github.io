@@ -8,9 +8,6 @@ author_profile: true
 
 {% include base_path %}
 
-Education and Experience
-======
-
 {% include han-cv-timeline.html %}
 
 Honours
