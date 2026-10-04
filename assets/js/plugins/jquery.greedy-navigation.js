@@ -6,7 +6,9 @@
 */
 
 var $nav = $('#site-nav');
-var $btn = $('#site-nav button');
+// 只取直接子级的那个汉堡按钮：用 '#site-nav button' 会把主题切换按钮一起选中，
+// 而下面 addClass('hidden') 是无差别地加给这批按钮的 —— 主题按钮会被一起藏掉。
+var $btn = $('#site-nav > button');
 var $vlinks = $('#site-nav .visible-links');
 var $vlinks_persist_tail = $vlinks.children("*.persist.tail");
 var $hlinks = $('#site-nav .hidden-links');
