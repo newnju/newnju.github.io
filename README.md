@@ -312,7 +312,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **流光渐变背景**（`_includes/han-effects.html` + `_sass/_han.scss` 第 13–14 节）：三团大色斑在内容层下方以 47–64 秒的周期缓慢漂移。配色是三个变量 `--han-aurora-a/b/c`，在 `_sass/theme/_han_light.scss` / `_han_dark.scss` 按明暗各定义一套，`_han.scss` 第 8 节的南大紫配色再覆盖一层 —— 切暗色、换配色，背景跟着走。实现上只用 radial-gradient（没有 `filter: blur`，省掉一整屏的模糊开销），`@keyframes` 只动 `transform`，颜色不进关键帧（延续本文件对旧 Safari 的约定）；变量都带兜底值，换 `site_theme` 也不至于空白。
 
-**光标光斑**（`assets/js/han.js` 第 7 节 + 第 14 节样式）：一团 420px 的柔光跟着指针走，图层收成 420×420 小块、位置走 `transform`（每帧只更新合成层，指针移动不整屏重绘）。只在精细指针（`hover: hover and pointer: fine`）上启用，`requestAnimationFrame` 节流每帧最多写一次坐标；没有这段脚本时色斑停在默认坐标，不影响任何内容。
+**光标光斑**（`assets/js/han.js` 第 7 节 + 第 14 节样式）：一团 420px 半径的柔光跟着指针走，图层收成 600×600 小块、位置走 `transform`（每帧只更新合成层，指针移动不整屏重绘；方块要大于渐变 294px 的消散半径，否则柔光会在盒子边缘被切成方块）。只在精细指针（`hover: hover and pointer: fine`）上启用，`requestAnimationFrame` 节流每帧最多写一次坐标；没有这段脚本时色斑停在默认坐标，不影响任何内容。
 
 **滚动渐显**（`_includes/head/custom.html` 内联引导 + `han.js` 第 6 节 + 第 15 节样式）：列表卡片、时间轴条目、荣誉条目、内容区小标题进入视口时轻微上浮淡入，只触发一次。三重兜底保证「动效坏了也不藏内容」：隐藏态只在 `<html data-reveal>` 与 `.han-reveal` 同时存在时才生效（引导脚本没跑、用户开了减少动效，正文照常可见）；`han.js` 里没有 IntersectionObserver 或没选中元素会立刻撤销标记；内联脚本 3 秒没等到 `han.js` 的就绪标记 `__hanRevealReady` 也自动撤销。
 

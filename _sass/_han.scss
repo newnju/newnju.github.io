@@ -882,8 +882,11 @@ html[data-theme="dark"] ::selection {
    柔和高光跟着指针走：位置由 assets/js/han.js 第 7 节写入 --han-spot-x/y
    （rAF 节流、只认精细指针、reduced-motion 下不注册）。层曾经铺满整屏、把
    径向渐变的 at 位置写在背景上 —— 指针每动一下整屏图层都要重绘；现在图层
-   收成 420×420 的小块，位置走 translate3d（calc 减去半径让圆心对准指针），
-   每帧只更新合成层、不整屏重绘，will-change 提前给它留好层。
+   收成 600×600 的小块，位置走 translate3d（calc 减去 300px 半宽让圆心对准
+   指针），每帧只更新合成层、不整屏重绘，will-change 提前给它留好层。
+   方块必须比渐变的消散半径大：420px 半径的渐变要到 70%（294px）才完全
+   透明，早先 420 见方（半宽 210 < 294）柔光会在盒子边缘被切成一个方块；
+   600 见方（半宽 300 > 294）四周留 6px 透明余量，光斑圆整。
    层是固定的、透明的、不接事件；没 JS 时坐标变量不设，calc 用默认值把
    光斑放在右上，也不会出错。
    -------------------------------------------------------------------------- */
@@ -893,15 +896,15 @@ html[data-theme="dark"] ::selection {
     position: fixed;
     top: 0;
     left: 0;
-    width: 420px;
-    height: 420px;
+    width: 600px;
+    height: 600px;
     z-index: -1;
     pointer-events: none;
     will-change: transform;
     background: radial-gradient(420px circle,
         var(--han-spot-color, rgba(92, 46, 131, 0.09)), transparent 70%);
-    transform: translate3d(calc(var(--han-spot-x, 72vw) - 210px),
-        calc(var(--han-spot-y, 22vh) - 210px), 0);
+    transform: translate3d(calc(var(--han-spot-x, 72vw) - 300px),
+        calc(var(--han-spot-y, 22vh) - 300px), 0);
 }
 
 @media (hover: hover) and (pointer: fine) {
