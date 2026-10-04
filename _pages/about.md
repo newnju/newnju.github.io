@@ -10,15 +10,15 @@ redirect_from:
 
 我是**武嘉文**，南京大学新闻传播学院新闻传播学博士研究生，研究方向为影像史学与中华民族历史影像。硕士毕业于南京大学艺术学院美术学（美术考古方向），本科毕业于南京晓庄学院广播电视编导专业；2023 年 10 月至 2024 年 3 月在德国图宾根大学（Eberhard Karls Universität Tübingen）交换一学期。
 
-教育背景
-======
-
-{% include han-education.html %}
-
 荣誉
 ======
 
 {% include han-honours.html %}
+
+教育背景
+======
+
+{% include han-education.html %}
 
 近期成果
 ======

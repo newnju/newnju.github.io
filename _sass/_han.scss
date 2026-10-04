@@ -57,7 +57,7 @@ h1, h2, h3, h4 {
     /* 相对正常位置略向上挪一点，让图更贴近页面右上角。
        用 relative 偏移而非 margin：float 的布局占位不变，
        正文的环绕宽度不受影响，只是图本身挪位。
-       横向的 60px 另有条件，见紧随其后的媒体查询。 */
+       横向的 110px 另有条件，见紧随其后的媒体查询。 */
     position: relative;
     top: -30px;
     width: 272px;
@@ -70,14 +70,14 @@ h1, h2, h3, h4 {
     animation: han-mirror-breathe 18s ease-in-out infinite;
 }
 
-/* 再往右 60px，只在大屏（≥ $large = 925px）生效：
+/* 再往右 110px，只在大屏（≥ $large = 925px）生效：
    此宽度起 .page 用 span(10 of 12) + suffix(2 of 12)，正文栏右侧空出
-   约 2/12 宽的空白栏（925px 时约 150px），图右移后仍落在栏内、不顶出视口；
-   而 925px 以下 .page 占满整行，图本来就离视口右缘只剩 ~19px，
+   约 2/12 宽的空白栏（925px 时约 150px），图右移 110px 后仍落在栏内、
+   不顶出视口；而 925px 以下 .page 占满整行，图本来就离视口右缘只剩 ~19px，
    强行右移会把页面撑出横向滚动条。 */
 @media (min-width: 57.8125em) {
     .han-mirror {
-        right: -60px;
+        right: -110px;
     }
 }
 

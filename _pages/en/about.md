@@ -8,15 +8,15 @@ mirror: true
 
 I am **Jiawen Wu (武嘉文)**, a Ph.D. student in Journalism and Communication at Nanjing University's School of Journalism and Communication, specialising in visual history and the historical imagery of the Chinese nation. I received my M.A. in Art History from Nanjing University's School of Arts, where I focused on art archaeology, and my B.A. in Broadcasting and Television Directing from Nanjing Xiaozhuang University; from October 2023 to March 2024 I studied on exchange at Eberhard Karls Universität Tübingen in Germany.
 
-Education
-======
-
-{% include han-education.html %}
-
 Honours
 ======
 
 {% include han-honours.html %}
+
+Education
+======
+
+{% include han-education.html %}
 
 Recent Publications
 ======
