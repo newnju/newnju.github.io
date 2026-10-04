@@ -128,7 +128,8 @@ function flashLabel(el, doneLabel, doneClass) {
     }
 
     function moveToVisible() {
-      for (var i = 0; i < ordered.length; i++) {
+      // 倒着插：每次都插在站点名之后，正着插会把顺序反过来（履历跑到最前）
+      for (var i = ordered.length - 1; i >= 0; i--) {
         if (brand) visible.insertBefore(ordered[i], brand.nextSibling);
         else visible.appendChild(ordered[i]);
       }
@@ -140,6 +141,14 @@ function flashLabel(el, doneLabel, doneClass) {
       btn.classList.remove("open");
     }
 
+    /* 下拉里有东西才显示汉堡按钮 —— 不只看窄屏。
+       宽屏下顶栏放不下时，jquery.greedy-navigation.js 会把末尾的栏目折进下拉，
+       而按钮默认只有 ≤768px 才显示，那些栏目就永远点不到了（实测 900px 上下
+       履历正好被折进去）。这里按「下拉非空」决定，按钮随之出现或消失。 */
+    function syncOverflowClass() {
+      nav.classList.toggle("has-overflow", hidden.querySelectorAll("li").length > 0);
+    }
+
     function apply(isMobile) {
       if (isMobile) {
         moveToHidden();
@@ -147,6 +156,7 @@ function flashLabel(el, doneLabel, doneClass) {
       } else {
         moveToVisible();
       }
+      syncOverflowClass();
     }
 
     var mq = window.matchMedia("(max-width: 768px)");
@@ -158,8 +168,19 @@ function flashLabel(el, doneLabel, doneClass) {
       if (isMobile !== wasMobile) {
         wasMobile = isMobile;
         apply(isMobile);
+      } else {
+        // 宽度变了但没跨过 768px：折叠结果可能已被插件改过，跟着同步一次
+        window.requestAnimationFrame(syncOverflowClass);
       }
     });
+
+    // 字体就位、插件首轮量完后，条目数可能才最终定下来
+    window.requestAnimationFrame(syncOverflowClass);
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(function () {
+        window.requestAnimationFrame(syncOverflowClass);
+      });
+    }
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();

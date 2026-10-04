@@ -585,11 +585,22 @@ html[data-theme="dark"][data-color-theme="nju"] {
    9. 汉堡菜单（纯 CSS 图标 + 移动端折叠，行为见 assets/js/han.js）
    -------------------------------------------------------------------------- */
 
-/* 汉堡按钮默认隐藏，仅在窄屏由 CSS 显示；脚本负责点击折叠 / 展开 */
+/* 汉堡按钮默认隐藏；两种情况才显示：
+   一是窄屏（下面的媒体查询），二是 han.js 第 2 节给导航打了 .has-overflow
+   —— 下拉里确实折了东西（宽屏放不下时末尾栏目会被折进去），此时不显示按钮
+   就点不到那些栏目。 */
 .greedy-nav > button {
     display: none;
     top: 50%;
     transform: translateY(-50%);
+}
+
+.greedy-nav.has-overflow {
+    padding-right: 44px;
+}
+
+.greedy-nav.has-overflow > button {
+    display: block;
 }
 
 .greedy-nav .navicon {
