@@ -91,9 +91,8 @@ if (window.screen && window.screen.orientation && window.screen.orientation.addE
   });
 }
 
-$btn.on('click', function () {
-  $hlinks.toggleClass('hidden');
-  $(this).toggleClass('close');
-});
+// 展开 / 收起交给 han.js 第 2 节：那里按窄屏整体收拢、并统一管 .hidden 与
+// .open。这里再绑一次 click 会把同一个类切换两遍 —— 互相抵消，菜单点了没反应。
+// 本文件只保留「量宽度决定往哪折」与「量顶栏高度」两件事。
 
 updateNav();

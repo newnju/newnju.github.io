@@ -90,10 +90,17 @@ function flashLabel(el, doneLabel, doneClass) {
 })();
 
 /* ==========================================================================
-   2. 汉堡菜单（移动端折叠 + 点击展开）
+   2. 汉堡菜单（窄屏折叠 + 点击展开）
    --------------------------------------------------------------------------
-   仅做渐进增强：脚本不执行时，桌面端导航照常，移动端也至少仍显示汉堡按钮
-   （由 _han.scss 的媒体查询控制显隐），不会比现在更糟。
+   窄屏（≤768px，与 _han.scss 里显示汉堡按钮的媒体查询同一个宽度）把顶栏
+   条目整体收进汉堡菜单 —— 六个栏目 + 语言切换 + 主题切换，只留站点名在
+   顶栏左侧当锚点。用户要求「汉堡里的内容就是顶栏的所有菜单」，而早先只把
+   非 persist 的栏目收进去，语言与主题仍留在条上：主题按钮正好压在汉堡按钮
+   上（两者都是 position 绝对/流式落在同一个 x），汉堡点不开。现在两者一起
+   进下拉，条上不再重叠。
+
+   仅做渐进增强：脚本不执行时，所有条目都留在顶栏（都能点到），汉堡按钮由
+   CSS 决定显隐，不会比现在更糟。
    ========================================================================== */
 (function () {
   "use strict";
@@ -101,14 +108,18 @@ function flashLabel(el, doneLabel, doneClass) {
   function initGreedyNav() {
     var nav = document.getElementById("site-nav");
     if (!nav || !nav.classList.contains("greedy-nav")) return;
-    var btn = nav.querySelector("button");
+    // 只取直接子级的汉堡按钮：主题切换现在也是 <button>，用 button 选择器
+    // 会把它一起选中（它嵌在 li 里，靠直接子级区分）
+    var btn = nav.querySelector(":scope > button") || nav.querySelector("button");
     var visible = nav.querySelector(".visible-links");
     var hidden = nav.querySelector(".hidden-links");
     if (!btn || !visible || !hidden) return;
 
-    // 始终留在导航条上的项（站点名 / 语言 / 主题 / 配色），不参与折叠
-    var items = visible.querySelectorAll("li:not(.persist)");
-    var anchor = visible.querySelector("li.persist:not(.masthead__menu-item--lg)");
+    // 站点名（masthead__menu-item--lg）留在顶栏当锚点，其余全部收进下拉：
+    // 六个栏目 + 语言切换 + 主题切换。init 时按当前顺序记一份，回到宽屏时
+    // 照原序插回站点名之后。
+    var brand = visible.querySelector("li.masthead__menu-item--lg");
+    var items = visible.querySelectorAll("li:not(.masthead__menu-item--lg)");
     var ordered = [];
     for (var k = 0; k < items.length; k++) ordered.push(items[k]);
 
@@ -118,16 +129,24 @@ function flashLabel(el, doneLabel, doneClass) {
 
     function moveToVisible() {
       for (var i = 0; i < ordered.length; i++) {
-        if (anchor) visible.insertBefore(ordered[i], anchor);
+        if (brand) visible.insertBefore(ordered[i], brand.nextSibling);
         else visible.appendChild(ordered[i]);
       }
+      closeMenu();
+    }
+
+    function closeMenu() {
       hidden.classList.add("hidden");
       btn.classList.remove("open");
     }
 
     function apply(isMobile) {
-      if (isMobile) moveToHidden();
-      else moveToVisible();
+      if (isMobile) {
+        moveToHidden();
+        closeMenu();
+      } else {
+        moveToVisible();
+      }
     }
 
     var mq = window.matchMedia("(max-width: 768px)");
@@ -149,10 +168,7 @@ function flashLabel(el, doneLabel, doneClass) {
     });
 
     document.addEventListener("click", function (e) {
-      if (!nav.contains(e.target)) {
-        hidden.classList.add("hidden");
-        btn.classList.remove("open");
-      }
+      if (!nav.contains(e.target)) closeMenu();
     });
   }
 

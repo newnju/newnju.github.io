@@ -640,9 +640,36 @@ html[data-theme="dark"][data-color-theme="nju"] {
         padding-right: 44px;
     }
 
+    /* 下拉里现在是六个栏目 + 语言切换 + 主题切换（han.js 第 2 节），
+       条目多了要能滚：限高 70vh，窄屏上按不住也不至于顶出屏幕。
+       hidden-links 本身是 position:absolute，所以要自己带 overflow。 */
+    .greedy-nav .hidden-links {
+        max-height: 70vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .greedy-nav .hidden-links a {
+        display: block;
         margin: 0;
         padding: 10px 20px;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    /* 主题切换在下拉里是个 button（为了键盘可达），样式对齐同级的 a，
+       并撑满一行免得点到旁边空白处 */
+    .greedy-nav .hidden-links #theme-toggle button {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 10px 20px;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        background: none;
+        border: 0;
     }
 }
 
