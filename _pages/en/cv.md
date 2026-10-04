@@ -8,11 +8,6 @@ author_profile: true
 
 {% include base_path %}
 
-Contact
-======
-
-{% include han-contact.html %}
-
 Education and Experience
 ======
 

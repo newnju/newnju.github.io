@@ -951,6 +951,7 @@ html[data-reveal] .han-reveal.is-visible {
     .archive__item,
     .archive__item-title,
     .han-timeline__item,
+    .han-timeline__item::before,
     .han-awards li,
     .page__content h1 + ul li {
         transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
@@ -974,6 +975,13 @@ html[data-reveal] .han-reveal.is-visible {
     html[data-reveal] .han-awards li.is-visible:hover {
         color: var(--han-patina);
         transform: translateX(4px);
+    }
+
+    /* 条目右移 4px 时，轴上的小圆点留在原位 —— 文字走、点不动，
+       否则一 hover 点就跟着文字歪出轴线。对 ::before 反向位移 4px
+       抵消父级位移，同在 §16 的 transition 列表里与文字同节奏过渡。 */
+    .han-timeline__item:hover::before {
+        transform: translateX(-50%) translateX(-4px);
     }
 }
 
@@ -1203,6 +1211,8 @@ html.theme-transition *::after {
    灰轴（§3 的 ::before）上叠一条同几何的彩色 ::after（left 0.75em、宽 2px，
    与灰轴严格重合），高度随滚动进度走容器上的 --han-timeline-progress
    （0→1，JS 按视口位置算）。scaleY 纯变换、零布局。
+   进度变化带 0.6s 缓出过渡（no-preference 媒体）：一次滚轮之后彩轴
+   「追」上来的时间更长，不是硬跳一格。
    reduced-motion 下 JS 不跑，媒体查询直接给静态全彩轴；
    print 走 §17 隐藏，纸上保持原来的灰轴。
    -------------------------------------------------------------------------- */
@@ -1223,6 +1233,13 @@ html.theme-transition *::after {
 @media (prefers-reduced-motion: reduce) {
     .han-timeline::after {
         transform: translateX(-50%) scaleY(1);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .han-timeline::after {
+        /* 滚一下之后彩轴用 0.6s 缓出追上来，动态比一次滚轮的瞬间更长 */
+        transition: transform 0.6s ease-out;
     }
 }
 
@@ -1285,5 +1302,25 @@ html.theme-transition *::after {
     .han-top {
         transition: opacity 0.3s ease, transform 0.3s ease,
             background-color 0.25s ease;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   26. 项目页（/portfolio/）条目字号再平衡
+   --------------------------------------------------------------------------
+   用户反馈「小的太小、大的太大」：条目标题 h2 原 1.25em（20px，宋体加粗
+   本来就显大）压到 1.125em（18px）；说明文字 archive__item-excerpt 原
+   0.75em（12px）提到 0.875em（14px）；发布时间维持正文 16px 不动。
+   只圈在 .portfolio-page（_pages/portfolio.html 与 en 版的包装层）里，
+   论文 / 会议 / 教学等其他列表页保持原样。
+   -------------------------------------------------------------------------- */
+
+.portfolio-page {
+    .archive__item-title {
+        font-size: 1.125em;
+    }
+
+    .archive__item-excerpt {
+        font-size: 0.875em;
     }
 }

@@ -9,11 +9,6 @@ redirect_from:
 
 {% include base_path %}
 
-联系方式
-======
-
-{% include han-contact.html %}
-
 学历与经历
 ======
 

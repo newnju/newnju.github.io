@@ -316,7 +316,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **滚动渐显**（`_includes/head/custom.html` 内联引导 + `han.js` 第 6 节 + 第 15 节样式）：列表卡片、时间轴条目、荣誉条目、内容区小标题进入视口时轻微上浮淡入，只触发一次。三重兜底保证「动效坏了也不藏内容」：隐藏态只在 `<html data-reveal>` 与 `.han-reveal` 同时存在时才生效（引导脚本没跑、用户开了减少动效，正文照常可见）；`han.js` 里没有 IntersectionObserver 或没选中元素会立刻撤销标记；内联脚本 3 秒没等到 `han.js` 的就绪标记 `__hanRevealReady` 也自动撤销。
 
-**hover 微交互**（第 16 节）：卡片上浮 3px、时间轴与荣誉条目右移 4px 并染品牌色，仅限有指针且不介意动效的设备（`@media (hover: hover)` 门控）。
+**hover 微交互**（第 16 节）：卡片上浮 3px、时间轴与荣誉条目右移 4px 并染品牌色（时间轴的轴上圆点会反向位移 4px 钉在轴线上 —— 文字走、点不动，不会一 hover 点就歪），仅限有指针且不介意动效的设备（`@media (hover: hover)` 门控）。
 
 **点击涟漪**（`assets/js/han.js` 第 10 节 + 第 21 节样式）：页面任意处按下鼠标或手指都有反馈 —— 在可点击元素（链接、按钮、`summary`、`role=button`）上以指针为圆心铺满整块（半径取指针到元素四角的最大距离，整张卡片都能铺满），在正文等普通处泛指尖大小的小圆；颜色走 `--han-ripple`（第 8 节随明暗主题切换，带青铜绿兜底）。节点 `position: fixed` 挂在 body 上、`pointer-events: none`，不参与布局也不挡点击，560ms 扩散淡出后自回收；reduced-motion 下 JS 直接不监听、第 17 节样式再兜底隐藏；缩略图拖动区（`.han-minimap`）是拖拽导航，排除在外。
 
@@ -324,7 +324,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **主题切换色彩渐变**（`han.js` 第 11 节 + 第 23 节样式）：点 masthead 明暗按钮的瞬间给 `<html>` 临时挂 `.theme-transition` 500ms，期间全站颜色（背景、文字、边框、阴影、图标填充）0.35 秒渐变换过去，时段一过摘掉类、平时的 hover 与滚动渐显不受影响；页面首载的主题落位仍是瞬时的。
 
-**时间轴滚动点亮**（`han.js` 第 12 节 + 第 24 节样式）：`/timeline/` 的灰轴上叠一条严格重合的彩色渐变（南大紫 → 金），随滚动按视口位置从上往下点亮（容器上的 `--han-timeline-progress` + `scaleY`，纯变换零布局）；reduced-motion 下 JS 不跑、直接静态全彩，打印走第 17 节保持灰轴。
+**时间轴滚动点亮**（`han.js` 第 12 节 + 第 24 节样式）：`/timeline/` 的灰轴上叠一条严格重合的彩色渐变（南大紫 → 金），随滚动按视口位置从上往下点亮（容器上的 `--han-timeline-progress` + `scaleY`，纯变换零布局）；彩轴带 0.6s 缓出过渡，一次滚轮之后能看到一段柔和的「追上来」，不是硬跳一格。reduced-motion 下 JS 不跑、直接静态全彩，打印走第 17 节保持灰轴。
 
 **回到顶部按钮**（`han.js` 第 13 节 + 第 25 节样式）：JS 生成的右下角紫圆钮（页面 HTML 一行不动），滚过半屏才浮出、点击平滑回顶；≥1200px 自动挪到缩略图左侧不重叠（z-index 40，缩略图 30、导航下拉 100）；reduced-motion 照常显隐只是没有过渡动画，打印不印。
 
@@ -369,11 +369,11 @@ git push
 | 界面按钮文案（中文 / 英文） | `_data/ui-text.yml` 的 `zh` / `en` 段 |
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
-| **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜**（第 22–25 节） | `_sass/_han.scss` 第 22–25 节 + `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
+| **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜、项目页字号**（第 22–26 节） | `_sass/_han.scss` 第 22–26 节（第 26 节纯样式、无 JS，包装层在 `_pages/portfolio.html` 与 en 版）+ `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控） |
 | **首页自我介绍** | `_pages/about.md` |
-| **教育背景、联系方式、工作与任职**（主页与履历、中英四处同步更新） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`，履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
+| **教育背景、联系方式、工作与任职**（主页中英两版；履历页的「联系方式」章节已按需求删除，不再 include `han-contact.html`） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`（现只剩主页在用），履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」一节已改由 `_data` 与集合驱动，见上下几行 |
 | **履历时间轴的分期与内容**（博士 / 硕士 / 本科三个学历大块，过渡期内容排在博士与硕士块之间；块内嵌任职、项目、获奖，均为裸列表不加小节标签） | `_data/profile.yml` 的 `period`（phd / gap / master / bachelor）、`_data/awards.yml` 各条目的 `period`、`_portfolio/*` 的 `period`；标题样式在 `_sass/_han.scss` 第 19 节 |
 | **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」「获奖」两节 + 履历时间轴与「荣誉」节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页与履历页的「荣誉」小节（不参与分期）；其余年份分组显示在「获奖」小节、时间轴页，并按 `period` 进履历时期块 |
