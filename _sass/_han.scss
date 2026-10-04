@@ -1173,7 +1173,10 @@ html[data-reveal] .han-reveal.is-visible {
    左侧朱砂竖条把每个时期块「框」出来，块间距比基础 h2 的 2em 稍大，
    让三段时间轴在长履历里一眼可分。
    -------------------------------------------------------------------------- */
-.page__content .han-cv-period__head {
+/* 这几条不写 .page__content 前缀：履历页的容器是 .archive（archive-single
+   布局），主页才是 .page__content，带上前缀会让履历页整段失效。类名本身
+   （.han-cv-*）只出现在这两处，直接选中即可。 */
+.han-cv-period__head {
     margin-top: 2.6em;
     margin-bottom: 0.6em;
     padding-left: 0.75em;
@@ -1181,7 +1184,7 @@ html[data-reveal] .han-reveal.is-visible {
     line-height: 1.4;
 }
 
-.page__content .han-cv-period__head:first-of-type {
+.han-cv-period__head:first-of-type {
     margin-top: 1.2em;
 }
 
@@ -1191,8 +1194,8 @@ html[data-reveal] .han-reveal.is-visible {
    现在日期一律作为数据字段（profile.yml 的 daterange / daterange_en），
    由模板包成 .han-cv-date：比正文浅一档、数字用等宽（上下对齐，竖排一眼
    能比长短），加粗也一并去掉 —— 年份只是时间，不该比正文更重。
-   履历时间轴与「关于」页共用这一条，所以这里不限定在 .han-cv-timeline 里。 */
-.page__content .han-cv-date {
+   履历时间轴与「关于」页共用这一条。 */
+.han-cv-date {
     color: var(--global-text-color-light);
     font-variant-numeric: tabular-nums;
 }
@@ -1201,13 +1204,13 @@ html[data-reveal] .han-reveal.is-visible {
    给每条都套一层 <p>（多出上下外边距）；没带嵌套的列表则是紧排的。
    结果就是同一页里有的条目之间很松、有的很紧。在 .han-cv-timeline 里统一
    收一下：条目内的 <p> 上下外边距归零，只留行距。 */
-.page__content .han-cv-timeline li > p {
+.han-cv-timeline li > p {
     margin-top: 0;
     margin-bottom: 0;
 }
 
-.page__content .han-cv-timeline li > ul,
-.page__content .han-cv-timeline li > ol {
+.han-cv-timeline li > ul,
+.han-cv-timeline li > ol {
     margin-top: 0.25em;
     margin-bottom: 0;
 }
