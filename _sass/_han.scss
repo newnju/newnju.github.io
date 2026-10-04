@@ -604,6 +604,9 @@ html[data-theme="dark"][data-color-theme="nju"] {
 .greedy-nav > button {
     display: none;
     position: static;
+    /* 按钮在 DOM 里排在列表前面，直接排 flex 会跑到左边去（站点名被挤到右边）。
+       order 把它送回末尾：站点名在左、汉堡在右，与原先绝对定位时的观感一致。 */
+    order: 2;
     flex: 0 0 auto;
     margin-left: 10px;
     transform: none;
