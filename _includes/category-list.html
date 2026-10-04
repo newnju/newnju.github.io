@@ -1,4 +1,10 @@
-{% include base_path %}
+
+{%- comment -%}
+  界面文案按当前页面的 locale 取，英文页自然拿到 en 那套；缺了再回落到站点默认。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+  {% include base_path %}
 
 {% include base_path %}
 
@@ -18,7 +24,7 @@
   {% assign category_hashes = (page_categories | split: ',' | sort:0) %}
 
   <p class="page__taxonomy">
-    <strong><i class="fa fa-fw fa-folder-open" aria-hidden="true"></i> {{ site.data.ui-text[site.locale].categories_label | default: "Categories:" }} </strong>
+    <strong><i class="fa fa-fw fa-folder-open" aria-hidden="true"></i> {{ _ui.categories_label | default: "Categories:" }} </strong>
     <span itemprop="keywords">
     {% for hash in category_hashes %}
       {% assign keyValue = hash | split: '#' %}

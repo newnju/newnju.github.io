@@ -60,9 +60,9 @@
 
     <h2 class="archive__item-title" itemprop="headline">
       {% if _copyable %}
-        <a href="{{ _title_href }}" class="js-copy-citation" data-citation="{{ _citation | escape }}" data-label-done="{{ ui.copied_label | default: '已复制引用' }}" title="{{ ui.copy_citation_hint | default: '点击标题复制引用（GB/T 7714）' }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+        <a href="{{ _title_href }}" class="js-copy-citation" data-citation="{{ _citation | escape }}" data-label-done="{{ ui.copied_label | default: '已复制引用' }}" title="{{ ui.copy_citation_hint | default: '点击标题复制引用（GB/T 7714）' }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="{{ ui.permalink_label | default: '固定链接' }}"></i><span class="sr-only">{{ ui.permalink_label | default: '固定链接' }}</span></a>
       {% elsif post.link %}
-        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="permalink"></i><span class="sr-only">Permalink</span></a>
+        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="{{ ui.permalink_label | default: '固定链接' }}"></i><span class="sr-only">{{ ui.permalink_label | default: '固定链接' }}</span></a>
       {% else %}
         <a href="{{ base_path }}{{ post.url }}" rel="permalink">{{ title }}</a>
       {% endif %}

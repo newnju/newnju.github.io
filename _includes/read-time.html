@@ -1,4 +1,10 @@
-{% if post.read_time %}
+
+{%- comment -%}
+  界面文案按当前页面的 locale 取，英文页自然拿到 en 那套；缺了再回落到站点默认。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+  {% if post.read_time %}
   {% assign words = post.content | strip_html | number_of_words %}
 {% elsif page.read_time %}
   {% assign words = page.content | strip_html | number_of_words %}
@@ -6,12 +12,12 @@
 
 {% if site.words_per_minute %}
   {% if words < 180 %}
-	  {{ site.data.ui-text[site.locale].less_than | default: "less than" }} 1 {{ site.data.ui-text[site.locale].minute_read | default: "minute read" }}
+	  {{ _ui.less_than | default: "less than" }} 1 {{ _ui.minute_read | default: "minute read" }}
 	{% elsif words < 360 %}
-	  1 {{ site.data.ui-text[site.locale].minute_read | default: "minute read" }}
+	  1 {{ _ui.minute_read | default: "minute read" }}
 	{% else %}
-	  {{ words | divided_by:site.words_per_minute }} {{ site.data.ui-text[site.locale].minute_read | default: "minute read" }}
+	  {{ words | divided_by:site.words_per_minute }} {{ _ui.minute_read | default: "minute read" }}
 	{% endif %}
 {% else %}
-  {{ site.data.ui-text[site.locale].undefined_wpm | "Undefined parameter words_per_minute at _config.yml" }}
+  {{ _ui.undefined_wpm | "Undefined parameter words_per_minute at _config.yml" }}
 {% endif %}

@@ -64,7 +64,7 @@
 - year: "2021"
   items:
     - text: "获江苏省大学生创新训练计划优秀结项"
-      text_en: "Outstanding Completion, Jiangsu Provincial Undergraduate Innovation Training Programme"
+      text_en: "Certificate of Outstanding Completion, Jiangsu Provincial Undergraduate Innovation Training Programme"
       level: provincial
       period: bachelor
       note: "江苏省教育厅"
@@ -76,7 +76,7 @@
       note: "中国好创意暨全国数字艺术设计大赛组委会"
       note_en: "Organising Committee, China Creative & National Digital Art Design Competition"
     - text: "连续三年获南京大学校级二、三等奖学金"
-      text_en: "Nanjing University academic scholarships (second and third class), three years in a row"
+      text_en: "Nanjing University academic scholarships (second and third class), awarded three years in a row"
       level: school
       period: master
       note: "2021 – 2024"
@@ -126,6 +126,6 @@
     - text: "南京大学优秀共青团干部"
       text_en: "Outstanding Communist Youth League Cadre, Nanjing University"
     - text: "南京大学图书馆年度优秀读者"
-      text_en: "Reader of the Year, Nanjing University Library"
+      text_en: "Library Reader of the Year, Nanjing University"
     - text: "南京大学第五届研究生代表大会代表"
       text_en: "Delegate, Fifth Graduate Students' Congress, Nanjing University"
