@@ -229,7 +229,13 @@
       a,
       button {
         /* 触摸目标至少 44×44（原先只有 25px 宽）；按钮是 masthead.html 里
-           为了键盘可达才换成的真 button，所以要把浏览器默认样式抹平。 */
+           为了键盘可达才换成的真 button，所以要把浏览器默认样式抹平。
+           position/z-index 也要压回去：主题给 .greedy-nav button 的通用规则是
+           position: absolute; right: 0（那是给汉堡按钮用的），换成 button 之后
+           主题按钮也被卷进去 —— 脱离文档流跳到导航最右端，跟语言切换拉开了距离，
+           所在的 li 宽度还会塌成 0。 */
+        position: static;
+        z-index: auto;
         min-width: 44px;
         min-height: 44px;
         display: flex;
