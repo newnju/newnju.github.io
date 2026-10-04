@@ -9,12 +9,12 @@ redirect_from:
 
 {% include base_path %}
 
+{% include han-cv-timeline.html %}
+
 荣誉
 ======
 
 {% include han-honours.html %}
-
-{% include han-cv-timeline.html %}
 
 证书
 ======
