@@ -288,9 +288,15 @@
       if (pos === "fixed" || pos === "sticky") cloneAll[i].style.position = "static";
     }
 
-    // 顶部导航是 fixed，缩略图里没有意义；脚本与样式表也一并去掉
+    // 顶部导航是 fixed，缩略图里没有意义；脚本与样式表也一并去掉。
+    // 装饰层（流光 / 光斑 / 回到顶部 / 涟漪）直接删除而不是压回普通流：
+    // 压回流等于往克隆内容上方塞进一个带显式尺寸的块（光斑 600×600），
+    // 整页在缩略图里下移，按真实坐标走的视口方块就恒定偏高 —— 紫框总偏上。
     Array.prototype.forEach.call(
-      clone.querySelectorAll(".masthead, .han-minimap, script, link, noscript"),
+      clone.querySelectorAll(
+        ".masthead, .han-minimap, script, link, noscript," +
+          " .han-aurora, .han-spotlight, .han-top, .han-ripple"
+      ),
       function (n) { n.parentNode.removeChild(n); }
     );
 
@@ -359,10 +365,16 @@
     // 既不破坏页内锚点的平滑滚动，也保证这里的拖动逐帧跟手。
     var scrollRoot = document.documentElement;
     var maxScroll = Math.max(0, pageH - window.innerHeight);
+    // 缩略内容在窄条里的实际高度：按宽适配后通常不足一屏（窄条是 100vh 高）
+    var mapH = pageH * scale;
 
     function scrollToPoint(clientY) {
       var rect = shell.getBoundingClientRect();
-      var ratio = (clientY - rect.top) / rect.height;
+      // 映射按「内容区」而不是整条壳算比例：内容比 100vh 的壳矮时，
+      // 按壳算会让方块恒定落在指针上方 —— 拖到哪都「偏上」；
+      // 内容比壳高（超长页）时取壳高，与可见区域一致。
+      var track = Math.min(rect.height, mapH);
+      var ratio = (clientY - rect.top) / track;
       if (ratio < 0) ratio = 0;
       if (ratio > 1) ratio = 1;
       // 让指针落在视口方块的中心，而不是让方块顶边对齐指针
@@ -672,7 +684,7 @@
    9. 侧栏 fit 门控（_sidebar.scss 的 .is-fit）
    --------------------------------------------------------------------------
    宽屏侧栏不再无条件固定：默认文档流，只有内容装得下一屏才加
-   .is-fit 恢复固定（fixed + 100vh + padding-top:70，top 来自
+   .is-fit 恢复固定（fixed + 100vh + padding-top:50，top 来自
    .sticky 工具类的 2em）。装不下（英文版联系方式更长 + 线稿）或
    脚本没跑时保持流式 —— 左列不出现内层滚动条，底部线稿随页滚动
    进视口，vivus 的 inViewport 监听的是窗口滚动，固定侧栏永远
@@ -686,7 +698,7 @@
   if (!sidebar) return;
 
   var mqPin = window.matchMedia("(min-width: 925px)"); // 与 _themes.scss 的 $large 对齐
-  var CLEARANCE = 70; // 与 _sass 下的 $masthead-height 对齐
+  var CLEARANCE = 50; // 与 _sass 下的 $masthead-height 对齐
   var GUTTER = 8;
   var rafId = 0;
 
@@ -695,7 +707,7 @@
       sidebar.classList.remove("is-fit");
       return;
     }
-    // 先脱掉 .is-fit 量流式真实高度（固定态的 padding-top 会把量高撑大 70px）
+    // 先脱掉 .is-fit 量流式真实高度（固定态的 padding-top 会把量高撑大 50px）
     sidebar.classList.remove("is-fit");
     var pinTop = parseFloat(window.getComputedStyle(sidebar).top) || 0;
     if (
