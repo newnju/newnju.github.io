@@ -169,6 +169,10 @@ analytics:
 
 
 # Reading Files
+# _pages 必须列在 include 里：下划线开头的目录 Jekyll 默认不读，
+# 去掉这一行，全站页面（/、/cv/、/en/…）会全部消失，只剩集合页与静态文件。
+include:
+  - _pages
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
