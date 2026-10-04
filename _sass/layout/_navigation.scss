@@ -226,10 +226,20 @@
     }
 
     #theme-toggle {
-      a {
-        width: 25px;
+      a,
+      button {
+        /* 触摸目标至少 44×44（原先只有 25px 宽）；按钮是 masthead.html 里
+           为了键盘可达才换成的真 button，所以要把浏览器默认样式抹平。 */
+        min-width: 44px;
+        min-height: 44px;
         display: flex;
+        align-items: center;
         justify-content: center;
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        background: none;
+        border: 0;
         cursor: pointer;
       }
     }
@@ -252,10 +262,14 @@
                 transform: scaleX(0); /* hide*/
       }
 
-      &:hover:before {
-        -webkit-transform: scaleX(1);
-            -ms-transform: scaleX(1);
-                transform: scaleX(1); /* reveal*/
+      /* 只在真有指针悬停时显示下划线：触摸设备点一下会一直留着 hover 态，
+         导航下面会挂一道不会再消失的横条。 */
+      @media (hover: hover) {
+        &:hover:before {
+          -webkit-transform: scaleX(1);
+              -ms-transform: scaleX(1);
+                  transform: scaleX(1); /* reveal*/
+        }
       }
     }
   }

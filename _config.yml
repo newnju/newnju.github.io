@@ -163,15 +163,12 @@ social:
 
 # Analytics
 analytics:
-  provider               :  "false" # false (default), "google", "google-universal", "google-analytics-4", "custom"
+  provider               :  false # false（默认）/ "google" / "google-universal" / "google-analytics-4" / "custom"
   google:
     tracking_id          :
 
 
 # Reading Files
-include:
-  - .htaccess
-  - _pages
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"

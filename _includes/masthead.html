@@ -39,7 +39,7 @@
             <a href="{{ base_path }}{{ _ui.lang_switch_href }}"><i class="fa-solid fa-language" aria-hidden="true"></i>{{ _ui.lang_switch_label | default: "English" }}</a>
           </li>
           <li id="theme-toggle" class="masthead__menu-item persist tail">
-            <a role="button" aria-labelledby="theme-icon"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true" title="toggle theme"></i></a>
+            <button type="button" aria-label="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}" title="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true"></i></button>
           </li>
         </ul>
         <ul class="hidden-links hidden"></ul>

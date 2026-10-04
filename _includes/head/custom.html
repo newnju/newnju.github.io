@@ -2,16 +2,17 @@
 
 <!-- start custom head snippets -->
 
-<!-- 学术图标（academicons）来自 jsDelivr：提前握手，省一次解析 + TLS 往返 -->
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- 图标字体：同源文件，直接当普通样式表引。
+     原来用 rel="preload" + onload 换 stylesheet 异步加载，但 Firefox 57–84
+     与 Safari 11 以下不认 preload 的 as="style"，onload 永不触发 → 整份图标
+     样式丢失（侧栏联系方式、语言球、主题按钮全成空白）。同源文件本来也不
+     值得为它多绕一圈，直接引更稳。 -->
+<link rel="stylesheet" href="{{ base_path }}/assets/css/fontawesome.css">
 
-<!-- Support for Academicons -->
-<link rel="preload" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css"></noscript>
-
-<!-- Support for Font Awesome -->
- <link rel="preload" href="{{ base_path }}/assets/css/fontawesome.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="{{ base_path }}/assets/css/fontawesome.css"></noscript>
+<!-- 学术图标（academicons）原本从 jsDelivr 引，但 _config.yml 里
+     academia / arxiv / orcid / googlescholar 等字段全为空，全站没有一个
+     ai-* 类名渲染，所以那一整块（外加一次跨域握手）已删除。
+     将来真要挂 ORCID / Google Scholar 时，把 jsDelivr 那三行加回来即可。 -->
 
 <!-- favicon from https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_academic-progressive.svg -->
 <link rel="apple-touch-icon" sizes="180x180" href="{{ base_path }}/images/apple-touch-icon-180x180.png"/>
@@ -20,7 +21,26 @@
 <link rel="icon" type="image/png" href="{{ base_path }}/images/favicon-192x192.png" sizes="192x192"/>
 <link rel="manifest" href="{{ base_path }}/images/manifest.json"/>
 <link rel="icon" href="{{ base_path }}/images/favicon.ico"/>
-<meta name="theme-color" content="#fbf8f1"/>
+<meta name="theme-color" content="#fbf8f1" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#1d2321" media="(prefers-color-scheme: dark)"/>
+
+<!-- 主题落位：赶在首次绘制之前定好 data-theme。
+     原来由 main.min.js 里的 setTheme() 负责 —— 脚本是 type="module"，要等
+     取回下载才执行，慢一点就会先闪一下亮色；而且脚本一旦没跑成（被拦、被
+     旧浏览器的中断报错带走），整站就永远停在亮色。这里内联一小段：先用
+     localStorage 里的选择，没有就跟随系统的 prefers-color-scheme，
+     于是换设备 / 换系统时配色也跟着走。main.min.js 稍后再校正一次。 -->
+<script>
+  (function () {
+    var d = document.documentElement;
+    var saved = null;
+    try { saved = window.localStorage.getItem("theme"); } catch (e) {}
+    if (saved !== "dark" && saved !== "light") {
+      saved = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    d.setAttribute("data-theme", saved);
+  })();
+</script>
 
 <!-- 滚动渐显引导（_han.scss §15）：仅当用户没有 reduced-motion 偏好才启用。
      han.js 第 6 节就绪后会设 __hanRevealReady；3 秒没等到就自动撤销标记，

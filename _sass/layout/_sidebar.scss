@@ -14,13 +14,8 @@
   margin-bottom: 1em;
   /* 侧栏盒子本身不再上提：头像的位置统一由 _han.scss 第 6 节里
      .author__avatar 的负外边距决定（两种状态共用同一个值），
-     这里保持 0，流式态的位置就等于「顶栏让位 + #main 的 2em」。
-     竖屏媒体查询随后把它改回正 1em。 */
+     这里保持 0，流式态的位置就等于「顶栏让位 + #main 的 2em」。 */
   margin-top: 0;
-
-  @media (orientation: portrait) {
-    margin-top: 1em;
-  }
 
   /*
     固定侧栏改为条件启用（fit 门控，由 han.js 第 9 节驱动）：
@@ -32,10 +27,20 @@
   @include breakpoint($large) {
     &:not(.is-fit) {
       position: static;             // 抵消 .sticky 工具类的吸顶
+
+      /* 竖屏时侧栏回到内容之上，给一段正间距。
+         必须待在 :not(.is-fit) 里：iPad Pro 竖屏宽 1024px ≥ $large，
+         放到外面会让流式态比固定态多出 1em，fit 门控切换时头像会跳一下。 */
+      @media (orientation: portrait) {
+        margin-top: 1em;
+      }
     }
 
     &.is-fit {
+      /* 同 .han-minimap：100vh 在 iOS 上是最大视口高，地址栏展开时底部会露不到；
+         不认 dvh 的浏览器忽略第二条。 */
       height: 100vh;
+      height: 100dvh;
       overflow-y: auto;             // 判定贴边 fit 时的兜底滚动条
       position: fixed;
       margin-top: 0;

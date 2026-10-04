@@ -337,7 +337,23 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 **卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS，每帧最多重算一次（rAF 节流）；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
 
-**性能微优化**：侧栏头像改用 `images/avatar.webp`（400×400、14KB，原 PNG 119KB 只留给 `og_image` 分享预览），`<img>` 补了 `width/height` 免加载时布局抖动；作品缩略图 `loading="lazy"` 延后屏外图片；jsDelivr 提前 `preconnect` 省一次连接；光斑、卡片倾斜、时间轴与回到顶部全部 rAF 节流、每帧最多写一次。
+**性能与跨设备加固**（这一轮的取舍都写在改动处）：
+
+- **图标字体子集化**（`tools/subset-fonts.js`，`npm run fonts`）：Font Awesome Free 的两套完整字体是 277KB woff2，而全站只用到十几个图标 —— 首屏传输量的三分之二。脚本扫源码里出现的 `fa-*` 类名、到 `_sass/vendor/font-awesome/_variables.scss` 查码位、交给 `pyftsubset` 生成子集，**加图标只要写进模板，重跑一次即可**，不用回来改码位表。当前 277KB → 11KB（woff2），ttf 兜底同样瘦身。依赖 Python 的 `fonttools` + `brotli`（`pip install fonttools brotli`）；没装时脚本只打印码位、不动文件。
+- **删掉没人用的样式与外链**：`main.scss` 里去掉 `layout/json_cv`、`layout/forms`、`layout/notices`、`syntax` 四块（站内没有 json_cv 页、没有表单控件、`notice--` 只出现在 IE9 条件注释里、`highlight` 一个都没渲染），main.css 压缩后 73KB → 60KB；`head/custom.html` 里 jsDelivr 的 academicons 整块删除（`_config.yml` 的 academia / arxiv / orcid / googlescholar 全为空，全站没有一个 `ai-*` 类名），顺带省掉每次访问一次跨域握手；将来真要挂 ORCID / Google Scholar 时把那段加回来。
+- **`main.min.js` 的 `screen.orientation` 判空**（`assets/js/plugins/jquery.greedy-navigation.js`）：它在 Safari / iOS 16.4 以下不存在，而 `main.min.js` 是整包 `type="module"`，模块顶层一抛错，后面的 `setTheme`、主题按钮、联系方式按钮全都不执行 —— 症状正是「换到这台设备上主题永远是亮的、按钮点不动」。改完记得 `npm run build:js`。
+- **主题跟着设备走**：`_includes/head/custom.html` 里加了一段内联脚本，在首次绘制前按 `localStorage` → 系统 `prefers-color-scheme` 的顺序定下 `data-theme`（不再等 `main.min.js` 取回下载才执行，也不再受上面的报错影响）；`_sass/theme/_han_dark.scss` 的暗色变量表抽成 mixin，另用 `@media (prefers-color-scheme: dark) + html:not([data-theme="light"])` 兜住「脚本没跑」的情况。
+- **`100vh` 改成 `100vh` + `100dvh` 两行**（缩略图与固定侧栏）：iOS 的 `100vh` 是地址栏收起时的最大视口高，地址栏展开时底部会露不到屏外；不认 `dvh` 的旧浏览器忽略第二条。
+- **刘海屏**：`viewport-fit=cover` + `.han-top` 用 `max(24px, env(safe-area-inset-*))`，没有 `env()` 的浏览器照旧 24px。
+- **触摸目标与 hover**：主题切换改成真正的 `<button>`（原先是 `role="button"` 的 `<a>`，键盘不可达），点击区从 25px 放到 44×44；回到顶部按钮 42→48px；导航下划线与回到顶部的 hover 反馈包进 `@media (hover: hover)`，免得触摸设备点一下就留着高亮。
+- **`forced-colors`（Windows 高对比度）**：系统会接管颜色但不接管背景图，所以流光、光斑、缩略图那几层直接收掉，正文与图标交给系统配色（SVG 的 fill/stroke 本来就会被强制成单色，正好是清晰的线稿）。
+- **正文字体栈补中文**（`_sass/theme/_han_*.scss` 的 `$sans-serif`）：系统栈在前，后面补 PingFang SC / 微软雅黑 / Noto Sans CJK —— 只靠通用 `sans-serif` 兜底，在「默认字体不含中文」的机器上会掉成豆腐块。
+- **侧栏竖屏规则收进 `:not(.is-fit)`**（`_sass/layout/_sidebar.scss`）：iPad Pro 竖屏宽 1024px ≥ `$large`，放在外面会让流式态比固定态多出 1em，fit 门控切换时头像会跳一下。
+- **首屏不再等渐显**（`han.js` 第 6 节）：已经在视口内的元素直接点亮，不进观察者队列 —— 淡入对首屏没意义，却会让 LCP 白白晚一拍（一次 IO 往返 + 0.65 秒过渡）。
+- **缩略图不再每次 resize 都重建**：重建 = 克隆一遍整页 DOM（几百节点）+ 几百次 `getComputedStyle`，原先拖窗口时每秒能触发几十次；现在 rAF 合并一次，并由 `geometryKey()` 判断尺寸是否真的变了。滚动跟随也不再每次 `querySelector`，直接用本次构建出的节点引用。
+- **主题按钮与固定链接的无障碍/双语**：`ui-text.yml` 新增 `theme_toggle_label`（中英）与 `permalink_label`（中英），原先四个 `archive-single*` 片段里硬编码的英文 `Permalink` 一并本地化。
+
+**性能微优化**：侧栏头像改用 `images/avatar.webp`（400×400、14KB，原 PNG 119KB 只留给 `og_image` 分享预览），`<img>` 补了 `width/height` 免加载时布局抖动；作品缩略图 `loading="lazy"` 延后屏外图片；光斑、卡片倾斜、时间轴与回到顶部全部 rAF 节流、每帧最多写一次。（原先这里的「jsDelivr 提前 `preconnect`」已随 academicons 一并删除。）
 
 **侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。线稿看得见、动得了的前提是侧栏能滚进视口 —— 宽屏侧栏由 `han.js` 第 9 节做 fit 门控：装得下一屏才固定（`.is-fit`），装不下就保持文档流随页滚动，否则左列多出内层滚动条、`inViewport` 永不触发。
 
@@ -380,6 +396,8 @@ git push
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
 | **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 55.6px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白。**插件源码改完要跑 `npm run build:js` 重新生成 `assets/js/main.min.js`**（页面加载的是这个打包产物，不是插件文件本身） |
+| **明暗主题**（跟随系统偏好，可手动覆盖） | 落位在 `_includes/head/custom.html` 的内联脚本（首次绘制前定 `data-theme`）+ `_sass/theme/_han_dark.scss` 的变量 mixin（含 `prefers-color-scheme` 兜底）；切换按钮在 `_includes/masthead.html`，文案取 `ui-text.yml` 的 `theme_toggle_label`；点击处理在 `assets/js/_main.js` 的 `toggleTheme`（打进 `main.min.js`，改完要 `npm run build:js`） |
+| **图标字体子集**（首屏大头，277KB → 11KB） | `tools/subset-fonts.js`（`npm run fonts`），码位由源码里出现的 `fa-*` 类名反查 `_sass/vendor/font-awesome/_variables.scss` 得到；产物是 `assets/webfonts/fa-{solid-900,brands-400}.{woff2,ttf}` |
 | **首页自我介绍** | `_pages/about.md` |
 | **教育背景、联系方式、工作与任职**（主页中英两版；履历页的「联系方式」章节已按需求删除，不再 include `han-contact.html`） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`（现只剩主页在用），履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」标题已按需求删除（合并时间轴直接跟在页题下）；「荣誉」节排在合并时间轴之后、证书之前（时间轴主体先行，荣誉紧邻证书）。该节内容已改由 `_data` 与集合驱动，见上下几行 |

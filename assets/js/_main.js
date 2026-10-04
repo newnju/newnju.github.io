@@ -158,14 +158,22 @@ $(document).ready(function () {
 
   // If the user hasn't chosen a theme, follow the OS preference
   setTheme();
-  window.matchMedia('(prefers-color-scheme: dark)')
-        .addEventListener("change", (e) => {
-          if (!localStorage.getItem("theme")) {
-            setTheme(e.matches ? "dark" : "light");
-          }
-        });
+  // Safari 13 及更早的 MediaQueryList 还不是 EventTarget，只有 addListener；
+  // 不做这个兼容分支的话，下面这行会直接抛错，把紧随其后的主题按钮绑定
+  // 一起带崩（切换按钮就成了死的）。
+  const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const onScheme = (e) => {
+    if (!localStorage.getItem("theme")) {
+      setTheme(e.matches ? "dark" : "light");
+    }
+  };
+  if (scheme.addEventListener) {
+    scheme.addEventListener("change", onScheme);
+  } else if (scheme.addListener) {
+    scheme.addListener(onScheme);
+  }
 
-  // Enable the theme toggle
+  // Enable the theme toggle（点按钮本体，事件冒泡到 li 也一样，绑 li 更稳）
   $('#theme-toggle').on('click', toggleTheme);
 
   // 页脚已回归文档流（见 _sass/layout/_footer.scss）：

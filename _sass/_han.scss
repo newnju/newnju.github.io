@@ -706,7 +706,11 @@ html[data-theme="dark"] ::selection {
     top: 0;
     right: 0;
     width: 100px;
+    /* 先 100vh 再 100dvh：iOS Safari 的 100vh 是「地址栏收起时」的最大视口高，
+       地址栏展开时底部会有一截露不到屏外；dvh 跟着实际可视高度走。不认 dvh
+       的旧浏览器忽略第二条，照旧用 100vh。 */
     height: 100vh;
+    height: 100dvh;
     z-index: 30;
     overflow: hidden;
     /* 整条都是拖动区：按下即定位、拖动即跟随（逻辑见 assets/js/han.js 第 5 节） */
@@ -1045,6 +1049,19 @@ html[data-reveal] .han-reveal.is-visible {
     }
 }
 
+/* Windows 高对比度（forced-colors）：系统会把颜色强制接管，但背景图不在
+   强制清单里，于是流光、光斑、缩略图那几层半透明色块仍会盖在被强制的
+   画布上。直接收掉装饰层，正文与图标交给系统配色（SVG 的 fill/stroke
+   本来就会被强制成单色，正好是清晰的线稿）。 */
+@media (forced-colors: active) {
+    .han-aurora,
+    .han-spotlight,
+    .han-minimap,
+    .han-ripple {
+        display: none !important;
+    }
+}
+
 @media print {
 
     .han-aurora,
@@ -1272,14 +1289,16 @@ html.theme-transition *::after {
 
 .han-top {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
+    /* 刘海屏 / 底部指示条：没有 viewport-fit=cover 时 env() 恒为 0，
+       max() 会退回 24px，所以旧浏览器照原样。 */
+    right: max(24px, env(safe-area-inset-right));
+    bottom: max(24px, env(safe-area-inset-bottom));
     z-index: 40;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -1301,8 +1320,12 @@ html.theme-transition *::after {
     pointer-events: auto;
 }
 
-.han-top:hover {
-    background: #c8a45c;
+/* 只在真有指针悬停能力的设备上给 hover 反馈：触摸设备点一下会一直留着
+   hover 态（要点别处才消），按钮会一直停在金色。 */
+@media (hover: hover) {
+    .han-top:hover {
+        background: #c8a45c;
+    }
 }
 
 .han-top:focus-visible {

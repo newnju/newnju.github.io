@@ -43,9 +43,17 @@ $sidebar-screen-min-width   : 1024px;
 /* Typography: 与明色版一致 */
 $han-serif                  : "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Source Han Serif", Georgia, "Times New Roman", serif;
 $header-font-family         : $han-serif;
+/* 与 _han_light 同一套：系统栈在前，后面补中文字体，避免在默认字体不含中文的
+   机器上掉成豆腐块。 */
+$sans-serif                  : -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans GB", "Segoe UI", Roboto, "Helvetica Neue", "Lucida Grande", Arial, sans-serif;
 
-/* Dark theme for the site */
-html[data-theme="dark"] {
+/* 暗色变量表。抽成 mixin 是为了同一个表能用两次：
+   一次给显式的 data-theme="dark"（用户点过切换按钮，或页首那段内联脚本
+   按系统偏好写进去的），一次给「脚本没跑」的场景 —— 那时 html 上没有
+   data-theme，但系统要暗色，于是用媒体查询兜住，文字与背景仍是暗底这套。
+   少了这条，禁用 JS 的访客（以及任何脚本没执行成功的情况）永远只看到亮色，
+   换设备就会「颜色变了一截」。 */
+@mixin han-dark-vars {
     --global-base-color                 : #7cbfa2;
     --global-bg-color                   : #1d2321;
     --global-footer-bg-color            : #191e1c;
@@ -77,4 +85,18 @@ html[data-theme="dark"] {
     --han-aurora-b                      : rgba(212, 176, 106, 0.13);
     --han-aurora-c                      : rgba(224, 119, 106, 0.10);
     --han-spot-color                    : rgba(124, 191, 162, 0.18);
+}
+
+html[data-theme="dark"] {
+    @include han-dark-vars;
+}
+
+/* 没有显式选择（html 上没有 data-theme="light"）且系统要暗色时，
+   同样给这套变量。!important 不需要：这条媒体查询在后、特异性也不低，
+   且 head/custom.html 的内联脚本会在首次绘制前把 data-theme 写上，
+   两条路径不会互相打架。 */
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) {
+        @include han-dark-vars;
+    }
 }

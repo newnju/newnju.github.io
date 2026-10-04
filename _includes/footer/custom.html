@@ -1,10 +1,13 @@
 <!-- start custom footer snippets -->
 
-<!--
+{%- comment -%}
   MathJax 已移除：全站没有公式内容，却要在每个页面拉 ~1MB 的外链脚本，
   还会拖后 load 事件（han.js 的缩略图校正、以及旧的 defer 队列都吃过这个亏，
   见 README 第三章第 5 节）。哪天真要写公式，把下面这行放回来即可：
   <script id="MathJax-script" defer src="https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.js"></script>
--->
+
+  用 Liquid 注释而不是 HTML 注释包着：HTML 注释一旦被哪个压缩器删掉，
+  那行 script 就会活过来，静悄悄给每个页面加回 1MB 外链。
+{%- endcomment -%}
 
 <!-- end custom footer snippets -->

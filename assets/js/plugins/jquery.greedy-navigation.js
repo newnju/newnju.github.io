@@ -79,9 +79,15 @@ function updateNav() {
 $(window).on('resize', function () {
   updateNav();
 });
-screen.orientation.addEventListener("change", function () {
-  updateNav();
-});
+// screen.orientation 在 Safari / iOS 16.4 以下（2023 年 3 月才支持）不存在，
+// 直接 addEventListener 会抛错。main.min.js 是整包 type="module"，模块顶层一
+// 旦抛错，后面的代码（setTheme、主题按钮、联系方式按钮）全都不执行 —— 表现就
+// 是「换到这台设备上主题永远是亮的、按钮点不动」，所以先判存在。
+if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
+  window.screen.orientation.addEventListener("change", function () {
+    updateNav();
+  });
+}
 
 $btn.on('click', function () {
   $hlinks.toggleClass('hidden');

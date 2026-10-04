@@ -40,6 +40,10 @@ $sidebar-screen-min-width   : 1024px;
 /* Typography: 标题走宋体（衬线），正文保持无衬线以保证屏幕可读性 */
 $han-serif                  : "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Source Han Serif", Georgia, "Times New Roman", serif;
 $header-font-family         : $han-serif;
+/* 正文字体：系统栈在前（各平台都命中自己那套），后面补中文字体。
+   只靠通用的 sans-serif 兜底在「默认字体不含中文」的机器上（精简版 Linux、
+   英文版 Windows、裁剪过的安卓镜像）会掉成豆腐块，补上就稳。 */
+$sans-serif                  : -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Hiragino Sans GB", "Segoe UI", Roboto, "Helvetica Neue", "Lucida Grande", Arial, sans-serif;
 
 /* Default light theme for the site */
 :root {

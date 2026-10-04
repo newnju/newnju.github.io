@@ -229,6 +229,7 @@ function flashLabel(el, doneLabel, doneClass) {
   var lastGeo = "";     // 上次建图时的「视口宽 x 页面高」，用来判断是否需要重建
   var syncScale = 0.1;  // JS 回退路径下当前用的缩放比，建图时更新
   var syncBound = false; // scroll 监听是否已挂（只挂一次，避免重建时叠加）
+  var viewEl = null;      // 本次构建出的方块节点，滚动时直接写它，省掉每次 querySelector
 
   function geometryKey() {
     return document.documentElement.clientWidth + "x" + document.documentElement.scrollHeight;
@@ -245,6 +246,7 @@ function flashLabel(el, doneLabel, doneClass) {
       '<div class="han-minimap__view"></div>';
     var inner = shell.querySelector(".han-minimap__inner");
     var view = shell.querySelector(".han-minimap__view");
+    viewEl = view;
 
     var clone = document.body.cloneNode(true);
 
@@ -303,8 +305,9 @@ function flashLabel(el, doneLabel, doneClass) {
       window.CSS && CSS.supports && CSS.supports("animation-timeline", "scroll()");
 
     function syncView() {
-      var el = document.querySelector(".han-minimap__view");
-      if (el) el.style.transform = "translateY(" + window.scrollY * syncScale + "px)";
+      // viewEl 是本次构建时创建的节点，直接用模块级引用；
+      // 原先每次滚动都 querySelector 一遍，既浪费也会在重建后写到已移除的旧节点上
+      if (viewEl) viewEl.style.transform = "translateY(" + window.scrollY * syncScale + "px)";
     }
 
     if (cssDriven) {
@@ -399,6 +402,7 @@ function flashLabel(el, doneLabel, doneClass) {
   }
 
   function destroyMinimap() {
+    viewEl = null;
     var old = document.querySelector(".han-minimap");
     if (old && old.parentNode) old.parentNode.removeChild(old);
   }
@@ -494,9 +498,17 @@ function flashLabel(el, doneLabel, doneClass) {
       }
     });
     // resize 只注册一次：以前写在构建函数里，每次重建都会再叠一个监听，
-    // 而旧监听抓着已经移除的 shell，会反复重建、叠出好几条缩略图
+    // 而旧监听抓着已经移除的 shell，会反复重建、叠出好几条缩略图。
+    // 这里用 rAF 合并：拖窗口时 resize 每秒能来几十次，而重建 = 克隆一遍
+    // 整页 DOM（几百个节点）+ 几百次 getComputedStyle，一秒几十次会把主线程
+    // 占满。交给 geometryKey() 判断尺寸是否真的变了，没变就直接返回。
+    var resizeRaf = 0;
     window.addEventListener("resize", function () {
-      rebuildMinimap(true);
+      if (resizeRaf) return;
+      resizeRaf = window.requestAnimationFrame(function () {
+        resizeRaf = 0;
+        rebuildMinimap(false);
+      });
     });
   }
 
@@ -557,7 +569,14 @@ function flashLabel(el, doneLabel, doneClass) {
 
     Array.prototype.forEach.call(nodes, function (node) {
       node.classList.add("han-reveal");
-      io.observe(node);
+      /* 首屏之内的元素不等观察者：它们本来就该立刻可见，等一次 IO 回调
+         再淡入 0.65 秒，只会让首屏（也是 Largest Contentful Paint 的来源）
+         白白晚一拍 —— 淡入对首屏也没有意义，滚下去的元素才需要。 */
+      if (node.getBoundingClientRect().top < window.innerHeight) {
+        node.classList.add("is-visible");
+      } else {
+        io.observe(node);
+      }
     });
 
     /* 兜底：3 秒后若视口内的元素还没被回调点亮（observer 异常等），手动点亮。
