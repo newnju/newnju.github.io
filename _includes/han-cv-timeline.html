@@ -12,11 +12,10 @@
 用法：页面里写 include han-cv-timeline.html（Jekyll include 语法）。
 
 渲染约定（改动时别破坏）：
-- 外层那个 <div class="han-cv-timeline"> 必须带 markdown="1"：kramdown 默认把
-  HTML 块的内部当原始 HTML（不解析里面的 markdown），列表会整段变成带 `*` 的
-  纯文本；加上 markdown="1" 才按 markdown 解析。本地 liquidjs + markdown-it
-  看不出这个问题（markdown-it 遇空行就结束 HTML 块），只有线上 kramdown 会
-  暴露，所以这一条要以 /cv/ 的实际 DOM 为准。
+- 不要用 <div class="han-cv-timeline"> 把整段包起来。Jekyll 的 kramdown 默认
+  parse_block_html: false，HTML 块的内部按原始 HTML 处理（markdown="1" 也不
+  生效），块里的 "* " 列表会整段变成带星号的纯文本，嵌套说明、链接、加粗全失效。
+  样式因此挂在 h2 的 .han-cv-period__head 与日期的 .han-cv-date 上，不依赖外层容器。
 - 块标题 h2 走 HTML（挂 class 给 _han.scss §19 样式），列表走 Markdown
   （交给页面 kramdown 解析，加粗与嵌套缩进才生效）。
 - 每个 HTML 元素与列表之间必须留至少一个空行，否则列表被吞进 HTML 块。
@@ -33,7 +32,6 @@
 {% unless _en %}{% assign _colon = "：" %}{% assign _comma = "，" %}{% endunless %}
 {% comment %} 日期全部来自 profile.yml 的 daterange / daterange_en 字段（日期不再写在文案里），由本文件统一包 .han-cv-date：学位大标题在句尾用逗号，任职 / 交换 / 学历条目与获奖年份在句首用冒号 {% endcomment %}
 {% assign _order = "phd,gap,master,bachelor" | split: "," %}
-<div class="han-cv-timeline" markdown="1">
 {% for _pid in _order %}
 {% assign _eds = site.data.profile.education | where: "period", _pid %}
 {% assign _edn = _eds | size %}
@@ -100,4 +98,3 @@
 {% endfor %}
 {% endif %}
 {% endfor %}
-</div>

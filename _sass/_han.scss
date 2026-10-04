@@ -1202,15 +1202,12 @@ html[data-reveal] .han-reveal.is-visible {
 
 /* 同一段里若条目自带嵌套列表，kramdown 会把该列表整体判成「松散」，
    给每条都套一层 <p>（多出上下外边距）；没带嵌套的列表则是紧排的。
-   结果就是同一页里有的条目之间很松、有的很紧。在 .han-cv-timeline 里统一
-   收一下：条目内的 <p> 上下外边距归零，只留行距。 */
-.han-cv-timeline li > p {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-.han-cv-timeline li > ul,
-.han-cv-timeline li > ol {
+   结果就是同一页里有的条目之间很松、有的很紧。履历页（.archive）上面那条
+   .archive li > p 已经把 <p> 的外边距归零，嵌套列表再收一下上边距，
+   让整段时间轴的疏密一致。注意别改用 .han-cv-timeline 之类的外层容器：
+   时间轴没有外层容器（Jekyll 的 kramdown 不解析 HTML 块里的 markdown）。 */
+.archive li > ul,
+.archive li > ol {
     margin-top: 0.25em;
     margin-bottom: 0;
 }
