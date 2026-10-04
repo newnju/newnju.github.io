@@ -30,8 +30,7 @@ author_profile: true
     {% endfor %}
   {% endfor %}
 
-  <!-- Entries with a missing or unrecognised category go under a fallback
-       heading instead of being dropped silently. -->
+  <!-- 未填或未定义的 category 归入「其他」，而不是被静默丢弃 -->
   {% assign other_shown = false %}
   {% for post in site.publications reversed %}
     {% assign has_category = false %}

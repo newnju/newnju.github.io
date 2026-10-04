@@ -1,33 +1,67 @@
 /* ==========================================================================
-   HAN THEME — 站点脚本
+   共用工具
    --------------------------------------------------------------------------
+   copyText  §1 的 BibTeX 复制与 §4 的引用复制共用一份实现：
+            优先异步剪贴板 API，被拒或压根没有（http、file://、旧浏览器）
+            时退回 execCommand。
+   flashLabel  两处复制成功后都要把按钮/链接文案换成「已复制」再换回来，
+            只是完成态的类名不同，逻辑收在这里。
+   ========================================================================== */
+
+/** 兜底复制：clipboard API 不可用时（http、file://、旧浏览器）走 execCommand */
+function copyText(text, onDone) {
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.top = "-1000px";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  var ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (e) {
+    ok = false;
+  }
+  document.body.removeChild(ta);
+  if (ok) onDone();
+}
+
+/** 写入剪贴板，成功（或兜底成功）后回调 onDone */
+function writeText(text, onDone) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onDone, function () {
+      copyText(text, onDone);
+    });
+  } else {
+    copyText(text, onDone);
+  }
+}
+
+/** 换文案 → 加完成态类 → 1.8 秒后换回；连点时不会把「已复制」当成原文 */
+function flashLabel(el, doneLabel, doneClass) {
+  if (!el.hasAttribute("data-label-original")) {
+    el.setAttribute("data-label-original", el.textContent);
+  }
+  var original = el.getAttribute("data-label-original");
+  el.textContent = doneLabel;
+  el.classList.add(doneClass);
+  window.clearTimeout(el.hanFlashTimer);
+  el.hanFlashTimer = window.setTimeout(function () {
+    el.textContent = original;
+    el.classList.remove(doneClass);
+  }, 1800);
+}
+
+/* ==========================================================================
    1. 论文 BibTeX 一键复制（按钮文案由 _includes/han-bibtex.html 传入）
    只做渐进增强：脚本不执行时，BibTeX 仍可通过 <details> 展开手动选中复制。
    ========================================================================== */
 
 (function () {
   "use strict";
-
-  /** 兜底复制：clipboard API 不可用时（http、file://、旧浏览器）走 execCommand */
-  function legacyCopy(text, onDone) {
-    var ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.top = "-1000px";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    ta.setSelectionRange(0, text.length);
-    var ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch (e) {
-      ok = false;
-    }
-    document.body.removeChild(ta);
-    if (ok) onDone();
-  }
 
   function bindCopyButtons() {
     var buttons = document.querySelectorAll("[data-bibtex-copy]");
@@ -41,31 +75,9 @@
         var pre = scope && scope.querySelector(".han-bibtex__pre");
         if (!pre) return;
 
-        var text = pre.textContent;
-        var doneLabel = btn.getAttribute("data-label-done") || "已复制";
-        if (!btn.hasAttribute("data-label-original")) {
-          btn.setAttribute("data-label-original", btn.textContent);
-        }
-        var originalLabel = btn.getAttribute("data-label-original");
-        var timer = null;
-
-        function flash() {
-          btn.textContent = doneLabel;
-          btn.classList.add("is-done");
-          window.clearTimeout(timer);
-          timer = window.setTimeout(function () {
-            btn.textContent = originalLabel;
-            btn.classList.remove("is-done");
-          }, 1800);
-        }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(flash, function () {
-            legacyCopy(text, flash);
-          });
-        } else {
-          legacyCopy(text, flash);
-        }
+        writeText(pre.textContent, function () {
+          flashLabel(btn, btn.getAttribute("data-label-done") || "已复制", "is-done");
+        });
       });
     });
   }
@@ -181,27 +193,6 @@
 (function () {
   "use strict";
 
-  /** 兜底复制：clipboard API 不可用时（http、file://、旧浏览器）走 execCommand */
-  function fallbackCopy(text, onDone) {
-    var ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.top = "-1000px";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    ta.setSelectionRange(0, text.length);
-    var ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch (e) {
-      ok = false;
-    }
-    document.body.removeChild(ta);
-    if (ok) onDone();
-  }
-
   function bindCitationCopy() {
     var links = document.querySelectorAll(".js-copy-citation");
     Array.prototype.forEach.call(links, function (link) {
@@ -210,31 +201,9 @@
         if (!text) return; // 没拿到引用文本，按普通链接跳转
         event.preventDefault();
 
-        var doneLabel = link.getAttribute("data-label-done") || "已复制引用";
-        // 首次点击时缓存标题原文，避免连点时把「已复制引用」当成原文
-        if (!link.hasAttribute("data-label-original")) {
-          link.setAttribute("data-label-original", link.textContent);
-        }
-        var original = link.getAttribute("data-label-original");
-        var timer = null;
-
-        function flash() {
-          link.textContent = doneLabel;
-          link.classList.add("is-copied");
-          window.clearTimeout(timer);
-          timer = window.setTimeout(function () {
-            link.textContent = original;
-            link.classList.remove("is-copied");
-          }, 1800);
-        }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(flash, function () {
-            fallbackCopy(text, flash);
-          });
-        } else {
-          fallbackCopy(text, flash);
-        }
+        writeText(text, function () {
+          flashLabel(link, link.getAttribute("data-label-done") || "已复制引用", "is-copied");
+        });
       });
     });
   }
@@ -816,7 +785,7 @@
    .theme-transition 500ms：期间 §23 的规则给全站颜色补一段 0.35s 过渡，
    深浅两套配色渐变着换过去；时段一过就摘掉类，平时的 hover、滚动渐显
    完全不受影响。页面首载时主题落位是瞬时的（不挂类），入场不拖泥带水。
-   reduced-motion 下颜色渐变属于「只变颜色」的允许范围，照常生效。
+   reduced-motion 下颜色渐变属于「只变颜色」，不触发前庭反应，照常生效。
    ========================================================================== */
 (function () {
   var timer = 0;

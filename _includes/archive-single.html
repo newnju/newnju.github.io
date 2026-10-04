@@ -75,7 +75,6 @@
     {% if post.collection == 'teaching' %}
       {%- comment -%}
         教学的「类型 / 单位」也备了英文字段（type_en / venue_en），缺省回落中文。
-        条目没有独立的语言标记，因此这里按当前页面的 locale 判断。
       {%- endcomment -%}
       {% assign _t_type = post.type %}
       {% assign _t_venue = post.venue %}

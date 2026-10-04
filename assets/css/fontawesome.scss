@@ -1,7 +1,7 @@
 ---
 ---
 
-// Vendor SCSS compile to reduce main.scss weight
+// 只把用到的三套图标编译进 main.css，减少产物体积
 
 @import
     "vendor/font-awesome/fontawesome",

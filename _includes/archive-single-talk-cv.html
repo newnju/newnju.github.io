@@ -26,7 +26,7 @@
   {% assign _loc = post.location_en | default: post.location %}
 {% endif %}
 
-{%- comment -%} 三项里缺哪项就跳过，避免出现多余的「｜」 {%- endcomment -%}
+{%- comment -%} 汇报单位 / 场合 / 日期三项缺哪项就跳过，避免出现多余的「｜」 {%- endcomment -%}
 {% assign _meta = "" %}
 {% if _type %}{% assign _meta = _type %}{% endif %}
 {% if _venue %}{% if _meta != "" %}{% assign _meta = _meta | append: _ui.sep_pipe %}{% endif %}{% assign _meta = _meta | append: _venue %}{% endif %}
