@@ -26,7 +26,7 @@
 {% assign _colon = ": " %}
 {% assign _comma = ", " %}
 {% unless _en %}{% assign _colon = "：" %}{% assign _comma = "，" %}{% endunless %}
-{% comment %} 日期在首（任职 / 交换 / 学历）按冒号切、学历块大标题的日期在尾按逗号切，统一交给 han-cv-text.html 包 .han-cv-date {% endcomment %}
+{% comment %} 日期全部来自 profile.yml 的 daterange / daterange_en 字段（日期不再写在文案里），由本文件统一包 .han-cv-date：学位大标题在句尾用逗号，任职 / 交换 / 学历条目与获奖年份在句首用冒号 {% endcomment %}
 {% assign _order = "phd,gap,master,bachelor" | split: "," %}
 <div class="han-cv-timeline">
 {% for _pid in _order %}
@@ -37,12 +37,12 @@
 {% if _en and _head.notes_en %}{% assign _hn = _head.notes_en %}{% endif %}
 {% if _edn > 0 %}
 {% if _en and _head.text_en %}{% assign _ht = _head.text_en %}{% else %}{% assign _ht = _head.text %}{% endif %}{% assign _ht = _ht | remove: '**' %}
-{% assign cv_text = _ht %}{% assign cv_sep = _comma %}{% assign cv_mode = "tail" %}{% capture _hhtml %}{% include "han-cv-text.html" %}{% endcapture %}
-<h2 class="han-cv-period__head">{{ _hhtml }}</h2>
+{% assign _hdr = _head.daterange %}{% if _en and _head.daterange_en %}{% assign _hdr = _head.daterange_en %}{% endif %}
+<h2 class="han-cv-period__head">{{ _ht }}{% if _hdr %}{{ _comma }}<span class="han-cv-date">{{ _hdr }}</span>{% endif %}</h2>
 
 {% for n in _hn %}* {{ n }}
 {% endfor %}
-{% for e in _eds offset:1 %}{% if _en and e.text_en %}{% assign _et = e.text_en %}{% else %}{% assign _et = e.text %}{% endif %}{% assign cv_text = _et %}{% assign cv_sep = _colon %}{% assign cv_mode = "head" %}{% capture _ehtml %}{% include "han-cv-text.html" %}{% endcapture %}* {{ _ehtml }}
+{% for e in _eds offset:1 %}{% if _en and e.text_en %}{% assign _et = e.text_en %}{% else %}{% assign _et = e.text %}{% endif %}{% assign _edr = e.daterange %}{% if _en and e.daterange_en %}{% assign _edr = e.daterange_en %}{% endif %}* {% if _edr %}<span class="han-cv-date">{{ _edr }}</span>{{ _colon }}{% endif %}{{ _et }}
 {% for n in e.notes %}    * {{ n }}
 {% endfor %}{% endfor %}
 {% endif %}
@@ -50,7 +50,7 @@
 {% assign _wn = _works | size %}
 {% if _wn > 0 %}
 {% for w in _works %}
-{% if _en and w.text_en %}{% assign _wt = w.text_en %}{% else %}{% assign _wt = w.text %}{% endif %}{% assign cv_text = _wt %}{% assign cv_sep = _colon %}{% assign cv_mode = "head" %}{% capture _whtml %}{% include "han-cv-text.html" %}{% endcapture %}* {{ _whtml }}
+{% if _en and w.text_en %}{% assign _wt = w.text_en %}{% else %}{% assign _wt = w.text %}{% endif %}{% assign _wdr = w.daterange %}{% if _en and w.daterange_en %}{% assign _wdr = w.daterange_en %}{% endif %}* {% if _wdr %}<span class="han-cv-date">{{ _wdr }}</span>{{ _colon }}{% endif %}{{ _wt }}
 {% assign _wnotes = w.notes %}
 {% if _en and w.notes_en %}{% assign _wnotes = w.notes_en %}{% endif %}
 {% for n in _wnotes %}
@@ -83,7 +83,7 @@
 {% unless g.key == "honours" %}
 {% for a in g.items %}
 {% if a.period == _pid %}
-{% if _en and a.text_en %}{% assign _at = a.text_en %}{% else %}{% assign _at = a.text %}{% endif %}{% assign cv_text = _at %}{% assign cv_sep = _colon %}{% assign cv_mode = "head" %}{% capture _ahtml %}{% include "han-cv-text.html" %}{% endcapture %}* <span class="han-cv-date">{{ g.year }}</span>{{ _colon }}{{ _ahtml }}
+{% if _en and a.text_en %}{% assign _at = a.text_en %}{% else %}{% assign _at = a.text %}{% endif %}* <span class="han-cv-date">{{ g.year }}</span>{{ _colon }}{{ _at }}
 {% assign _an = a.note %}
 {% if _en and a.note_en %}{% assign _an = a.note_en %}{% endif %}
 {% if _an %}

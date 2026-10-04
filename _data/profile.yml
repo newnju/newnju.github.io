@@ -30,16 +30,24 @@ contact:
 # 顺序即显示顺序：博士 → 硕士 → 本科 → 学期交换（主页与履历页统一按此渲染）
 # 履历合并时间轴里，学期交换（period: master）会随硕士条目一起进硕士大块
 education:
+  # 日期单独放 daterange / daterange_en（与 text / text_en 同理，中英各一份）：
+  # 履历时间轴与「关于」页都据此统一包 .han-cv-date，样式只在一处定义，
+  # 文案里不再混着写时间 —— 以前日期在句首、句尾、一对括号里各有一种颜色。
+  # 三个学位条目的日期由时间轴放进大标题末尾，其余条目写在句首。
   - period: phd
-    text: "**博士研究生**，南京大学新闻传播学院，新闻传播学（050300），2026.09 – 至今"
-    text_en: "**Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300), 2026.09 – present"
+    text: "**博士研究生**，南京大学新闻传播学院，新闻传播学（050300）"
+    text_en: "**Ph.D. student**, School of Journalism and Communication, Nanjing University — Journalism and Communication (050300)"
+    daterange: "2026.09 – 至今"
+    daterange_en: "2026.09 – present"
     notes:
       - "研究方向：影像史学 · 中华民族历史影像"
     notes_en:
       - "Research: visual history · historical imagery of the Chinese nation"
   - period: master
-    text: "**硕士研究生**，南京大学艺术学院，美术学（130400），2021.09 – 2024.06"
-    text_en: "**M.A.**, School of Arts, Nanjing University — Art History (130400), 2021.09 – 2024.06"
+    text: "**硕士研究生**，南京大学艺术学院，美术学（130400）"
+    text_en: "**M.A.**, School of Arts, Nanjing University — Art History (130400)"
+    daterange: "2021.09 – 2024.06"
+    daterange_en: "2021.09 – 2024.06"
     notes:
       - "研究方向：美术考古 · 汉代物质文化与图像"
       - "学位论文：《四神博局镜纹饰及相关问题研究》"
@@ -49,53 +57,74 @@ education:
       - "Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*"
       - "Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships"
   - period: bachelor
-    text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305），2017.09 – 2021.06"
-    text_en: "**B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305), 2017.09 – 2021.06"
+    text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305）"
+    text_en: "**B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305)"
+    daterange: "2017.09 – 2021.06"
+    daterange_en: "2017.09 – 2021.06"
     notes:
       - "修读影视后期制作、数字媒体、纪录片、广告、电影与电视剧研究等课程，排名 10%，多次获学业奖学金，大四下学期在小米、京东实习"
     notes_en:
       - "Coursework in post-production, digital media, documentary, advertising and film/television studies; ranked in the top 10%, repeatedly awarded academic scholarships; interned at Xiaomi and JD.com in the second semester of senior year"
   - period: bachelor
-    text: "2019.07 – 2019.08：加州大学洛杉矶分校（UCLA）数字媒体研究（江苏高校学生境外学习政府奖学金）"
-    text_en: "Jul 2019 – Aug 2019: Digital media studies, University of California, Los Angeles (UCLA), on the Jiangsu Government Scholarship for Overseas Study"
+    text: "加州大学洛杉矶分校（UCLA）数字媒体研究（江苏高校学生境外学习政府奖学金）"
+    text_en: "Digital media studies, University of California, Los Angeles (UCLA), on the Jiangsu Government Scholarship for Overseas Study"
+    daterange: "2019.07 – 2019.08"
+    daterange_en: "Jul 2019 – Aug 2019"
   - period: master
-    text: "**学期交换**，德国图宾根大学，校际合作，2023.10 – 2024.03"
-    text_en: "**Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement), 2023.10 – 2024.03"
+    text: "**学期交换**，德国图宾根大学，校际合作"
+    text_en: "**Exchange semester**, Eberhard Karls Universität Tübingen, Germany (inter-university agreement)"
+    daterange: "2023.10 – 2024.03"
+    daterange_en: "2023.10 – 2024.03"
 
 # 工作与任职（履历按时期嵌入；顺序即各时期内的显示顺序，最近在前）
+# 日期同样只在 daterange / daterange_en 里写一次，句首由模板拼。
 work:
   # —— 过渡期 ——
   - period: gap
-    text: "2024.12 – 2025.05：上海交通大学文科建设处 科研管理（校聘）"
-    text_en: "Dec 2024 – May 2025: Research administration, Office of Liberal Arts Development, Shanghai Jiao Tong University (university appointment)"
+    text: "上海交通大学文科建设处 科研管理（校聘）"
+    text_en: "Research administration, Office of Liberal Arts Development, Shanghai Jiao Tong University (university appointment)"
+    daterange: "2024.12 – 2025.05"
+    daterange_en: "Dec 2024 – May 2025"
     notes:
       - "主导大模型轻应用竞赛、智慧文科论坛、院系 AI 赋能文科项目等"
     notes_en:
       - "Led the large-model lightweight-app competition, the Smart Liberal Arts Forum, and AI-for-liberal-arts projects across departments"
   # —— 硕士期间 ——
   - period: master
-    text: "2022.09 – 2023.09：南京大学艺术学院 团委组织部部长"
-    text_en: "Sep 2022 – Sep 2023: Head of the Organisation Department, Communist Youth League, School of Arts, Nanjing University"
+    text: "南京大学艺术学院 团委组织部部长"
+    text_en: "Head of the Organisation Department, Communist Youth League, School of Arts, Nanjing University"
+    daterange: "2022.09 – 2023.09"
+    daterange_en: "Sep 2022 – Sep 2023"
     notes:
       - "负责团务建设，策划主题活动，管理团员档案"
     notes_en:
       - "Managed league affairs, planned themed activities, and maintained member records"
   - period: master
-    text: "2022.09 – 2023.09：南京大学 3D 打印社 技术部部长"
-    text_en: "Sep 2022 – Sep 2023: Head of Technology, 3D Printing Club, Nanjing University"
+    text: "南京大学 3D 打印社 技术部部长"
+    text_en: "Head of Technology, 3D Printing Club, Nanjing University"
+    daterange: "2022.09 – 2023.09"
+    daterange_en: "Sep 2022 – Sep 2023"
   - period: master
-    text: "2022.05 – 2023.05：中国人民大学 数字人文学生研究员"
-    text_en: "May 2022 – May 2023: Student Researcher in Digital Humanities, Renmin University of China"
+    text: "中国人民大学 数字人文学生研究员"
+    text_en: "Student Researcher in Digital Humanities, Renmin University of China"
+    daterange: "2022.05 – 2023.05"
+    daterange_en: "May 2022 – May 2023"
   - period: master
-    text: "2022.04 – 2022.08：北京大学数字人文实验室 科研助理"
-    text_en: "Apr 2022 – Aug 2022: Research Assistant, Digital Humanities Laboratory, Peking University"
+    text: "北京大学数字人文实验室 科研助理"
+    text_en: "Research Assistant, Digital Humanities Laboratory, Peking University"
+    daterange: "2022.04 – 2022.08"
+    daterange_en: "Apr 2022 – Aug 2022"
   - period: master
-    text: "2021.09 – 2022.02：南京大学《创作方法与创新思维》课程助教"
-    text_en: "Sep 2021 – Feb 2022: Teaching Assistant, Creative Methods and Innovative Thinking, Nanjing University"
+    text: "南京大学《创作方法与创新思维》课程助教"
+    text_en: "Teaching Assistant, Creative Methods and Innovative Thinking, Nanjing University"
+    daterange: "2021.09 – 2022.02"
+    daterange_en: "Sep 2021 – Feb 2022"
   # —— 本科期间 ——
   - period: bachelor
-    text: "2021.03 – 2021.05：北京京东世纪贸易有限公司 资质审核实习生（京东商城中台大商超事业群）"
-    text_en: "Mar 2021 – May 2021: Compliance intern, Beijing JD Century Trade Co., Ltd. (JD Marketplace, Hypermarket Business Group)"
+    text: "北京京东世纪贸易有限公司 资质审核实习生（京东商城中台大商超事业群）"
+    text_en: "Compliance intern, Beijing JD Century Trade Co., Ltd. (JD Marketplace, Hypermarket Business Group)"
+    daterange: "2021.03 – 2021.05"
+    daterange_en: "Mar 2021 – May 2021"
     notes:
       - "供应商与商品管理：审核自营 / POP 商家资质，分级核查商品合规"
       - "数据驱动运营：整理商品资质数据，提供原始数据，支持可视化 BI 面板决策"
@@ -105,8 +134,10 @@ work:
       - "Data-driven operations: prepared qualification datasets as source data for a visual BI dashboard"
       - "Risk control and algorithm tuning: ran keyword models through the Zhoudun matching pipeline to flag violations and catch trademark and compliance risks at final review"
   - period: bachelor
-    text: "2020.12 – 2021.02：小米通讯技术有限公司 要闻运营实习生（互联网部三组内容分发部）"
-    text_en: "Dec 2020 – Feb 2021: News operations intern, Xiaomi Communications Technology Co., Ltd. (Internet Dept., Content Distribution)"
+    text: "小米通讯技术有限公司 要闻运营实习生（互联网部三组内容分发部）"
+    text_en: "News operations intern, Xiaomi Communications Technology Co., Ltd. (Internet Dept., Content Distribution)"
+    daterange: "2020.12 – 2021.02"
+    daterange_en: "Dec 2020 – Feb 2021"
     notes:
       - "负责信息流、PUSH 产品等内容，日均 100+ 条推送，提升分发效率"
       - "实时监控热点事件，主导 2 次突发新闻快速响应"

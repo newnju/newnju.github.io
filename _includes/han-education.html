@@ -1,13 +1,18 @@
 {%- comment -%}
 教育背景（数据源 _data/profile.yml）。主页与履历页、中英两版共用：
   {% include han-education.html %}
-英文页取 text_en / notes_en，缺省回落中文；notes 渲染为二级列表。
+英文页取 text_en / notes_en / daterange_en，缺省回落中文；notes 渲染为二级列表。
+  日期取 profile.yml 的 daterange 字段（与履历时间轴同一套 .han-cv-date 样式）。
 {%- endcomment -%}
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _en = false -%}
 {%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _colon = ": " -%}
+{%- unless _en -%}{%- assign _colon = "：" -%}{%- endunless -%}
 {%- for e in site.data.profile.education %}
-* {% if _en and e.text_en %}{{ e.text_en }}{% else %}{{ e.text }}{% endif %}
+{%- assign _dr = e.daterange -%}
+{%- if _en and e.daterange_en -%}{%- assign _dr = e.daterange_en -%}{%- endif -%}
+* {% if _dr %}<span class="han-cv-date">{{ _dr }}</span>{{ _colon }}{% endif %}{% if _en and e.text_en %}{{ e.text_en }}{% else %}{{ e.text }}{% endif %}
 {%- assign _notes = e.notes -%}
 {%- if _en and e.notes_en -%}{%- assign _notes = e.notes_en -%}{%- endif -%}
 {%- for n in _notes %}

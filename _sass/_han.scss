@@ -1188,10 +1188,11 @@ html[data-reveal] .han-reveal.is-visible {
 /* 履历条目里的时间：全站统一一处样式。
    此前时间散在三种位置、三种颜色里（任职/学历条目写在句首、与正文同色；
    项目写在一对括号里；获奖的年份是加粗），同一页上看着像三种东西。
-   现在都由 _includes/han-cv-text.html 包成 .han-cv-date：比正文浅一档、
-   数字用等宽（上下对齐，竖排一眼能比长短），加粗也一并去掉 —— 年份只是
-   时间，不该比正文更重。 */
-.page__content .han-cv-timeline .han-cv-date {
+   现在日期一律作为数据字段（profile.yml 的 daterange / daterange_en），
+   由模板包成 .han-cv-date：比正文浅一档、数字用等宽（上下对齐，竖排一眼
+   能比长短），加粗也一并去掉 —— 年份只是时间，不该比正文更重。
+   履历时间轴与「关于」页共用这一条，所以这里不限定在 .han-cv-timeline 里。 */
+.page__content .han-cv-date {
     color: var(--global-text-color-light);
     font-variant-numeric: tabular-nums;
 }
