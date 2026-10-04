@@ -1185,6 +1185,32 @@ html[data-reveal] .han-reveal.is-visible {
     margin-top: 1.2em;
 }
 
+/* 履历条目里的时间：全站统一一处样式。
+   此前时间散在三种位置、三种颜色里（任职/学历条目写在句首、与正文同色；
+   项目写在一对括号里；获奖的年份是加粗），同一页上 looked 像三种东西。
+   现在都由 _includes/han-cv-text.html 包成 .han-cv-date：比正文浅一档、
+   数字用等宽（上下对齐，竖排一眼能比长短），加粗也一并去掉 —— 年份只是
+   时间，不该比正文更重。 */
+.page__content .han-cv-timeline .han-cv-date {
+    color: var(--global-text-color-light);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 同一段里若条目自带嵌套列表，kramdown 会把该列表整体判成「松散」，
+   给每条都套一层 <p>（多出上下外边距）；没带嵌套的列表则是紧排的。
+   结果就是同一页里有的条目之间很松、有的很紧。在 .han-cv-timeline 里统一
+   收一下：条目内的 <p> 上下外边距归零，只留行距。 */
+.page__content .han-cv-timeline li > p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.page__content .han-cv-timeline li > ul,
+.page__content .han-cv-timeline li > ol {
+    margin-top: 0.25em;
+    margin-bottom: 0;
+}
+
 /* --------------------------------------------------------------------------
    20. 侧栏线稿自绘（.han-drawline + #svgpx，素材取自南大官网）
    --------------------------------------------------------------------------
@@ -1273,18 +1299,50 @@ html[data-reveal] .han-reveal.is-visible {
    23. 主题切换时的全站色彩渐变（JS：han.js 第 11 节挂 .theme-transition）
    --------------------------------------------------------------------------
    明暗切换靠换 CSS 变量完成，本身是一瞬的硬切。点 masthead 主题按钮的
-   瞬间给 html 临时挂 .theme-transition（500ms 后摘掉），期间这条规则给
-   所有元素补一段 background-color / color / border 过渡，全站颜色渐变换
-   过去；时段一过一切照旧，平时的 hover、滚动渐显不受影响。
-   reduced-motion 下颜色渐变属于「只变颜色」的允许范围，照常生效。
+   瞬间给 html 临时挂 .theme-transition（约 0.3s 后摘掉），期间下面这条规则
+   给承载主题色的表面补一段颜色过渡，深浅两套配色渐变着换过去；时段一过一切
+   照旧，平时的 hover、滚动渐显不受影响。
+
+   这里**刻意不用 `*`**：早先写成 `html.theme-transition *`（连 ::before /
+   ::after 一起、六个属性、带 !important），实测一次切换要同时驱动正文 942 个
+   节点加缩略图克隆的 436 个节点（合计一千多个盒子、算上伪元素三千多），
+   968ms 只渲染出 18 帧、最长一帧 150ms —— 观感就是「点下去要等一下、颜色
+   一卡一卡地刷」。改成只覆盖真正带主题色的表面后，同样的渐变观感留着，
+   每帧要处理的盒子少两个数量级。
+
+   box-shadow 也一并去掉：阴影动画比颜色贵不少，而主题切换时几乎看不出差别。
+   reduced-motion 下颜色渐变属于「只变颜色」，不触发前庭反应，照常生效。
    -------------------------------------------------------------------------- */
 
-html.theme-transition *,
-html.theme-transition *::before,
-html.theme-transition *::after {
-    transition: background-color 0.35s ease, color 0.35s ease,
-        border-color 0.35s ease, box-shadow 0.35s ease, fill 0.35s ease,
-        stroke 0.35s ease !important;
+html.theme-transition body,
+html.theme-transition .masthead,
+html.theme-transition .masthead__inner-wrap,
+html.theme-transition .page__content,
+html.theme-transition .page__footer,
+html.theme-transition .sidebar,
+html.theme-transition .archive__item,
+html.theme-transition .toc,
+html.theme-transition .han-bibtex,
+html.theme-transition .han-cv-period__head,
+html.theme-transition .han-timeline,
+html.theme-transition .han-timeline__item,
+html.theme-transition .han-awards li,
+html.theme-transition .han-honours li,
+html.theme-transition .han-mirror,
+html.theme-transition .han-aurora span,
+html.theme-transition .btn,
+html.theme-transition pre,
+html.theme-transition code,
+html.theme-transition a {
+    transition: background-color 0.28s ease, color 0.28s ease,
+        border-color 0.28s ease, fill 0.28s ease, stroke 0.28s ease !important;
+}
+
+/* 缩略图是整页克隆，颜色跟着硬切即可 —— 它只有 100px 宽，渐变既看不见
+   又要把成本翻一倍（它自己就有四百多个节点）。 */
+html.theme-transition .han-minimap,
+html.theme-transition .han-minimap * {
+    transition: none !important;
 }
 
 /* --------------------------------------------------------------------------

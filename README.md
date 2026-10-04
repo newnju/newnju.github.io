@@ -349,7 +349,8 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 - **`forced-colors`（Windows 高对比度）**：系统会接管颜色但不接管背景图，所以流光、光斑、缩略图那几层直接收掉，正文与图标交给系统配色（SVG 的 fill/stroke 本来就会被强制成单色，正好是清晰的线稿）。
 - **正文字体栈补中文**（`_sass/theme/_han_*.scss` 的 `$sans-serif`）：系统栈在前，后面补 PingFang SC / 微软雅黑 / Noto Sans CJK —— 只靠通用 `sans-serif` 兜底，在「默认字体不含中文」的机器上会掉成豆腐块。
 - **侧栏竖屏规则收进 `:not(.is-fit)`**（`_sass/layout/_sidebar.scss`）：iPad Pro 竖屏宽 1024px ≥ `$large`，放在外面会让流式态比固定态多出 1em，fit 门控切换时头像会跳一下。
-- **首屏不再等渐显**（`han.js` 第 6 节）：已经在视口内的元素直接点亮，不进观察者队列 —— 淡入对首屏没意义，却会让 LCP 白白晚一拍（一次 IO 往返 + 0.65 秒过渡）。
+- **主题切换的渐变不再拖累全站**（`_han.scss` §23 + `han.js` 第 11 节）：原先过渡规则写成 `html.theme-transition *`（连 `::before` / `::after` 一起、六个属性、带 `!important`、挂 500ms），一次点击要同时驱动正文 942 个节点加缩略图克隆的 436 个节点，968ms 只渲染 18 帧、最长一帧 150ms —— 正是「点下去要等一下、颜色一卡一卡刷」的来源。现在只覆盖真正带主题色的表面（约 20 个选择器）、去掉最贵的 `box-shadow`、时长收到 0.28s，缩略图那一整棵克隆树直接硬切（它只有 100px 宽，渐变看不见但成本翻倍），摘类定时也从 500ms 收到 320ms（原先颜色早已换完、类还挂着，那段时间 hover 与滚动渐显都被压着）。
+- **履历条目的时间统一成一处样式**：日期原先散在三种位置、三种颜色里（任职/学历条目写在句首且与正文同色、项目写在一对括号里、获奖年份是加粗），同一页上看起来像三种东西。现在由 `_includes/han-cv-text.html` 把日期摘出来统一包成 `.han-cv-date`（比正文浅一档、数字等宽、去掉加粗），学历块大标题末尾、条目句首、项目括号、获奖年份四处都走它；同一段里带嵌套列表的条目会被 kramdown 判成「松散」多套一层 `<p>` 导致疏密不匀，也在该片段的样式里一并收平。- **首屏不再等渐显**（`han.js` 第 6 节）：已经在视口内的元素直接点亮，不进观察者队列 —— 淡入对首屏没意义，却会让 LCP 白白晚一拍（一次 IO 往返 + 0.65 秒过渡）。
 - **缩略图不再每次 resize 都重建**：重建 = 克隆一遍整页 DOM（几百节点）+ 几百次 `getComputedStyle`，原先拖窗口时每秒能触发几十次；现在 rAF 合并一次，并由 `geometryKey()` 判断尺寸是否真的变了。滚动跟随也不再每次 `querySelector`，直接用本次构建出的节点引用。
 - **主题按钮与固定链接的无障碍/双语**：`ui-text.yml` 新增 `theme_toggle_label`（中英）与 `permalink_label`（中英），原先四个 `archive-single*` 片段里硬编码的英文 `Permalink` 一并本地化。
 
@@ -402,6 +403,7 @@ git push
 | **首页自我介绍** | `_pages/about.md` |
 | **教育背景、联系方式、工作与任职**（主页中英两版；履历页的「联系方式」章节已按需求删除，不再 include `han-contact.html`） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`（现只剩主页在用），履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」标题已按需求删除（合并时间轴直接跟在页题下）；章节顺序为 合并时间轴 → 荣誉 → 论文列表 → 证书 → 技能 → 会议与暑期学校 → 教学与助教。该节内容已改由 `_data` 与集合驱动，见上下几行 |
+| **履历条目的时间样式**（日期统一 `.han-cv-date`） | 拆日期的逻辑在 `_includes/han-cv-text.html`（调用方先 `assign cv_text / cv_sep / cv_mode` 再 include，见该文件注释里为什么不用 include 传参）；样式在 `_sass/_han.scss` 第 19 节。数据侧日期写在 `text` 的句首（任职 / 交换 / 学历）或句尾（学历块大标题），所以拆法分 head / tail 两种 |
 | **履历时间轴的分期与内容**（博士 / 硕士 / 本科三个学历大块，过渡期内容排在博士与硕士块之间；块内嵌任职、项目、获奖，均为裸列表不加小节标签） | `_data/profile.yml` 的 `period`（phd / gap / master / bachelor）、`_data/awards.yml` 各条目的 `period`、`_portfolio/*` 的 `period`；标题样式在 `_sass/_han.scss` 第 19 节 |
 | **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」「获奖」两节 + 履历时间轴与「荣誉」节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页与履历页的「荣誉」小节（不参与分期）；其余年份分组显示在「获奖」小节、时间轴页，并按 `period` 进履历时期块 |
 | 论文条目 | `_publications/` 下的 Markdown 文件。论文页、履历页「论文列表」、主页「近期成果」（自动取最新 3 篇）与 RSS feed 全部随它更新，不用手改页面 |

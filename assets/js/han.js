@@ -838,10 +838,14 @@ function flashLabel(el, doneLabel, doneClass) {
    --------------------------------------------------------------------------
    明暗切换的真正逻辑在 assets/js/_main.js（改 html[data-theme]），这里只
    负责在用户点了 masthead 的主题按钮（#theme-toggle）时给 html 临时挂
-   .theme-transition 500ms：期间 §23 的规则给全站颜色补一段 0.35s 过渡，
+   .theme-transition：期间 §23 的规则给承载主题色的表面补一段 0.28s 过渡，
    深浅两套配色渐变着换过去；时段一过就摘掉类，平时的 hover、滚动渐显
    完全不受影响。页面首载时主题落位是瞬时的（不挂类），入场不拖泥带水。
    reduced-motion 下颜色渐变属于「只变颜色」，不触发前庭反应，照常生效。
+
+   摘类定时 320ms：比 §23 的 0.28s 稍长一截，留出过渡收尾的余量，早前的
+   500ms 会让「点击后的感觉」比实际动画长一倍 —— 颜色早已换完，类还挂着，
+   那段时间里 hover 与滚动渐显都被这条规则压着。
    ========================================================================== */
 (function () {
   var timer = 0;
@@ -856,7 +860,7 @@ function flashLabel(el, doneLabel, doneClass) {
       clearTimeout(timer);
       timer = setTimeout(function () {
         root.classList.remove("theme-transition");
-      }, 500);
+      }, 320);
     },
     { passive: true }
   );
