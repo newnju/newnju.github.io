@@ -588,15 +588,25 @@ html[data-theme="dark"][data-color-theme="nju"] {
 /* 汉堡按钮默认隐藏；两种情况才显示：
    一是窄屏（下面的媒体查询），二是 han.js 第 2 节给导航打了 .has-overflow
    —— 下拉里确实折了东西（宽屏放不下时末尾栏目会被折进去），此时不显示按钮
-   就点不到那些栏目。 */
-.greedy-nav > button {
-    display: none;
-    top: 50%;
-    transform: translateY(-50%);
+   就点不到那些栏目。
+
+   主题原样把按钮绝对定位在导航右上角（_navigation.scss 的 button{position:absolute}），
+   而 .visible-links 是 display:table，放不下时不会缩、只会从按钮底下溢出去 ——
+   实测 900px 上下主题按钮正好压在汉堡上，汉堡点不开（padding-right 救不了，
+   table 的最小内容宽度不让步）。改成 flex：按钮占自己的一格，列表在旁边，
+   两者不可能重叠，宽窄屏都一样。 */
+.greedy-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.greedy-nav.has-overflow {
-    padding-right: 44px;
+.greedy-nav > button {
+    display: none;
+    position: static;
+    flex: 0 0 auto;
+    margin-left: 10px;
+    transform: none;
 }
 
 .greedy-nav.has-overflow > button {
@@ -642,13 +652,9 @@ html[data-theme="dark"][data-color-theme="nju"] {
 }
 
 @media (max-width: 768px) {
-    /* 窄屏显示汉堡按钮，并为它预留右侧空间，避免压住末尾图标项 */
+    /* 窄屏显示汉堡按钮（flex 布局已给它留好位置，这里不用再补 padding） */
     .greedy-nav > button {
         display: block;
-    }
-
-    .greedy-nav {
-        padding-right: 44px;
     }
 
     /* 下拉里现在是六个栏目 + 语言切换 + 主题切换（han.js 第 2 节），
