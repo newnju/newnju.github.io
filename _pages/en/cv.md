@@ -8,12 +8,12 @@ author_profile: true
 
 {% include base_path %}
 
-{% include han-cv-timeline.html %}
-
 Honours
 ======
 
 {% include han-honours.html %}
+
+{% include han-cv-timeline.html %}
 
 Certificates
 ======
