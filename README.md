@@ -522,11 +522,14 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 �
 | 命令 | 挡什么 |
 | --- | --- |
 | `npm run validate` | front matter 缺字段、类型不对、permalink 重复、`category` 拼错 |
-| `npm run check:content` | 手改了 `_includes/generated/*.html` 或渲染器，导致产物和数据不同步 |
+| `npm run check:content` | 生成物与数据不同步 —— **只提示，不挡**：后台改完内容生成物必然过期，而后台没法跑生成器，所以 CI 每次 `jekyll build` 之前都会自动重新生成 |
 | `npm run check:structure` | 列表塌成一段、Liquid 漏渲染、页面缺章节、薄包装片段里混进 Liquid |
-| `npm test` | 生成片段与 Liquid 基准的字节级比对 + 后台配置与 schema 的逐字段比对 |
+| `npm test` | JS 生成器与原 Liquid 模板**现场渲染**结果逐字节一致（40 个） |
 
 CI 里这四步全部会跑，**任何一步红都不会部署**。
+
+> 关键设计：所有比对都用**同一份当前数据现场渲染**，不依赖任何存下来的快照。
+> 否则在后台改一个字，快照就过期了 —— 那等于白设门禁。
 
 > 构建产物那部分检查（`check:structure` 的后半段）只有在 `_site/` 存在时才跑。
 > 本地没装 Jekyll 会自动跳过并提示；CI 是在 Jekyll 构建完之后才执行它，所以线上部署前一定能拦到。

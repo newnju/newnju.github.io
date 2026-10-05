@@ -14,12 +14,13 @@
 - 块标题 h2 走 HTML（挂 class 给 _han.scss §19 样式），列表走 Markdown。
 - 每个 HTML 元素与列表之间必须留空行，否则列表被吞进 HTML 块；
   列表内部反过来不能有多余空行，否则 kramdown 判定为松散列表、<li> 被 <p> 包住。
-  这套「哪个换行必须在、哪个必须不在」的契约由 tools/reference-liquid/ 里的
-  原始模板 + tests/fixtures/liquid/ 的基准逐字节锁死，别靠肉眼对。
+  这套「哪个换行必须在、哪个必须不在」的契约由 tests/render.test.mjs 对着
+  tools/reference-liquid/ 里的原始模板**现场渲染**的结果逐字节锁死，别靠肉眼对。
 - 标题里的 ** 加粗冗余，统一 remove 掉。
 
 薄包装：内容由 tools/lib/render.mjs 生成，落地在
-_includes/generated/han-cv-timeline.{zh,en}.html；改数据后跑 npm run build:content。
+_includes/generated/han-cv-timeline.{zh,en}.html；改数据后跑 npm run build:content
+（CI 每次 jekyll build 前也会自动重新生成，后台改内容不必手动跑）。
 {%- endcomment -%}
 {%- assign _han_locale = page.locale | default: site.locale -%}
 {%- if _han_locale contains 'en' -%}

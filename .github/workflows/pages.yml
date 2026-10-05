@@ -46,7 +46,11 @@ jobs:
           gem install bundler -v '~> 2.4'
           bundle install --jobs 4 --retry 3
       - name: jekyll build
-        run: bundle exec jekyll build --strict_front_matter --trace
+        run: |
+          # 后台（Decap）只能写文件，没法跑生成器。所以在后台改完任何内容之后，
+          # _includes/generated/* 一定是过期的 —— 每次构建都重新生成，别信仓库里那份。
+          npm run build:content
+          bundle exec jekyll build --strict_front_matter --trace
         env:
           JEKYLL_ENV: production
       # 第三道关：只看构建产物 —— 列表塌成一段、Liquid 被删这类问题

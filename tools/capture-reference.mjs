@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// 一次性工具：把 tools/reference-liquid/ 里的原始 Liquid 模板渲染成基准文件，
-// 写进 tests/fixtures/liquid/。基准文件是生成器的「外部真值」——
-// 之后 tools/lib/render.mjs 的任何改动都必须逐字节复现这些输出。
+// 把 tools/reference-liquid/ 里的原始 Liquid 模板渲染一遍 —— 这就是生成器的「外部真值」。
 //
-// 只有在**有意**改变渲染语义时才需要重跑（npm run capture:reference），
-// 重跑前请先确认参考模板本身没有被误改。
+// 这里的 renderReference() 是**每次现场渲染**的（吃当前的 _data 与 front matter），
+// tests/render.test.mjs 直接调它跟 JS 生成器逐字节比。这样改任何内容都不会让测试失效，
+// 而「JS 重写有没有改变渲染语义」反而被更强地保证：任何分歧当场暴露。
+//
+// 直接跑本文件（npm run capture:reference）会把渲染结果写到 tests/fixtures/liquid/，
+// 留一份便于肉眼对照的快照。这**不是**测试用的基准 —— 快照会随内容过期，所以它不进断言。
 import fs from 'node:fs';
 import path from 'node:path';
 import { Liquid } from 'liquidjs';
@@ -41,7 +43,7 @@ if (isMain) {
     for (const locale of LOCALES) {
       const html = await renderReference(name, locale);
       fs.writeFileSync(path.join(outDir, `${name}.${locale}.html`), html, 'utf8');
-      console.log(`tests/fixtures/liquid/${name}.${locale}.html  (${html.length} B)`);
+      console.log(`tests/fixtures/liquid/${name}.${locale}.html  (${html.length} B)  ← 仅供肉眼对照`);
     }
   }
 }

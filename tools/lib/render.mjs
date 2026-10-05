@@ -1,7 +1,8 @@
 // 六个内容片段的纯 JS 生成器。
 //
 // 输出必须与 tools/reference-liquid/ 里的原始 Liquid 模板**逐字节一致** ——
-// 一致性由 tests/render.test.mjs 强制（基准取自 tests/fixtures/liquid/）。
+// 一致性由 tests/render.test.mjs 强制：每次都用 liquidjs 现场渲染原模板再逐字节比，
+// 不依赖任何存下来的快照（快照一改内容就失效，那会让「后台改一个字」发不上去）。
 // 之所以连空行都对齐：kramdown 靠空行区分列表的松紧，差一个换行就会让
 // 列表项被 <p> 包起来，行距随之改变。见 han-recent-pubs.html 里的注释。
 import { loadData, loadCollections } from './content.mjs';

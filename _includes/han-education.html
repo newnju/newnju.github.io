@@ -6,9 +6,10 @@
 本文件现在只是「按语言选生成物」的薄包装：列表内容由
   tools/lib/render.mjs 从 _data/profile.yml 生成
 落地在 _includes/generated/han-education.{zh,en}.html。
-改 profile.yml 之后跑 npm run build:content 重新生成（CI 会用 --check 拦住漏跑）。
+改 profile.yml 之后跑 npm run build:content 重新生成（CI 每次 jekyll build 之前也会
+自动重新生成一遍，所以仓库里这份过期也不影响上线；后台改内容不必手动跑）。
 不要在这里加循环 —— 循环与空行契约由 tests/render.test.mjs 对着
-tests/fixtures/liquid/ 里的 Liquid 基准逐字节锁死。
+tools/reference-liquid/ 里的原 Liquid 模板**现场渲染**的结果逐字节锁死。
 {%- endcomment -%}
 {%- assign _han_locale = page.locale | default: site.locale -%}
 {%- if _han_locale contains 'en' -%}

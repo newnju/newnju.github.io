@@ -47,7 +47,7 @@
     "validate": "node tools/validate.mjs",
     "validate:strict": "node tools/validate.mjs --strict",
     "build:content": "node tools/render-content.mjs",
-    "check:content": "node tools/render-content.mjs --check",
+    "check:content": "node tools/render-content.mjs --check --warn",
     "capture:reference": "node tools/capture-reference.mjs",
     "check:structure": "node tools/check-structure.mjs",
     "screenshots": "node tools/screenshots.mjs",
