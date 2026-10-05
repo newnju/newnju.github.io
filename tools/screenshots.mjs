@@ -4,6 +4,10 @@
 //   node tools/screenshots.mjs              截图 + 跑断言（不比对）
 //   node tools/screenshots.mjs --compare    再和 tests/__screenshots__/ 的基线做像素比对
 //   node tools/screenshots.mjs --update     把当前结果写成基线
+//   node tools/screenshots.mjs --strict-pixels  像素有差异也算失败（默认只提示）
+//
+// 运行时断言失败会挡住部署；像素比对默认只报不挡 —— 侧栏那段文字的栅格化抖动
+// 能到 1%，比真回归还大，当门禁用只会天天误报。详见下面 MAX_DIFF_RATIO 的说明。
 //
 // 像素比对的基线**必须在同一环境生成**（字体渲染在 Windows / Linux 上必然不同），
 // 所以基线取自 CI 的 artifact，本地 Windows 跑 --compare 会全是噪音 —— 本地只跑断言。
@@ -24,9 +28,14 @@ const args = new Set(process.argv.slice(2));
 const compare = args.has('--compare') || (!args.has('--no-compare') && process.env.CI === 'true');
 const update = args.has('--update');
 
-// 同一环境下渲染是确定性的（正常差异应为 0），阈值只用来放过抗锯齿的零星像素，
-// 所以卡得很紧：0.1% 已经足够放过噪声，而「少一行」这种回归大约是 0.2%。
+// 同一环境下大部分截图是逐字节一致的（实测 18 张里 16 张差异为 0），
+// 但侧栏那段作者简介偶发「同样字号粗细不同」的栅格化抖动，能到 1% 左右 —— 比
+// 真回归（少一个列表项约 0.3%）还大，所以不能靠调阈值区分，只能分开对待：
+//
+//   运行时断言（溢出 / 404 / JS 报错 / alt / href）→ 确定性，失败即失败，挡住部署
+//   像素比对                          → 仅供参考，只报不挡，差异图照样上传
 const MAX_DIFF_RATIO = 0.001;
+const STRICT_PIXELS = args.has('--strict-pixels');
 
 const PAGES = [
   ['home', '/'],
@@ -65,6 +74,7 @@ const MIME = {
 };
 
 const failures = [];
+const pixelNotes = [];
 const fail = (where, msg) => failures.push(`${where}: ${msg}`);
 
 function startServer(root) {
@@ -219,8 +229,12 @@ async function main() {
           const ratio = diffPixels / (a.width * a.height);
           if (ratio > MAX_DIFF_RATIO) {
             mismatched += 1;
-            fs.writeFileSync(path.join(OUT_DIR, file.replace(/\.png$/, '-diff.png')), PNG.sync.write(diff));
-            fail(where, `像素差异 ${(ratio * 100).toFixed(3)}% 超过 ${(MAX_DIFF_RATIO * 100).toFixed(3)}%（见 ${file.replace(/\.png$/, '-diff.png')}）`);
+            const diffFile = file.replace(/\.png$/, '-diff.png');
+            fs.writeFileSync(path.join(OUT_DIR, diffFile), PNG.sync.write(diff));
+            const msg =
+              `像素差异 ${(ratio * 100).toFixed(3)}% 超过 ${(MAX_DIFF_RATIO * 100).toFixed(3)}%（见 ${diffFile}）`;
+            if (STRICT_PIXELS) fail(where, msg);
+            else pixelNotes.push(`${where}: ${msg}`);
           }
         }
       }
@@ -232,15 +246,24 @@ async function main() {
   }
 
   const total = PAGES.length * VIEWPORTS.length;
+
+  // 像素差异始终打印出来（差异图也会上传），但默认不挡住部署 —— 见上面 MAX_DIFF_RATIO 的说明
+  for (const n of pixelNotes) console.warn(`  ! ${n}`);
+
   if (failures.length) {
     console.error(`screenshots: FAIL — ${failures.length} 处`);
     for (const f of failures) console.error(`  x ${f}`);
     return 1;
   }
+
   let tail = `screenshots: PASS — ${total} 张图已出到 screenshots/`;
-  if (update) tail = `screenshots: PASS — ${total} 张图已写成基线（tests/__screenshots__/）`;
-  else if (compare) {
-    tail = `screenshots: PASS — 比对 ${compared}/${total} 张基线，无差异`;
+  if (update) {
+    tail = `screenshots: PASS — ${total} 张图已写成基线（tests/__screenshots__/）`;
+  } else if (compare) {
+    tail =
+      mismatched === 0
+        ? `screenshots: PASS — 比对 ${compared}/${total} 张基线，无差异`
+        : `screenshots: PASS — 比对 ${compared}/${total} 张基线，${mismatched} 张有像素差异（仅提示，见上面的 ! 行和 *-diff.png）`;
     if (missingBaseline) {
       tail += `\n  ${missingBaseline} 张还没有基线，本次只出图：把 CI 的 screenshots artifact 取回放进 tests/__screenshots__/ 即可开启比对`;
     }
