@@ -11,12 +11,18 @@
     {% if page.previous %}
       <a href="{{ base_path }}{{ page.previous.url }}" class="pagination--pager" title="{{ page.previous.title | markdownify | strip_html }}">{{ _ui.pagination_previous | default: "Previous" }}</a>
     {% else %}
-      <a href="#" class="pagination--pager disabled">{{ _ui.pagination_previous | default: "Previous" }}</a>
+      {%- comment -%}
+        禁用的一侧不写 href。写成 href="#" 有三个坏处：读屏软件会把它念成
+        「链接」；Tab 能停在一个点了没反应的元素上；真有人点下去，地址栏会多出
+        一个 #。按 HTML 规范，<a> 不带 href 就是「占位链接」—— 不可聚焦、不被
+        念成链接，而 .pagination a 的样式照样命中，外观零变化。
+      {%- endcomment -%}
+      <a class="pagination--pager disabled">{{ _ui.pagination_previous | default: "Previous" }}</a>
     {% endif %}
     {% if page.next %}
       <a href="{{ base_path }}{{ page.next.url }}" class="pagination--pager" title="{{ page.next.title | markdownify | strip_html }}">{{ _ui.pagination_next | default: "Next" }}</a>
     {% else %}
-      <a href="#" class="pagination--pager disabled">{{ _ui.pagination_next | default: "Next" }}</a>
+      <a class="pagination--pager disabled">{{ _ui.pagination_next | default: "Next" }}</a>
     {% endif %}
   </nav>
 {% endif %}

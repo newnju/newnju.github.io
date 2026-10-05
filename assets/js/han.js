@@ -308,6 +308,32 @@ function flashLabel(el, doneLabel, doneClass) {
       function (n) { n.parentNode.removeChild(n); }
     );
 
+    // 克隆体里的 id / name 必须摘掉。缩略图是整页 DOM 的复制品，留着同样的 id
+    // 会让文档里每个 id 都出现两次：重复 id 是无效 HTML，更实际的问题是
+    // getElementById 与 #锚点 都有可能命中缩略图里那份看不见的副本
+    // （实测 / 上 main、svgpx、荣誉、教育背景… 全部成对出现）。
+    // name 同理 —— a[name] 和 form 控件的 name 也能当锚点用。
+    //
+    // 注意这不会影响线稿动画：本文件第 8 节用 getElementById("svgpx") /
+    // new Vivus("svgpx")，两者都只作用于文档中第一个匹配，而真实侧栏在
+    // shell 之前（shell 是在下面才 appendChild 到 body 末尾的），所以拿到的
+    // 一直是正版。克隆体里那份本来就没被动画到。
+    Array.prototype.forEach.call(clone.querySelectorAll("[id]"), function (n) {
+      n.removeAttribute("id");
+    });
+    Array.prototype.forEach.call(clone.querySelectorAll("[name]"), function (n) {
+      n.removeAttribute("name");
+    });
+
+    // aria-hidden 只挡读屏，挡不住 Tab —— 克隆体里全是链接和按钮，键盘用户
+    // 会一路 Tab 进一个看不见的控件里，逐个摘出 tab 序即可。
+    // 这里不用 inert：那会把指针事件一起吞掉，而缩略图正是靠 shell 上的
+    // pointerdown 做定位的（见下面 scrollToPoint）。
+    Array.prototype.forEach.call(
+      clone.querySelectorAll("a[href], button, input, select, textarea, [tabindex]"),
+      function (n) { n.setAttribute("tabindex", "-1"); }
+    );
+
     // 先入文档再量宽度：脱离文档的元素没有布局，shell.clientWidth 恒为 0，
     // 下面这行于是永远落到兜底值 0.1。窄条固定 100px，只有在 1000px 视口下
     // 才恰好等于 10vw —— 更宽时缩略图比窄条宽、右缘被裁，更窄时右侧留白。
