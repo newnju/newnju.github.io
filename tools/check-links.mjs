@@ -79,7 +79,15 @@ while (queue.length) {
   if (pagesSeen.has(p)) continue;
   pagesSeen.add(p);
 
-  const res = await page.goto(ORIGIN + p, { waitUntil: 'load', timeout: 30_000 });
+  // 单个 URL 出岔子（畸形、跳到怪协议、DNS 失败）不该让整轮检查崩掉 ——
+  // 崩掉等于这道关卡形同虚设，还会掩盖真正该报的问题。
+  let res = null;
+  try {
+    res = await page.goto(ORIGIN + p, { waitUntil: 'load', timeout: 30_000 });
+  } catch (err) {
+    problems.push(`${p} — 打不开：${String(err.message).split('\n')[0]}`);
+    continue;
+  }
   if (!res || res.status() !== 200) { problems.push(`${p} — 页面返回 ${res?.status()}`); continue; }
 
   const localMissing = [];
@@ -118,21 +126,35 @@ while (queue.length) {
 
   for (const { href, target, rel } of found.links) {
     if (href === '' || href === '#') {
-      problems.push(`${p} — 假链接 href="${href}"：「${href}」应改为不带 href 的占位元素`);
+      problems.push(`${p} — 假链接 href="${href}"：应改为不带 href 的占位元素`);
       continue;
     }
-    if (/^(https?:)?\/\//.test(href)) {
-      if (target === '_blank' && !/noopener/.test(rel)) problems.push(`${p} — 外链 target=_blank 缺 rel=noopener：${href}`);
+    // 任何带 scheme 的都跳掉：https、mailto、tel…… 之前只判了「//」开头，
+    // 结果 mailto:wujiawen@… 被当成相对路径，new URL 之后整串变成 pathname，
+    // 再拼到 origin 后面就成了一个畸形 URL，浏览器去解析
+    // wujiawen@smail.nju.edu.cn 这个主机名 —— 直接把整轮检查带崩。
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+      if (/^https?:/i.test(href) && target === '_blank' && !/noopener/.test(rel)) {
+        problems.push(`${p} — 外链 target=_blank 缺 rel=noopener：${href}`);
+      }
       continue;
     }
+    if (href.startsWith('//')) continue; // 协议相对，必然是外链
     if (href.startsWith('#')) {
       if (href.length > 1 && !(await page.$(href))) problems.push(`${p} — 锚点不存在：${href}`);
       continue;
     }
-    const clean = href.split('#')[0].split('?')[0];
-    if (!clean) continue;
-    const abs = clean.startsWith('/') ? clean : new URL(clean, ORIGIN + p).pathname;
-    if (!pagesSeen.has(abs)) queue.push(abs);
+    // 只跟同源。解析失败、跳到外域、协议怪异的，一律不当成站内页面。
+    let target2;
+    try {
+      target2 = new URL(href, ORIGIN + p);
+    } catch {
+      continue;
+    }
+    if (target2.origin !== ORIGIN) continue;
+    if (target2.protocol !== 'http:' && target2.protocol !== 'https:') continue;
+    const abs = target2.pathname;
+    if (abs && !pagesSeen.has(abs)) queue.push(abs);
   }
 }
 
