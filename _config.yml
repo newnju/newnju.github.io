@@ -191,6 +191,7 @@ exclude:
   - config
   - Dockerfile
   - Gemfile
+  - Gemfile.lock
   - Gruntfile.js
   - gulpfile.js
   - LICENSE
@@ -198,6 +199,9 @@ exclude:
   - log
   - node_modules
   - package.json*
+  - package-lock.json
+  - schemas
+  - tests
   - tools
   - Rakefile
   - README.md
