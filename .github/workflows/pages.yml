@@ -30,8 +30,7 @@ jobs:
       - run: npm run check
 
   # 第二道关：真的把站点构建出来。
-  # 与 check 分开跑（各自独立的 runner），构建机上没有 node_modules，
-  # 因此 _site 里也不会混进 npm 装的东西。
+  # 与 check 分开跑（各自独立的 runner），check 那边失败就不会浪费构建时间。
   build:
     runs-on: ubuntu-latest
     needs: check
@@ -45,22 +44,24 @@ jobs:
         run: |
           gem install bundler -v '~> 2.4'
           bundle install --jobs 4 --retry 3
-      - name: jekyll build
-        run: |
-          # 后台（Decap）只能写文件，没法跑生成器。所以在后台改完任何内容之后，
-          # _includes/generated/* 一定是过期的 —— 每次构建都重新生成，别信仓库里那份。
-          npm run build:content
-          bundle exec jekyll build --strict_front_matter --trace
-        env:
-          JEKYLL_ENV: production
-      # 第三道关：只看构建产物 —— 列表塌成一段、Liquid 被删这类问题
-      # Jekyll 一律「构建成功」，必须在部署前从 HTML 上面拦。
-      # 放在 build 之后装 node，_site 已经生成，node_modules 不会混进产物。
+      # node 必须在 jekyll build 之前装好 —— 生成器要用 gray-matter / js-yaml。
+      # 构建机上因此会有 node_modules，但 _config.yml 的 exclude 里挡着
+      # node_modules，不会混进 _site。
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      # 后台（Decap）只能写文件，跑不了生成器。所以在后台改完任何内容之后，
+      # _includes/generated/* 一定是过期的 —— 每次构建都重新生成，别信仓库里那份。
+      - name: regenerate content fragments
+        run: npm run build:content
+      - name: jekyll build
+        run: bundle exec jekyll build --strict_front_matter --trace
+        env:
+          JEKYLL_ENV: production
+      # 第三道关：只看构建产物 —— 列表塌成一段、Liquid 被删这类问题
+      # Jekyll 一律「构建成功」，必须在部署前从 HTML 上面拦。
       - name: structure checks on _site
         run: npm run check:structure
       # 第四道关：真用 Chromium 打开页面，跑结构检查看不出的运行时问题
