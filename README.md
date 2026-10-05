@@ -407,7 +407,8 @@ git push
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
 | **窄屏汉堡菜单**（≤768px 时顶栏条目整体收进汉堡，只留站点名） | 折叠逻辑在 `assets/js/han.js` 第 2 节（六个栏目 + 语言切换 + 主题切换一起进下拉，回到宽屏按原序插回站点名之后）；下拉里的样式（限高 70vh 可滚、主题按钮对齐同级链接）在 `_sass/_han.scss` 第 9 节。汉堡按钮的显示条件是「下拉里确实折了东西」（`.has-overflow`，由 `han.js` 打），不只看窄屏 —— 宽屏放不下时末尾栏目也会被折进去（实测 900px 上下履历正好被折），按钮不出现就点不到。`jquery.greedy-navigation.js` 只负责「量宽度决定往哪折」与量顶栏高度，展开/收起统一由 `han.js` 管 —— 两边都绑 click 会把同一个类切两遍、互相抵消 |
-| **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 55.6px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白。**插件源码改完要跑 `npm run build:js` 重新生成 `assets/js/main.min.js`**（页面加载的是这个打包产物，不是插件文件本身） |
+| **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 58.5px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白。**插件源码改完要跑 `npm run build:js` 重新生成 `assets/js/main.min.js`**（页面加载的是这个打包产物，不是插件文件本身） |
+| **全站已无 jQuery**（`main.min.js` 100.4KB → 17.6KB，gzip 后每页少约 30KB） | 原先 jQuery 只被 `_main.js`（主题切换、联系方式折叠）与 `greedy-navigation.js`（量宽度折行）用到，已全部改写成原生 DOM，行为由 `npm run check:behavior` 逐条断言。文件名 `jquery.greedy-navigation.js` 沿用上游命名、内容已是原生实现，只是改名要动多处引用，不值当。唯一残留的 jQuery 用法在 `_includes/comments-providers/staticman.html`，而 `comments.provider` 是 `false`，那个文件永远不会被 include |
 | **明暗主题**（跟随系统偏好，可手动覆盖） | 落位在 `_includes/head/custom.html` 的内联脚本（首次绘制前定 `data-theme`）+ `_sass/theme/_han_dark.scss` 的变量 mixin（含 `prefers-color-scheme` 兜底）；切换按钮在 `_includes/masthead.html`，文案取 `ui-text.yml` 的 `theme_toggle_label`；点击处理在 `assets/js/_main.js` 的 `toggleTheme`（打进 `main.min.js`，改完要 `npm run build:js`） |
 | **图标字体子集**（首屏大头，277KB → 11KB） | `tools/subset-fonts.js`（`npm run fonts`），码位由源码与 `assets/js` 脚本里出现的 `fa-*` 类名反查 `_sass/vendor/font-awesome/_variables.scss` 得到；完整原字在 `assets/webfonts/full/`（不发布），产物是 `assets/webfonts/fa-{solid-900,brands-400}.{woff2,ttf}` |
 | **首页自我介绍** | `_pages/about.md` |
@@ -528,7 +529,7 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 �
 | `npm run check:en` | 改了中文却没动对应 `*_en` 字段 —— **只提醒，不挡**（见下） |
 | `npm run check:links` | 重复 id、假链接、站内 404、缺 alt、横向溢出 —— **只报不挡**（见下） |
 
-CI 里这四步全部会跑，**任何一步红都不会部署**。构建产物上的三道（`check:structure` 后半段、`check:links`、`screenshots`）在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。
+CI 里这四步全部会跑，**任何一步红都不会部署**。构建产物上的四道（`check:structure` 后半段、`check:links`、`check:behavior`、`screenshots`）在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。
 
 > 关键设计：所有比对都用**同一份当前数据现场渲染**，不依赖任何存下来的快照。
 > 否则在后台改一个字，快照就过期了 —— 那等于白设门禁。
@@ -587,7 +588,17 @@ en-sync: 1 处「改了中文、英文没动」
 
 只报不挡（`--strict` 可改成挡），历史遗留一次清完比每次拦着更现实。
 
-**第六道：截图回归**（`npm run screenshots`，同样要先有 `_site/`）
+**第六道：交互行为**（`npm run check:behavior`，需要 `_site/`）
+
+用 Chromium 真点一遍：主题按钮翻转 `data-theme` 与图标类、`localStorage` 落盘、刷新后记住、
+联系方式折叠展开与收起、顶栏在 1366px / 760px 之间的折行与复原、`--han-masthead-h` 与
+`body` 上内边距一致。
+
+它的来历：把 jQuery 换成原生 JS 时，**截图只能看外观，看不出「点了有没有反应」**。
+换库前后跑同一套断言，输出必须逐条一致（实测 `count`、`hidden`、`58.5px` 这些值完全相同），
+这才是敢动主题脚本的底气。
+
+**第七道：截图回归**（`npm run screenshots`，同样要先有 `_site/`）
 
 用 Chromium 真的把首页、履历、时间轴等 9 个页面各截一张（桌面 + 手机两种宽度），顺带查
 结构检查看不出来的问题：横向溢出、同源资源 404、JS 运行时报错、图片缺 `alt`、链接缺 `href`。

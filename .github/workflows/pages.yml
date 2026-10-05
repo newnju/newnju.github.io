@@ -85,6 +85,11 @@ jobs:
       # 这类问题构建日志里一个字都不会提。
       - name: link and a11y checks on _site
         run: npm run check:links
+      # 同一批浏览器，顺手把交互也断言一遍：主题切换、联系方式折叠、
+      # 顶栏折行与高度变量。截图只能看外观，看不出「点了有没有反应」——
+      # 去掉 jQuery 那类改动正是靠它守住行为一致的。
+      - name: dom behavior checks on _site
+        run: npm run check:behavior
       # 第五道关：把关键页面各截一张（桌面 + 手机），与基线做像素比对。
       # 截图即使用例失败也照上传，方便点开看现场。
       - name: screenshots

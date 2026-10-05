@@ -1,3 +1,9 @@
+{# 本站 comments.provider 是 false（见 _config.yml），所以这个文件永远不会被
+   include —— 它是上游原样保留的，现在也不会被 jQuery 检查扫到。
+
+   ⚠️ 但它依赖 jQuery（下面的 (function($){...})(jQuery)），而全站 jQuery 已在
+   2026-10 去掉（main.min.js 从 100KB 降到 17.6KB）。真要启用 staticman 评论，
+   必须先把 jQuery 加回来，或把这段改写成原生 DOM，否则表单直接报错。 #}
 {% if site.repository and site.staticman.branch %}
   <script>
     (function ($) {

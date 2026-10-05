@@ -23,9 +23,7 @@
   "engines": {
     "node": ">= 0.10.0"
   },
-  "dependencies": {
-    "jquery": "^3.7.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
@@ -40,7 +38,7 @@
     "uglify-js": "^3.19.3"
   },
   "scripts": {
-    "uglify": "uglifyjs node_modules/jquery/dist/jquery.min.js assets/js/plugins/jquery.greedy-navigation.js assets/js/_main.js assets/js/theme.js -c -m -o assets/js/main.min.js",
+    "uglify": "uglifyjs assets/js/plugins/jquery.greedy-navigation.js assets/js/_main.js assets/js/theme.js -c -m -o assets/js/main.min.js",
     "watch:js": "onchange \"assets/js/**/*.js\" -e \"assets/js/main.min.js\" -- npm run build:js",
     "build:js": "npm run uglify",
     "fonts": "node tools/subset-fonts.js",
@@ -52,6 +50,7 @@
     "check:structure": "node tools/check-structure.mjs",
     "check:en": "node tools/check-en-sync.mjs",
     "check:links": "node tools/check-links.mjs",
+    "check:behavior": "node tools/check-dom-behavior.mjs",
     "avatar": "node tools/make-avatar.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "test": "node --test \"**/*.test.mjs\"",

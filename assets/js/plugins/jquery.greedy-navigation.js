@@ -1,84 +1,104 @@
 /*
 * Greedy Navigation
 *
-* http://codepen.io/lukejacksonn/pen/PwmwWV
-*
+* 原版是 jQuery 实现（http://codepen.io/lukejacksonn/pen/PwmwWV）。
+* 本站已把 jQuery 整体去掉，这个文件改写成原生 DOM，行为逐条对齐：
+*   .width()        → 盒宽要减掉 padding/border（jQuery 的 .width() 永远给内容宽）
+*   .children(sel)  → 过滤子元素
+*   .prependTo/.appendTo/.insertBefore → prepend/append/before
+*   .hasClass/.addClass/.removeClass   → classList
+* .outerHeight() 用 getBoundingClientRect（要小数，jQuery 同理），
+* 因为 --han-masthead-h 与 body 的 padding-top 都靠它，侧栏 is-fit 让位要用。
 */
 
-var $nav = $('#site-nav');
 // 只取直接子级的那个汉堡按钮：用 '#site-nav button' 会把主题切换按钮一起选中，
-// 而下面 addClass('hidden') 是无差别地加给这批按钮的 —— 主题按钮会被一起藏掉。
-var $btn = $('#site-nav > button');
-var $vlinks = $('#site-nav .visible-links');
-var $vlinks_persist_tail = $vlinks.children("*.persist.tail");
-var $hlinks = $('#site-nav .hidden-links');
+// 而下面加 hidden 类是无差别地加给这批按钮的 —— 主题按钮会被一起藏掉。
+var nav = document.getElementById('site-nav');
+var btn = document.querySelector('#site-nav > button');
+var vlinks = document.querySelector('#site-nav .visible-links');
+var hlinks = document.querySelector('#site-nav .hidden-links');
+
+// jQuery 的 .width() 返回的是内容宽（永远不含 padding 与 border），
+// 直接用 getBoundingClientRect 会在有内边距的顶栏上算宽几 px，折叠点就偏了。
+function contentWidth(el) {
+  if (!el) return 0;
+  var cs = window.getComputedStyle(el);
+  var rect = el.getBoundingClientRect().width;
+  var extra =
+    (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) +
+    (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+  return rect - extra;
+}
+
+function kids(el) { return el ? Array.prototype.slice.call(el.children) : []; }
+function foldableKids() { return kids(vlinks).filter(function (n) { return !n.classList.contains('persist'); }); }
+function persistTail() { return kids(vlinks).filter(function (n) { return n.classList.contains('persist') && n.classList.contains('tail'); }); }
 
 var breaks = [];
 
 function updateNav() {
+  if (!nav || !btn || !vlinks || !hlinks) return;
 
-  var availableSpace = $btn.hasClass('hidden') ? $nav.width() : $nav.width() - $btn.width() - 30;
+  var btnHidden = btn.classList.contains('hidden');
+  var availableSpace = btnHidden ? contentWidth(nav) : contentWidth(nav) - contentWidth(btn) - 30;
 
-  // The visible list is overflowing the nav
-  if ($vlinks.width() > availableSpace) {
+  // 可见列表把顶栏撑破了
+  if (contentWidth(vlinks) > availableSpace) {
+    while (contentWidth(vlinks) > availableSpace && foldableKids().length > 0) {
+      // 记下当前宽度，用来判断拉宽之后能不能把条目放回来
+      breaks.push(contentWidth(vlinks));
 
-    while ($vlinks.width() > availableSpace && $vlinks.children("*:not(.persist)").length > 0) {
-      // Record the width of the list
-      breaks.push($vlinks.width());
+      // 把最后一个可折的条目挪进隐藏列表
+      var movable = foldableKids();
+      hlinks.prepend(movable[movable.length - 1]);
 
-      // Move item to the hidden list
-      $vlinks.children("*:not(.persist)").last().prependTo($hlinks);
+      btnHidden = btn.classList.contains('hidden');
+      availableSpace = btnHidden ? contentWidth(nav) : contentWidth(nav) - contentWidth(btn) - 30;
 
-      availableSpace = $btn.hasClass("hidden") ? $nav.width() : $nav.width() - $btn.width() - 30;
-
-      // Show the dropdown btn
-      $btn.removeClass("hidden");
+      // 把下拉按钮露出来
+      btn.classList.remove('hidden');
     }
-
-    // The visible list is not overflowing
   } else {
-
-    // There is space for another item in the nav
+    // 还有空间，往回放
     while (breaks.length > 0 && availableSpace > breaks[breaks.length - 1]) {
-      // Move the item to the visible list
-      if ($vlinks_persist_tail.children().length > 0) {
-        $hlinks.children().first().insertBefore($vlinks_persist_tail);
-      } else {
-        $hlinks.children().first().appendTo($vlinks);
+      var tail = persistTail();
+      var back = hlinks.firstElementChild;
+      if (back) {
+        if (tail.length > 0) tail[0].before(back);
+        else vlinks.appendChild(back);
       }
       breaks.pop();
+      btnHidden = btn.classList.contains('hidden');
+      availableSpace = btnHidden ? contentWidth(nav) : contentWidth(nav) - contentWidth(btn) - 30;
     }
 
-    // Hide the dropdown btn if hidden list is empty
+    // 隐藏列表空了就把下拉按钮收起来
     if (breaks.length < 1) {
-      $btn.addClass('hidden');
-      $btn.removeClass('close');
-      $hlinks.addClass('hidden');
+      btn.classList.add('hidden');
+      btn.classList.remove('close');
+      hlinks.classList.add('hidden');
     }
   }
 
-  // Keep counter updated
-  $btn.attr("count", breaks.length);
+  btn.setAttribute('count', breaks.length);
 
-  // Update masthead height and the body/sidebar top padding
-  // 顶栏是 fit-content，真实高度随根字号与字体回退而变（18px 根字号下
-  // 约 55.6px，scss 里的 $masthead-height 只是近似兜底），所以每轮都量
-  // 一次：body 的上内边距照旧内联覆盖，另外把实测值写成 --han-masthead-h
+  // 量一次顶栏真实高度：顶栏是 fit-content，高度随根字号与字体回退而变
+  // （18px 根字号下约 58.5px，scss 里的 $masthead-height 只是近似兜底）。
+  // body 的上内边距照旧内联覆盖，另外把实测值写成 --han-masthead-h
   // 供 CSS 取用（.sidebar.is-fit 的 padding-top 就是靠它让开顶栏）。
   // 侧栏自身不再内联 padding —— 原主题里 .sidebar 恒为 fixed 才需要，
   // 本站改成 fit 门控（流式 / 固定两态，见 _sidebar.scss 与 han.js 第 9 节），
   // 无条件加这段内边距会在流式态凭空多出 55px 空白、把头像压到很低。
-  var mastheadHeight = $('.masthead').outerHeight() || 0;
+  var masthead = document.querySelector('.masthead');
+  var mastheadHeight = masthead ? masthead.getBoundingClientRect().height : 0;
   if (mastheadHeight > 0) {
-    $('body').css('padding-top', mastheadHeight + 'px');
+    document.body.style.paddingTop = mastheadHeight + 'px';
     document.documentElement.style.setProperty('--han-masthead-h', mastheadHeight + 'px');
   }
-
 }
 
-// Window listeners
-
-$(window).on('resize', function () {
+// 视口变化时重算
+window.addEventListener('resize', function () {
   updateNav();
 });
 // screen.orientation 在 Safari / iOS 16.4 以下（2023 年 3 月才支持）不存在，
@@ -86,7 +106,7 @@ $(window).on('resize', function () {
 // 旦抛错，后面的代码（setTheme、主题按钮、联系方式按钮）全都不执行 —— 表现就
 // 是「换到这台设备上主题永远是亮的、按钮点不动」，所以先判存在。
 if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
-  window.screen.orientation.addEventListener("change", function () {
+  window.screen.orientation.addEventListener('change', function () {
     updateNav();
   });
 }
