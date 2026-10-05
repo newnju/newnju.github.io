@@ -198,6 +198,7 @@ exclude:
   - local
   - log
   - node_modules
+  - oauth-proxy
   - package.json*
   - package-lock.json
   - schemas

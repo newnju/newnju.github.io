@@ -1,0 +1,462 @@
+# =============================================================================
+# Decap CMS 配置 —— 后台入口 https://newnju.github.io/admin/
+# -----------------------------------------------------------------------------
+# 字段名与 schemas/*.schema.json 一一对应；tests/admin-config.test.mjs 会在
+# CI 里比对两边，改了一边忘了另一边直接红叉。改完先本地跑：
+#
+#     npm run check
+#
+# 约定：
+#   * 每个文件里**出现过的键都必须声明**，否则 Decap 保存时会把没声明的键
+#     整个丢掉（官方行为）。不想给人看的就用 widget: hidden。
+#   * required: false 的字段，值没动过就保持「不存在」；所以别给它们 default。
+#   * 正文用 richtext + modes: [raw] —— 页面里有 {% include %} 这种 Liquid，
+#     富文本往返一次会被改写，raw 模式是纯文本，原样进出。
+# =============================================================================
+
+backend:
+  name: github
+  repo: newnju/newnju.github.io
+  branch: main
+  # ↓↓↓ 换成你自己的 Worker 地址，见 oauth-proxy/README.md ↓↓↓
+  base_url: https://decap-oauth.REPLACE-ME.workers.dev
+  auth_endpoint: auth
+
+site_url: https://newnju.github.io
+display_url: https://newnju.github.io
+
+# 上传的图片落在仓库的 assets/images/，页面里引用 /assets/images/<文件名>
+media_folder: assets/images
+public_folder: /assets/images
+
+# 直接提交到 main（另一种 editorial_workflow 要开 PR，这里用不上）
+publish_mode: simple
+
+collections:
+  # -------------------------------------------------------------- 论文
+  - name: publications
+    label: 论文
+    label_singular: 论文
+    description: "_publications/*.md。分类、引用格式、BibTeX 都在这一条里。"
+    folder: _publications
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - { label: 中文标题, name: title, widget: string }
+      - { label: 英文标题, name: title_en, widget: string }
+      - { label: 所属集合, name: collection, widget: hidden, default: publications }
+      - label: 分类
+        name: category
+        widget: select
+        options:
+          - { label: 期刊论文 manuscripts, value: manuscripts }
+          - { label: 会议论文 conferences, value: conferences }
+          - { label: 专著 books, value: books }
+      - label: 链接地址
+        name: permalink
+        widget: string
+        hint: "必须以 /publication/ 开头，只能用小写字母、数字和连字符，例如 /publication/2026-my-paper"
+        pattern:
+          - '^/publication/[a-z0-9][a-z0-9-]*/?$'
+          - 必须以 /publication/ 开头，且只能包含小写字母、数字、连字符
+      - label: 原文外链
+        name: link
+        widget: string
+        required: false
+        hint: "可留空；填的话必须是 https:// 开头的完整地址"
+        pattern: ['^(|https?://\S+)$', 只允许留空或填 https:// 开头的地址]
+      - { label: 中文摘要, name: excerpt, widget: text }
+      - { label: 英文摘要, name: excerpt_en, widget: text }
+      - label: 发表日期
+        name: date
+        widget: datetime
+        date_format: YYYY-MM-DD
+        picker_utc: true
+        pattern: ['^\d{4}-\d{2}-\d{2}$', 格式必须是 YYYY-MM-DD]
+      - { label: 中文出处, name: venue, widget: string }
+      - { label: 英文出处, name: venue_en, widget: string }
+      - { label: 中文引用格式, name: citation, widget: text }
+      - { label: 英文引用格式, name: citation_en, widget: text }
+      - label: BibTeX
+        name: bibtex
+        widget: text
+        hint: "整段粘进来就行，缩进会被原样保存"
+      - label: 正文
+        name: body
+        widget: richtext
+        modes: [raw]
+        required: false
+
+  # -------------------------------------------------------------- 项目
+  - name: portfolio
+    label: 项目
+    label_singular: 项目
+    description: "_portfolio/*.md。period 决定这条进履历的哪个时期块。"
+    folder: _portfolio
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - { label: 中文标题, name: title, widget: string }
+      - { label: 英文标题, name: title_en, widget: string }
+      - { label: 中文简介, name: excerpt, widget: text }
+      - { label: 英文简介, name: excerpt_en, widget: text }
+      - { label: 所属集合, name: collection, widget: hidden, default: portfolio }
+      - label: 开始日期
+        name: date
+        widget: datetime
+        date_format: YYYY-MM-DD
+        picker_utc: true
+        pattern: ['^\d{4}-\d{2}-\d{2}$', 格式必须是 YYYY-MM-DD]
+      - label: 履历显示的日期跨度
+        name: daterange
+        widget: string
+        hint: "只写在这里，正文里不要再写一次，例如 2022.07 – 2022.08"
+      - label: 履历时期
+        name: period
+        widget: select
+        options:
+          - { label: 博士 phd, value: phd }
+          - { label: 过渡期 gap, value: gap }
+          - { label: 硕士 master, value: master }
+          - { label: 本科 bachelor, value: bachelor }
+      - label: 链接地址
+        name: permalink
+        widget: string
+        hint: "必须以 /portfolio/ 开头，只能用小写字母、数字和连字符"
+        pattern:
+          - '^/portfolio/[a-z0-9][a-z0-9-]*/?$'
+          - 必须以 /portfolio/ 开头，且只能包含小写字母、数字、连字符
+      - label: 正文
+        name: body
+        widget: richtext
+        modes: [raw]
+        required: false
+
+  # -------------------------------------------------------------- 会议 / 暑校
+  - name: talks
+    label: 会议与暑校
+    label_singular: 会议
+    description: "_talks/*.md"
+    folder: _talks
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - { label: 中文标题, name: title, widget: string }
+      - { label: 英文标题, name: title_en, widget: string }
+      - { label: 所属集合, name: collection, widget: hidden, default: talks }
+      - { label: 中文类型, name: type, widget: string, hint: 例如 报告 / 参加 / 主持 }
+      - { label: 英文类型, name: type_en, widget: string }
+      - label: 链接地址
+        name: permalink
+        widget: string
+        hint: "必须以 /talks/ 开头，只能用小写字母、数字和连字符"
+        pattern:
+          - '^/talks/[a-z0-9][a-z0-9-]*/?$'
+          - 必须以 /talks/ 开头，且只能包含小写字母、数字、连字符
+      - { label: 中文主办, name: venue, widget: string }
+      - { label: 英文主办, name: venue_en, widget: string }
+      - { label: 中文地点, name: location, widget: string }
+      - { label: 英文地点, name: location_en, widget: string }
+      - label: 显示时间
+        name: datetext
+        widget: string
+        required: false
+        hint: "页面上显示的时间文字，例如 2025.11；留空就不显示。不是日期，随便写"
+      - { label: 中文说明, name: excerpt, widget: text, required: false }
+      - { label: 英文说明, name: excerpt_en, widget: text }
+      - label: 正文
+        name: body
+        widget: richtext
+        modes: [raw]
+        required: false
+
+  # -------------------------------------------------------------- 教学
+  - name: teaching
+    label: 教学
+    label_singular: 教学
+    description: "_teaching/*.md"
+    folder: _teaching
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - { label: 中文标题, name: title, widget: string }
+      - { label: 英文标题, name: title_en, widget: string }
+      - { label: 所属集合, name: collection, widget: hidden, default: teaching }
+      - { label: 中文类型, name: type, widget: string, hint: 例如 助教 / 授课 }
+      - { label: 英文类型, name: type_en, widget: string }
+      - label: 链接地址
+        name: permalink
+        widget: string
+        hint: "必须以 /teaching/ 开头，只能用小写字母、数字和连字符"
+        pattern:
+          - '^/teaching/[a-z0-9][a-z0-9-]*/?$'
+          - 必须以 /teaching/ 开头，且只能包含小写字母、数字、连字符
+      - { label: 中文课程, name: venue, widget: string }
+      - { label: 英文课程, name: venue_en, widget: string }
+      - { label: 中文学校, name: location, widget: string }
+      - { label: 英文学校, name: location_en, widget: string }
+      - label: 显示时间
+        name: datetext
+        widget: string
+        required: false
+        hint: "例如 2021.09 – 2022.02；留空就不显示"
+      - { label: 中文说明, name: excerpt, widget: text, required: false }
+      - { label: 英文说明, name: excerpt_en, widget: text }
+      - label: 正文
+        name: body
+        widget: richtext
+        modes: [raw]
+        required: false
+
+  # -------------------------------------------------------------- 中文页面
+  - name: pages_zh
+    label: 中文页面
+    label_singular: 页面
+    description: "只有 .md 页面。列表页（publications/talks 等 .html）是数据驱动的，不在这里改。"
+    delete: false
+    files:
+      - name: home
+        label: 主页
+        file: _pages/about.md
+        fields: &zh_page_fields
+          - { label: 中文标题, name: title, widget: string }
+          - { label: 英文标题, name: title_en, widget: string, required: false }
+          - { label: 链接地址, name: permalink, widget: string, hint: 首页固定是 / }
+          - label: 版式
+            name: layout
+            widget: select
+            required: false
+            options:
+              - { label: 默认 single, value: single }
+              - { label: 列表 archive, value: archive }
+              - { label: 演讲 talk, value: talk }
+              - { label: 紧凑 compress, value: compress }
+              - { label: 空 default, value: default }
+          - { label: 显示作者栏, name: author_profile, widget: boolean, required: false }
+          - { label: 显示镜像链接, name: mirror, widget: boolean, required: false }
+          - { label: 不进站点地图, name: sitemap, widget: hidden }
+          - label: 旧地址重定向
+            name: redirect_from
+            widget: list
+            required: false
+            summary: "{{path}}"
+            hint: "每行一个旧地址，例如 /about/；路径里不要出现英文逗号"
+            field: { label: 旧地址, name: path, widget: string }
+          - label: 正文
+            name: body
+            widget: richtext
+            modes: [raw]
+            required: false
+      - name: cv
+        label: 履历
+        file: _pages/cv.md
+        fields: *zh_page_fields
+      - name: timeline
+        label: 获奖与荣誉
+        file: _pages/timeline.md
+        fields: *zh_page_fields
+      - name: sitemap
+        label: 站点地图
+        file: _pages/sitemap.md
+        fields: *zh_page_fields
+      - name: not_found
+        label: 404 页面
+        file: _pages/404.md
+        fields: *zh_page_fields
+
+  # -------------------------------------------------------------- 英文页面
+  - name: pages_en
+    label: English pages
+    label_singular: Page
+    description: "Mirror pages under _pages/en/. Keep them in sync with the Chinese ones."
+    delete: false
+    files:
+      - name: en_home
+        label: Home
+        file: _pages/en/about.md
+        fields: &en_page_fields
+          - { label: Title, name: title, widget: string }
+          - { label: Permalink, name: permalink, widget: string }
+          - { label: Locale, name: locale, widget: hidden, default: en }
+          - label: Layout
+            name: layout
+            widget: select
+            required: false
+            options:
+              - { label: single, value: single }
+              - { label: archive, value: archive }
+              - { label: talk, value: talk }
+              - { label: compress, value: compress }
+              - { label: default, value: default }
+          - { label: Show author profile, name: author_profile, widget: boolean, required: false }
+          - { label: Show mirror link, name: mirror, widget: boolean, required: false }
+          - label: Body
+            name: body
+            widget: richtext
+            modes: [raw]
+            required: false
+      - name: en_cv
+        label: Curriculum Vitae
+        file: _pages/en/cv.md
+        fields: *en_page_fields
+      - name: en_timeline
+        label: Awards and Honours
+        file: _pages/en/timeline.md
+        fields: *en_page_fields
+      - name: en_sitemap
+        label: Sitemap
+        file: _pages/en/sitemap.md
+        fields: *en_page_fields
+
+  # -------------------------------------------------------------- 个人资料
+  - name: profile
+    label: 个人资料
+    label_singular: 个人资料
+    description: "_data/profile.yml —— 教育背景、工作任职、联系方式的唯一数据源"
+    delete: false
+    format: yaml
+    files:
+      - name: profile
+        label: 教育 / 工作 / 联系方式
+        file: _data/profile.yml
+        fields:
+          - label: 联系方式
+            name: contact
+            widget: object
+            fields:
+              - { label: 电子邮箱, name: email, widget: string }
+              - { label: 所在地（中文）, name: location, widget: string }
+              - { label: 所在地（英文）, name: location_en, widget: string }
+          - label: 教育背景
+            name: education
+            widget: list
+            summary: "{{text}}"
+            hint: "顺序即显示顺序：博士 → 硕士 → 本科 → 交换。日期只写在 daterange 里，正文不要再写一次。"
+            fields: &profile_entry_fields
+              - label: 履历时期
+                name: period
+                widget: select
+                options:
+                  - { label: 博士 phd, value: phd }
+                  - { label: 过渡期 gap, value: gap }
+                  - { label: 硕士 master, value: master }
+                  - { label: 本科 bachelor, value: bachelor }
+              - { label: 中文条目, name: text, widget: string, hint: 可以用 **加粗** }
+              - { label: 英文条目, name: text_en, widget: string }
+              - { label: 中文日期跨度, name: daterange, widget: string, hint: 例如 2026.09 – 至今 }
+              - { label: 英文日期跨度, name: daterange_en, widget: string }
+              - label: 中文补充说明
+                name: notes
+                widget: list
+                required: false
+                summary: "{{note}}"
+                field: { label: 说明, name: note, widget: string }
+              - label: 英文补充说明
+                name: notes_en
+                widget: list
+                required: false
+                summary: "{{note}}"
+                field: { label: 说明, name: note, widget: string }
+          - label: 工作与任职
+            name: work
+            widget: list
+            summary: "{{text}}"
+            hint: "顺序即各时期内的显示顺序，最近的写在前面"
+            fields: *profile_entry_fields
+
+  # -------------------------------------------------------------- 获奖与荣誉
+  - name: awards
+    label: 获奖与荣誉
+    label_singular: 分组
+    description: "_data/awards.yml —— /timeline/、首页「获奖」与履历时间轴的唯一数据源"
+    delete: false
+    format: yaml
+    files:
+      - name: awards
+        label: 按年份分组
+        file: _data/awards.yml
+        fields:
+          - label: 年份分组
+            name: groups
+            widget: list
+            summary: "{{year}}"
+            hint: "按年份倒序；key 为 honours 的那一组会被单独渲染成首页的「荣誉」小节"
+            fields: &award_group_fields
+              - { label: 中文年份, name: year, widget: string, hint: 记得加引号，例如 "2026" }
+              - { label: 英文年份, name: year_en, widget: string, required: false }
+              - label: 分组标记
+                name: key
+                widget: select
+                required: false
+                options:
+                  - { label: 荣誉 honours（首页单独一小节）, value: honours }
+              - label: 条目
+                name: items
+                widget: list
+                summary: "{{text}}"
+                fields: &award_item_fields
+                  - { label: 中文获奖名称, name: text, widget: string }
+                  - { label: 英文获奖名称, name: text_en, widget: string }
+                  - label: 等级标签
+                    name: level
+                    widget: select
+                    required: false
+                    options:
+                      - { label: 国际 international, value: international }
+                      - { label: 国家级 national, value: national }
+                      - { label: 省级 provincial, value: provincial }
+                      - { label: 校级 school, value: school }
+                      - { label: 其他 other, value: other }
+                  - label: 履历时期
+                    name: period
+                    widget: select
+                    required: false
+                    options:
+                      - { label: 博士 phd, value: phd }
+                      - { label: 过渡期 gap, value: gap }
+                      - { label: 硕士 master, value: master }
+                      - { label: 本科 bachelor, value: bachelor }
+                  - { label: 中文补充说明, name: note, widget: text, required: false }
+                  - { label: 英文补充说明, name: note_en, widget: text, required: false }
+                  - { label: 中文日期, name: date, widget: string, required: false }
+                  - { label: 英文日期, name: date_en, widget: string, required: false }
+
+  # -------------------------------------------------------------- 顶部导航
+  - name: navigation
+    label: 顶部导航
+    label_singular: 导航项
+    description: "_data/navigation.yml —— 中英导航共用，英文页优先取 title_en"
+    delete: false
+    format: yaml
+    files:
+      - name: navigation
+        label: 主导航
+        file: _data/navigation.yml
+        fields:
+          - label: 导航项
+            name: main
+            widget: list
+            summary: "{{title}}"
+            hint: "顺序即显示顺序；url 必须是站内以 / 开头的地址"
+            fields:
+              - { label: 中文标题, name: title, widget: string }
+              - { label: 英文标题, name: title_en, widget: string }
+              - label: 地址
+                name: url
+                widget: string
+                hint: "例如 /cv/；必须以 / 开头，只允许小写字母、数字和 / . _ -"
+                pattern:
+                  - '^/[a-z0-9/._-]*$'
+                  - 必须以 / 开头，且只允许小写字母、数字与 / . _ -
