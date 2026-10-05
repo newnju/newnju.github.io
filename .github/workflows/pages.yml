@@ -72,9 +72,7 @@ jobs:
       # Jekyll 一律「构建成功」，必须在部署前从 HTML 上面拦。
       - name: structure checks on _site
         run: npm run check:structure
-      # 第四道关：真用 Chromium 打开页面，跑结构检查看不出的运行时问题
-      # （横向溢出、同源 404、JS 异常、缺 alt / href），并与基线做像素比对。
-      # 截图即使用例失败也照上传，方便点开看现场。
+      # 第四、五道关都要真浏览器，装一次就够。
       - name: cache playwright browsers
         uses: actions/cache@v4
         with:
@@ -82,6 +80,13 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: install chromium
         run: npx playwright install --with-deps chromium
+      # 第四道关：顺着页面里的链接爬一遍，抓「构建成功但 HTML 是坏的」——
+      # 重复 id、假链接 href="#"、站内 404、缺 alt、横向溢出、JS 报错。
+      # 这类问题构建日志里一个字都不会提。
+      - name: link and a11y checks on _site
+        run: npm run check:links
+      # 第五道关：把关键页面各截一张（桌面 + 手机），与基线做像素比对。
+      # 截图即使用例失败也照上传，方便点开看现场。
       - name: screenshots
         run: node tools/screenshots.mjs --compare
       - uses: actions/upload-artifact@v4

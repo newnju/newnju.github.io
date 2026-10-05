@@ -2,6 +2,15 @@
 
 <!-- start custom head snippets -->
 
+<!-- 图标字体预载。这两个 woff2 是全站最慢的资源（实测各 390～530ms，
+     比 main.css 还久），因为它们要等 fontawesome.css 解析完、
+     编译器扫到 @font-face 才发现 —— 那时才开始下载，首屏图标就空着。
+     font-display 是 block（FontAwesome 默认值），下载期间字形不可见，
+     于是图标晚出现几百毫秒。同源同文件，提前 preload 只是把下载提前，
+     不增加请求数。 -->
+<link rel="preload" href="{{ base_path }}/assets/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ base_path }}/assets/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin>
+
 <!-- 图标字体：同源文件，直接当普通样式表引。
      原来用 rel="preload" + onload 换 stylesheet 异步加载，但 Firefox 57–84
      与 Safari 11 以下不认 preload 的 as="style"，onload 永不触发 → 整份图标

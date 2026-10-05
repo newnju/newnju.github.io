@@ -27,10 +27,19 @@
 <div itemscope itemtype="http://schema.org/Person">
 
   <div class="author__avatar">
+    {%- comment -%}
+      srcset：CSS 里头像固定 158px 见方（_han.scss §6），而 avatar.webp 是
+      400×400 / 13.6 KB —— 1x 屏上多传了 2.53 倍的像素。带 srcset 后 1x 只取
+      160px（4.1 KB），2x 取 320px（9.8 KB）。换头像后跑 npm run avatar 重出。
+      width/height 仍写 400/400：它只用来定宽高比防 CLS，与实际取哪一档无关。
+    {%- endcomment -%}
     {% if author.avatar contains "://" %}
     	<img src="{{ author.avatar }}" alt="{{ _name }}" draggable="false" fetchpriority="high" />
     {% else %}
-    	<img src="{{ author.avatar | prepend: "/images/" | prepend: base_path }}" class="author__avatar" alt="{{ _name }}" width="400" height="400" draggable="false" fetchpriority="high" />
+    	<img src="{{ author.avatar | prepend: "/images/" | prepend: base_path }}"
+          srcset="{{ base_path }}/images/avatar-160.webp 1x, {{ base_path }}/images/avatar-320.webp 2x"
+          sizes="158px"
+          class="author__avatar" alt="{{ _name }}" width="400" height="400" draggable="false" fetchpriority="high" />
     {% endif %}
   </div>
 

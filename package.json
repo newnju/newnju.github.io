@@ -51,6 +51,8 @@
     "capture:reference": "node tools/capture-reference.mjs",
     "check:structure": "node tools/check-structure.mjs",
     "check:en": "node tools/check-en-sync.mjs",
+    "check:links": "node tools/check-links.mjs",
+    "avatar": "node tools/make-avatar.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "test": "node --test \"**/*.test.mjs\"",
     "check": "npm run validate && npm run check:content && npm run check:structure && npm test"
