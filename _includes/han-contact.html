@@ -2,19 +2,13 @@
 联系方式（数据源 _data/profile.yml；标签取 _data/ui-text.yml 的
 email_label / location_label），主页与履历页中英两版共用：
   {% include han-contact.html %}
+
+薄包装：内容由 tools/lib/render.mjs 生成，落地在
+_includes/generated/han-contact.{zh,en}.html；改数据后跑 npm run build:content。
 {%- endcomment -%}
-{%- assign _locale = page.locale | default: site.locale -%}
-{%- assign _en = false -%}
-{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
-{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
-{%- assign _email_lbl = _ui.email_label | default: "Email" -%}
-{%- if _en -%}
-  {%- assign _loc_lbl = _ui.location_label | default: "Location" -%}
-  {%- assign _loc = site.data.profile.contact.location_en | default: site.data.profile.contact.location -%}
+{%- assign _han_locale = page.locale | default: site.locale -%}
+{%- if _han_locale contains 'en' -%}
+{%- include generated/han-contact.en.html -%}
 {%- else -%}
-  {%- assign _loc_lbl = _ui.location_label | default: "所在地" -%}
-  {%- assign _loc = site.data.profile.contact.location -%}
+{%- include generated/han-contact.zh.html -%}
 {%- endif -%}
-{%- assign _email = site.data.profile.contact.email -%}
-* {{ _email_lbl }}: [{{ _email }}](mailto:{{ _email }})
-* {{ _loc_lbl }}: {{ _loc }}

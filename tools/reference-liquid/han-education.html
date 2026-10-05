@@ -1,0 +1,27 @@
+{%- comment -%}
+教育背景（数据源 _data/profile.yml）。主页与履历页、中英两版共用：
+  {% include han-education.html %}
+英文页取 text_en / notes_en / daterange_en，缺省回落中文；notes 渲染为二级列表。
+  日期取 profile.yml 的 daterange 字段（与履历时间轴同一套 .han-cv-date 样式）。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _colon = ": " -%}
+{%- unless _en -%}{%- assign _colon = "：" -%}{%- endunless -%}
+{%- comment -%}
+注意：循环体的第一个标签（下面那行 daterange 赋值）不能带左侧的连字符。
+每一轮的行首换行只来自 for 标签后面那一行；一旦被吃掉，本轮的「* 条目」
+就紧接在上一轮末尾，kramdown 看不到行首星号 —— 整段教育背景会塌成一条
+列表、星号被当成正文显示。写法与 han-honours / han-recent-pubs 一致。
+{%- endcomment -%}
+{%- for e in site.data.profile.education %}
+{% assign _dr = e.daterange -%}
+{%- if _en and e.daterange_en -%}{%- assign _dr = e.daterange_en -%}{%- endif -%}
+* {% if _dr %}<span class="han-cv-date">{{ _dr }}</span>{{ _colon }}{% endif %}{% if _en and e.text_en %}{{ e.text_en }}{% else %}{{ e.text }}{% endif %}
+{%- assign _notes = e.notes -%}
+{%- if _en and e.notes_en -%}{%- assign _notes = e.notes_en -%}{%- endif -%}
+{%- for n in _notes %}
+    * {{ n }}
+{%- endfor -%}
+{%- endfor %}

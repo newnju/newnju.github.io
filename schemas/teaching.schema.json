@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "teaching.schema.json",
+  "title": "教学 / 助教条目",
+  "description": "_teaching/*.md 的 front matter。结构与 _talks 相同。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "title_en", "collection", "type", "type_en", "permalink", "venue", "venue_en", "location", "location_en"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "title_en": { "type": "string", "minLength": 1 },
+    "collection": { "const": "teaching" },
+    "type": { "type": "string", "minLength": 1 },
+    "type_en": { "type": "string", "minLength": 1 },
+    "permalink": { "type": "string", "pattern": "^/teaching/[a-z0-9][a-z0-9-]*/?$" },
+    "venue": { "type": "string", "minLength": 1 },
+    "venue_en": { "type": "string", "minLength": 1 },
+    "location": { "type": "string", "minLength": 1 },
+    "location_en": { "type": "string", "minLength": 1 },
+    "datetext": { "type": "string" },
+    "excerpt": { "type": "string" },
+    "excerpt_en": { "type": "string" }
+  }
+}

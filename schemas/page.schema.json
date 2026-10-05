@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "page.schema.json",
+  "title": "页面 front matter",
+  "description": "_pages/*.md 与 _pages/en/*.md。additionalProperties: false 是故意的 —— 拼错字段名（permalnk、aithor_profile）会被当成未知字段拦下来，而不是静默失效。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "permalink"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "title_en": { "type": "string", "minLength": 1 },
+    "layout": { "type": "string", "enum": ["default", "archive", "single", "talk", "compress"] },
+    "permalink": { "type": "string", "minLength": 1 },
+    "author_profile": { "type": "boolean" },
+    "mirror": { "type": "boolean" },
+    "sitemap": { "type": "boolean" },
+    "locale": { "type": "string", "enum": ["en"] },
+    "redirect_from": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

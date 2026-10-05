@@ -1,26 +1,18 @@
 {%- comment -%}
-  获奖清单（紧凑版，用于首页）
-  --------------------------------------------------------------------------
-  数据源与时间轴相同：_data/awards.yml，唯一区别是这里跳过 key: honours 那一组
-  （荣誉单独渲染，见首页的「荣誉」小节）。
-  要带等级标签的完整版见 /timeline/。
-  year_en / text_en 选填，英文页优先取、缺省回落中文。
-  条目上的 date（英文页可另写 date_en）填了就跟在正文末尾显示，中文加全角
-  括号、英文加半角括号，样式是 _han.scss 第 3 节的浅色小字。
-  {%- endcomment -%}
-{%- assign _locale = page.locale | default: site.locale -%}
-{%- assign _en = false -%}
-{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
-{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
-{%- comment -%} 条目分隔符：中文用全角分号，英文取 ui-text 的 sep_comma（", "） {%- endcomment -%}
-{%- assign _sep = "；" -%}
-{%- if _en -%}{%- assign _sep = _ui.sep_comma | default: ", " -%}{%- endif -%}
-<ul class="han-awards">
-{%- for group in site.data.awards %}
-{%- unless group.key == "honours" %}
-  {%- assign _year = group.year -%}
-  {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}
-  <li><span class="han-awards__year">{{ _year }}</span>{% for item in group.items %}{%- assign _t = item.text -%}{%- if _en and item.text_en -%}{%- assign _t = item.text_en -%}{%- endif -%}{%- assign _d = item.date -%}{%- if _en and item.date_en -%}{%- assign _d = item.date_en -%}{%- endif -%}{{ _t }}{% if _d %}<span class="han-awards__date">{% if _en %} ({{ _d }}){% else %}（{{ _d }}）{% endif %}</span>{% endif %}{% unless forloop.last %}{{ _sep }}{% endunless %}{% endfor %}</li>
-{%- endunless %}
-{%- endfor %}
-</ul>
+获奖清单（紧凑版，用于首页）
+--------------------------------------------------------------------------
+数据源与时间轴相同：_data/awards.yml，唯一区别是这里跳过 key: honours 那一组
+（荣誉单独渲染，见首页的「荣誉」小节）。要带等级标签的完整版见 /timeline/。
+year_en / text_en 选填，英文页优先取、缺省回落中文。
+条目上的 date（英文页可另写 date_en）填了就跟在正文末尾显示，中文加全角
+括号、英文加半角括号，样式是 _han.scss 第 3 节的浅色小字。
+
+薄包装：内容由 tools/lib/render.mjs 生成，落地在
+_includes/generated/han-awards.{zh,en}.html；改数据后跑 npm run build:content。
+{%- endcomment -%}
+{%- assign _han_locale = page.locale | default: site.locale -%}
+{%- if _han_locale contains 'en' -%}
+{%- include generated/han-awards.en.html -%}
+{%- else -%}
+{%- include generated/han-awards.zh.html -%}
+{%- endif -%}

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "publication.schema.json",
+  "title": "论文条目",
+  "description": "_publications/*.md 的 front matter。改完跑 npm run validate。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "collection", "category", "permalink", "excerpt", "date", "venue", "citation", "bibtex"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "title_en": { "type": "string", "minLength": 1 },
+    "collection": { "const": "publications" },
+    "category": {
+      "description": "manuscripts=期刊论文, conferences=会议论文, books=专著；填别的会归入「其他」，不会丢条目，但会告警。",
+      "type": "string",
+      "enum": ["manuscripts", "conferences", "books"]
+    },
+    "permalink": { "$ref": "#/definitions/permalink", "pattern": "^/publication/[a-z0-9][a-z0-9-]*/?$" },
+    "excerpt": { "type": "string", "minLength": 1 },
+    "excerpt_en": { "type": "string", "minLength": 1 },
+    "date": { "$ref": "#/definitions/isoDate" },
+    "venue": { "type": "string", "minLength": 1 },
+    "venue_en": { "type": "string", "minLength": 1 },
+    "citation": { "type": "string", "minLength": 1 },
+    "citation_en": { "type": "string", "minLength": 1 },
+    "bibtex": { "type": "string", "minLength": 1 },
+    "link": { "type": "string", "format": "uri" }
+  },
+  "definitions": {
+    "permalink": { "type": "string", "minLength": 2 },
+    "isoDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+  }
+}

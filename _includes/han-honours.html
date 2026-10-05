@@ -1,14 +1,14 @@
 {%- comment -%}
 荣誉（数据源 _data/awards.yml 里 key 为 honours 的那一组）。
-主页、履历页与它们的英文版共用，替换此前散落在各页的硬编码列表：
+主页、履历页与它们的英文版共用：
   {% include han-honours.html %}
+
+薄包装：内容由 tools/lib/render.mjs 生成，落地在
+_includes/generated/han-honours.{zh,en}.html；改数据后跑 npm run build:content。
 {%- endcomment -%}
-{%- assign _locale = page.locale | default: site.locale -%}
-{%- assign _en = false -%}
-{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
-{%- assign _honours = site.data.awards | where: "key", "honours" | first -%}
-{%- if _honours -%}
-{%- for item in _honours.items %}
-* {% if _en and item.text_en %}{{ item.text_en }}{% else %}{{ item.text }}{% endif %}
-{%- endfor -%}
-{%- endif %}
+{%- assign _han_locale = page.locale | default: site.locale -%}
+{%- if _han_locale contains 'en' -%}
+{%- include generated/han-honours.en.html -%}
+{%- else -%}
+{%- include generated/han-honours.zh.html -%}
+{%- endif -%}

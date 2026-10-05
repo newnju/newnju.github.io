@@ -9,8 +9,8 @@ local/
 Gemfile.lock
 
 # Ignore files created by npm
+# package-lock.json 不忽略：CI 用 npm ci，锁文件缺了就只能每次装到什么算什么。
 node_modules
-package-lock.json
 
 # Ignore the vendor file at root level and bundle for alternative installation
 /vendor/

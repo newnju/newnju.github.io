@@ -1,0 +1,16 @@
+{%- comment -%}
+  近期成果：按 date 取最新 N 篇论文，单页格式与数据源在 _publications/ 下的文件
+  （在 _publications/ 加文件即自动上榜，主页、feed、论文页同步更新，不用手改
+   主页或履历的论文清单 —— 消除「双写」）
+  用法：{% include han-recent-pubs.html limit=3 %}
+  本文件结尾刻意不留换行：留了会在条目列表与页面上下一行之间挤出空行，
+  kramdown 据此把列表判为「松散」，最后一条会被包进 <p>、行距忽宽忽窄。
+{%- endcomment -%}
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _en = false -%}
+{%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- assign _limit = include.limit | default: 3 -%}
+{%- assign _pubs = site.publications | sort: "date" | reverse -%}
+{%- for post in _pubs limit: _limit %}
+* {% if _en %}{{ post.citation_en | default: post.citation }}{% else %}{{ post.citation }}{% endif %}
+{%- endfor %}
