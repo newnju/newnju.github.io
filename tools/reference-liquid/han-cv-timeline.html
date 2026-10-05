@@ -74,7 +74,7 @@
 {% endfor %}
 {% endif %}
 {% assign _na = 0 %}
-{% for g in site.data.awards %}
+{% for g in site.data.awards.groups %}
 {% unless g.key == "honours" %}
 {% for a in g.items %}
 {% if a.period == _pid %}{% assign _na = _na | plus: 1 %}{% endif %}
@@ -82,7 +82,7 @@
 {% endunless %}
 {% endfor %}
 {% if _na > 0 %}
-{% for g in site.data.awards %}
+{% for g in site.data.awards.groups %}
 {% unless g.key == "honours" %}
 {% for a in g.items %}
 {% if a.period == _pid %}

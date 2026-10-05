@@ -56,7 +56,7 @@ function renderEducation(data, en) {
 }
 
 function renderHonours(data, en) {
-  const group = data.awards.find((g) => g.key === 'honours');
+  const group = data.awards.groups.find((g) => g.key === 'honours');
   let out = '';
   if (group) {
     for (const item of group.items) out += `\n* ${pick(item.text, item.text_en, en)}`;
@@ -89,7 +89,7 @@ function renderRecentPubs(collections, en, limit) {
 function renderAwards(data, en) {
   const sep = en ? or(data.uiText['en']?.sep_comma, ', ') : '；';
   let out = '<ul class="han-awards">';
-  for (const group of data.awards) {
+  for (const group of data.awards.groups) {
     if (group.key === 'honours') continue;
     const year = pick(group.year, group.year_en, en);
     const items = group.items
@@ -191,7 +191,7 @@ function renderTimeline(data, collections, en) {
 
     // —— 获奖：先数条数，再渲染（模板里是两段独立循环）——
     out += '\n'; // {% assign _na = 0 %}
-    for (const group of data.awards) {
+    for (const group of data.awards.groups) {
       out += '\n'; // {% for g %}
       if (group.key !== 'honours') {
         out += '\n'; // {% unless %}
@@ -203,13 +203,13 @@ function renderTimeline(data, collections, en) {
     out += '\n'; // {% endfor %}（计数外层）
 
     let count = 0;
-    for (const group of data.awards) {
+    for (const group of data.awards.groups) {
       if (group.key === 'honours') continue;
       count += group.items.filter((a) => a.period === period).length;
     }
     if (count > 0) {
       out += '\n'; // {% if _na > 0 %}
-      for (const group of data.awards) {
+      for (const group of data.awards.groups) {
         out += '\n'; // {% for g %}
         if (group.key !== 'honours') {
           out += '\n'; // {% unless %}
@@ -241,7 +241,7 @@ function renderTimeline(data, collections, en) {
 function renderTimelineAwards(data, en) {
   const ui = (en ? data.uiText['en'] : undefined) ?? data.uiText['zh-CN'];
   let out = '<div class="han-timeline">';
-  for (const group of data.awards) {
+  for (const group of data.awards.groups) {
     out += `\n  <h3 class="han-timeline__year">${pick(group.year, group.year_en, en)}</h3>`;
     for (const item of group.items) {
       let line = `\n  <p class="han-timeline__item">${pick(item.text, item.text_en, en)}`;

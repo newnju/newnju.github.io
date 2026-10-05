@@ -16,7 +16,7 @@
 {%- assign _sep = "；" -%}
 {%- if _en -%}{%- assign _sep = _ui.sep_comma | default: ", " -%}{%- endif -%}
 <ul class="han-awards">
-{%- for group in site.data.awards %}
+{%- for group in site.data.awards.groups %}
 {%- unless group.key == "honours" %}
   {%- assign _year = group.year -%}
   {%- if _en and group.year_en -%}{%- assign _year = group.year_en -%}{%- endif %}

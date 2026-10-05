@@ -2,10 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "awards.schema.json",
   "title": "获奖与荣誉数据",
-  "description": "_data/awards.yml —— /timeline/、首页「获奖」「荣誉」与履历时间轴的唯一数据源。按年份倒序；key: honours 那一组是荣誉（不参与分期）。",
-  "type": "array",
-  "minItems": 1,
-  "items": { "$ref": "#/definitions/group" },
+  "description": "_data/awards.yml —— /timeline/、首页「获奖」「荣誉」与履历时间轴的唯一数据源。按年份倒序；key: honours 那一组是荣誉（不参与分期）。顶层是对象而不是数组：Decap CMS 只能编辑具名顶层字段，裸数组在后台里根本打不开。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["groups"],
+  "properties": {
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/group" }
+    }
+  },
   "definitions": {
     "period": {
       "type": "string",
@@ -21,8 +28,8 @@
       "additionalProperties": false,
       "required": ["year", "items"],
       "properties": {
-        "year": { "type": "string", "minLength": 1 },
-        "year_en": { "type": "string", "minLength": 1 },
+      "year": { "type": "string", "minLength": 1 },
+      "year_en": { "type": "string" },
         "key": { "type": "string", "enum": ["honours"] },
         "items": {
           "type": "array",

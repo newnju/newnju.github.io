@@ -6,7 +6,7 @@
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _en = false -%}
 {%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
-{%- assign _honours = site.data.awards | where: "key", "honours" | first -%}
+{%- assign _honours = site.data.awards.groups | where: "key", "honours" | first -%}
 {%- if _honours -%}
 {%- for item in _honours.items %}
 * {% if _en and item.text_en %}{{ item.text_en }}{% else %}{{ item.text }}{% endif %}

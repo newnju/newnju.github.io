@@ -145,7 +145,8 @@ for (const [label, list] of [['education', data.profile?.education ?? []], ['wor
 }
 
 // 6) 荣誉组必须存在且只有一份 —— 首页与履历的「荣誉」小节靠它
-const honours = (data.awards ?? []).filter((g) => g.key === 'honours');
+const awardGroups = data.awards?.groups ?? [];
+const honours = awardGroups.filter((g) => g.key === 'honours');
 if (honours.length === 0) warn('_data/awards.yml', '没有 key: honours 的分组，首页「荣誉」小节会是空的');
 if (honours.length > 1) err('_data/awards.yml', `有 ${honours.length} 个 key: honours 分组，应该只有一个`);
 
