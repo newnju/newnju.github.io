@@ -28,6 +28,14 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run check
+      # 中英同步提醒：改了中文却没动 *_en 时提一句。
+      # 只报不挡 —— 英文措辞得人翻，忘了改不是构建错误。
+      # BASE_SHA 用 push 前的那个提交，这样一次推送里含多个提交也能覆盖到。
+      - name: en sync reminder
+        if: github.event_name == 'push'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: npm run check:en
 
   # 第二道关：真的把站点构建出来。
   # 与 check 分开跑（各自独立的 runner），check 那边失败就不会浪费构建时间。
