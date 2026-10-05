@@ -25,6 +25,9 @@ node_modules
 oauth-proxy/node_modules/
 oauth-proxy/.wrangler/
 .wrangler/
-# 本地调试用的 Worker 密钥，永远不进仓库（真密钥在 Cloudflare 的 secret 里）
+# 本地调试用的 Worker 密钥，永远不进仓库（真密钥放在 Cloudflare 的 wrangler secret 里）
 oauth-proxy/dev.vars
+
+# 截图的输出目录（每次跑都重建，当次 CI 的 artifact 才是要看的东西）
+screenshots/
 

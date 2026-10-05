@@ -34,6 +34,9 @@
     "liquidjs": "^10.30.0",
     "node-html-parser": "^9.0.4",
     "onchange": "^7.1.0",
+    "pixelmatch": "^7.2.0",
+    "playwright": "^1.63.0",
+    "pngjs": "^7.0.0",
     "uglify-js": "^3.19.3"
   },
   "scripts": {
@@ -47,6 +50,7 @@
     "check:content": "node tools/render-content.mjs --check",
     "capture:reference": "node tools/capture-reference.mjs",
     "check:structure": "node tools/check-structure.mjs",
+    "screenshots": "node tools/screenshots.mjs",
     "test": "node --test \"**/*.test.mjs\"",
     "check": "npm run validate && npm run check:content && npm run check:structure && npm test"
   }
