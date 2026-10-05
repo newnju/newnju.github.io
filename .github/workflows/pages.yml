@@ -49,6 +49,16 @@ jobs:
         run: bundle exec jekyll build --strict_front_matter --trace
         env:
           JEKYLL_ENV: production
+      # 第三道关：只看构建产物 —— 列表塌成一段、Liquid 被删这类问题
+      # Jekyll 一律「构建成功」，必须在部署前从 HTML 上面拦。
+      # 放在 build 之后装 node，_site 已经生成，node_modules 不会混进产物。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: structure checks on _site
+        run: npm run check:structure
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

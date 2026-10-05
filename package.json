@@ -46,7 +46,8 @@
     "build:content": "node tools/render-content.mjs",
     "check:content": "node tools/render-content.mjs --check",
     "capture:reference": "node tools/capture-reference.mjs",
+    "check:structure": "node tools/check-structure.mjs",
     "test": "node --test \"**/*.test.mjs\"",
-    "check": "npm run validate && npm run check:content && npm test"
+    "check": "npm run validate && npm run check:content && npm run check:structure && npm test"
   }
 }

@@ -385,6 +385,15 @@ git commit -m "更新履历"
 git push
 ```
 
+**方式 C：网页后台表单（最不容易写错）**
+
+打开 <https://newnju.github.io/admin/> → 点 **Sign in with GitHub** → 左侧选要改的条目 → 表单里改 → 点 **Save**。
+
+后台会自动把内容写成符合校验的文件并提交，不用碰 YAML。详细说明见下面的[「后台表单（Decap CMS）」](#后台表单decap-cms)一节。
+
+> 三种方式最终都是改仓库里的文件、走同一条构建流水线，效果完全一样。
+
+
 ### 改哪里
 
 | 想改什么 | 改哪个文件 |
@@ -472,6 +481,56 @@ datetext: "2026.05"              # 可留空，留空则页面上不显示时间
 ---
 ```
 
+### 后台表单（Decap CMS）
+
+<https://newnju.github.io/admin/> 是本站自带的网页后台，用 GitHub 账号登录，能直接改：
+
+| 后台左侧的分类 | 对应文件 |
+| --- | --- |
+| 论文 / 项目 / 会议 / 教学 | `_publications/`、`_portfolio/`、`_talks/`、`_teaching/` 下的条目 |
+| 页面（中）/ 页面（英） | `_pages/`、`_pages/en/` |
+| 个人资料 | `_data/profile.yml`（教育、工作、联系方式） |
+| 获奖与荣誉 | `_data/awards.yml` |
+| 导航栏 | `_data/navigation.yml` |
+
+几点要留意：
+
+1. **保存 = 提交**。点 Save 会直接在 `main` 上产生一次 commit，走和手动 push 完全一样的流水线，出错同样会被 CI 拦住。
+2. **后台没列出来的字段不会被改坏**（没动过就原样保留），但也没法在后台改。`_data/ui-text.yml` 与 `_data/authors.yml` **故意没纳入后台**，要改这两个走方式 A / B。
+3. **新建条目**：集合右上角点 **New**，文件名自动按「日期 + 标题」生成，中文标题也能当文件名。
+4. **正文框固定在 Markdown 原文模式**，粘贴 Markdown 原样保存，后台不会把 `{% include %}` 之类的代码改写坏。
+5. 后台出问题就先用方式 A 改文件 —— 后台只是多一个入口，站点不依赖它。
+
+字段配置在 `admin/config.yml`，校验规则在 `schemas/*.schema.json`。**两边必须一致**：
+`tests/admin-config.test.mjs` 会自动逐字段比对，漏改一边 CI 就红。改字段时两边一起改。
+
+#### 第一次用前要配一次登录
+
+GitHub 登录走的是自建代理（client secret 不能写进公开仓库），**只需配一次**，
+照 [`oauth-proxy/README.md`](oauth-proxy/README.md) 分四步做完即可；之后任何人打开
+`/admin/` 点登录都能用。
+
+### 提交前自检
+
+```bash
+npm ci          # 第一次
+npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 个回归测试
+```
+
+`npm run check` 会挡掉这些问题：
+
+| 命令 | 挡什么 |
+| --- | --- |
+| `npm run validate` | front matter 缺字段、类型不对、permalink 重复、`category` 拼错 |
+| `npm run check:content` | 手改了 `_includes/generated/*.html` 或渲染器，导致产物和数据不同步 |
+| `npm run check:structure` | 列表塌成一段、Liquid 漏渲染、页面缺章节、薄包装片段里混进 Liquid |
+| `npm test` | 生成片段与 Liquid 基准的字节级比对 + 后台配置与 schema 的逐字段比对 |
+
+CI 里这四步全部会跑，**任何一步红都不会部署**。
+
+> 构建产物那部分检查（`check:structure` 的后半段）只有在 `_site/` 存在时才跑。
+> 本地没装 Jekyll 会自动跳过并提示；CI 是在 Jekyll 构建完之后才执行它，所以线上部署前一定能拦到。
+
 ### 五个容易踩的坑
 
 1. **`permalink` 不能重复**。两个条目用同一个 permalink，后一个会覆盖前一个。建议沿用「日期 + 短标题」的命名。
@@ -480,7 +539,8 @@ datetext: "2026.05"              # 可留空，留空则页面上不显示时间
 4. **`category` 填错不会丢条目**（已做兜底）：填了 `manuscripts`/`conferences`/`books` 之外的词，或干脆没填，会归到「其他」分组里，不会被静默丢掉。
 5. **`awards.yml` 的 `level` 只能填那五个词**，填别的会没有颜色和文字标签（不影响页面生成）。
 
-> 改完发现页面没更新？去仓库的 **Actions** 标签页看构建状态。红色叉号说明构建失败，点进去能看到具体是哪一行出的问题，通常是 YAML 格式。
+> 改完发现页面没更新？先在本地跑 `npm run check`（见上一节），它会直接指出是哪个文件的哪一行。
+> 本地没跑就先去仓库的 **Actions** 标签页看构建状态：红色叉号说明构建失败，点进去能看到具体是哪一行出的问题，通常是 YAML 格式。
 
 ---
 
@@ -510,6 +570,7 @@ bundle exec jekyll serve
 │   ├── awards.yml       获奖与荣誉数据（/timeline/ 的唯一数据源）
 │   └── authors.yml      多作者署名
 ├── _includes/           页面片段（含 han-mirror / han-timeline / han-awards / han-bibtex）
+│   └── generated/       由 JS 生成器产出的片段（不要手改，改了 CI 会红）
 ├── _layouts/            页面布局
 ├── _pages/              独立页面：about / cv / publications / portfolio / talks / teaching / timeline
 │   └── en/              对应的英文页面
@@ -520,6 +581,12 @@ bundle exec jekyll serve
 ├── _portfolio/          项目与作品条目
 ├── _talks/              会议与暑期学校条目
 ├── _teaching/           教学与助教条目
+├── admin/               Decap CMS 网页后台（config.yml 是字段定义）
+├── oauth-proxy/         GitHub 登录的 Cloudflare Worker 代理（不发布到站点）
+├── schemas/             内容校验规则（validate.mjs 读这里）
+├── tools/               内容生成器、校验器、结构检查器（npm run check 跑这些）
+├── tests/               回归测试（npm test，40 个）
+├── .github/workflows/   CI：先校验测试，再 Jekyll 构建，最后检查产物
 ├── assets/              样式与脚本（han.js 为本站自定义脚本：BibTeX 复制、引用复制、缩略图导航）
 ├── robots.txt           允许全站抓取，并声明 Sitemap 位置
 └── images/              图片与头像
