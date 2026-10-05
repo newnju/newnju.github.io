@@ -10,7 +10,7 @@ name = "decap-oauth"
 main = "worker.js"
 compatibility_date = "2025-06-01"
 
-# 用 Cloudflare 自带的 <名字>.<账号>.workers.dev 域名。
-# 想换成自己的子域（例如 decap.example.com）就取消下面的注释并改成自己的：
-# route = { pattern = "decap.example.com", zone_name = "example.com", custom_domain = true }
+# 挂自己的子域。workers.dev 在部分网络下被 DNS 污染 + SNI 丢包，完全不可达，
+# 所以后台登录必须走这里；workers_dev 仅作为本地调试时的备用地址保留。
+route = { pattern = "oauth.oaking.kdns.fr", zone_name = "oaking.kdns.fr", custom_domain = true }
 workers_dev = true

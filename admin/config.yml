@@ -18,8 +18,10 @@ backend:
   name: github
   repo: newnju/newnju.github.io
   branch: main
-  # ↓↓↓ 换成你自己的 Worker 地址，见 oauth-proxy/README.md ↓↓↓
-  base_url: https://decap-oauth.REPLACE-ME.workers.dev
+  # 自己的 Worker（oauth-proxy/），见 oauth-proxy/README.md。
+  # 不要用 <名字>.<账号>.workers.dev：那个域名在部分网络下被 DNS 污染 + SNI 丢包，
+  # 登录弹窗会一直转圈。这里用的是挂在 Cloudflare 上的自定义域名。
+  base_url: https://oauth.oaking.kdns.fr
   auth_endpoint: auth
 
 site_url: https://newnju.github.io
