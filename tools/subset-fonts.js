@@ -22,9 +22,16 @@ const { execFileSync } = require("child_process");
 const ROOT = path.resolve(__dirname, "..");
 const CHECK_ONLY = process.argv.indexOf("--check") !== -1;
 
-// 会渲染图标的源码位置：模板、页面、集合、样式与脚本（含 han.js 动态插入的图标）
-const SCAN_DIRS = ["_includes", "_layouts", "_pages", "_sass", "_portfolio", "_talks", "_teaching", "_publications"];
-const SCAN_FILES = ["assets/js/han.js", "assets/css/fontawesome.scss"];
+// 会渲染图标的源码位置：模板、页面、集合、样式与脚本
+// assets/js 整目录都要扫：图标类名不只出现在模板里，_main.js 切换主题时才会
+// 给 #theme-icon 换上 fa-moon（页面上只有 fa-sun），漏掉它子集字体就没有月亮的
+// 码位 —— 深色主题下按钮只剩一个空位。
+const SCAN_DIRS = [
+  "_includes", "_layouts", "_pages", "_sass",
+  "_portfolio", "_talks", "_teaching", "_publications",
+  "assets/js", "assets/css",
+];
+const SCAN_FILES = [];
 
 function walk(dir, out) {
   let entries;
@@ -106,17 +113,25 @@ if (missing.length) {
   console.log("变量表里查不到的（多为修饰类，忽略）：" + missing.join(", "));
 }
 
+// 每一套字体：full 是仓库里留的完整原字（子集化的唯一来源，勿删），
+// 输出 woff2 + ttf 两份到 assets/webfonts/。
+// 一定要从 full 生成，不要就地子集化输出文件：就地跑第二次只会拿已经缺了
+// 码位的文件再切一次，之前丢掉的字形永远回不来（fa-moon 就是这么丢的）。
 const FONTS = [
-  { file: "assets/webfonts/fa-solid-900.woff2", ttf: "assets/webfonts/fa-solid-900.ttf" },
-  { file: "assets/webfonts/fa-brands-400.woff2", ttf: "assets/webfonts/fa-brands-400.ttf" }
+  { full: "assets/webfonts/full/fa-solid-900.ttf", outputs: ["assets/webfonts/fa-solid-900.woff2", "assets/webfonts/fa-solid-900.ttf"] },
+  { full: "assets/webfonts/full/fa-brands-400.ttf", outputs: ["assets/webfonts/fa-brands-400.woff2", "assets/webfonts/fa-brands-400.ttf"] },
 ];
 
 if (CHECK_ONLY) {
   FONTS.forEach(function (font) {
-    const full = path.join(ROOT, font.file);
-    if (fs.existsSync(full)) {
-      console.log(font.file + "：当前 " + fs.statSync(full).size + " 字节");
-    }
+    font.outputs.forEach(function (rel) {
+      const full = path.join(ROOT, rel);
+      if (fs.existsSync(full)) {
+        console.log(rel + "：当前 " + fs.statSync(full).size + " 字节");
+      }
+    });
+    const src = path.join(ROOT, font.full);
+    console.log(font.full + "：完整原字 " + (fs.existsSync(src) ? fs.statSync(src).size + " 字节" : "缺失（无法重新生成子集）"));
   });
   process.exit(0);
 }
@@ -148,11 +163,15 @@ if (!pyftsubset) {
 const parts = pyftsubset.split(" ");
 
 FONTS.forEach(function (font) {
-  [font.file, font.ttf].forEach(function (rel) {
-    const src = path.join(ROOT, rel);
-    if (!fs.existsSync(src)) return;
-    const before = fs.statSync(src).size;
-    const tmp = src + ".tmp";
+  const src = path.join(ROOT, font.full);
+  if (!fs.existsSync(src)) {
+    console.log(font.full + "：完整原字缺失，跳过这一套（子集无法生成）。");
+    return;
+  }
+  font.outputs.forEach(function (rel) {
+    const dst = path.join(ROOT, rel);
+    const before = fs.existsSync(dst) ? fs.statSync(dst).size : 0;
+    const tmp = dst + ".tmp";
     const args = parts.slice(1).concat([
       src,
       "--unicodes=" + unicodes,
@@ -167,15 +186,10 @@ FONTS.forEach(function (font) {
     if (rel.endsWith(".woff2")) args.push("--flavor=woff2");
     execFileSync(parts[0], args);
     const after = fs.statSync(tmp).size;
-    if (after < before) {
-      fs.renameSync(tmp, src);
-      console.log(
-        path.basename(rel) + "：" + before + " → " + after + " 字节（省 " +
-          Math.round((1 - after / before) * 100) + "%）"
-      );
-    } else {
-      fs.unlinkSync(tmp);
-      console.log(path.basename(rel) + "：子集反而更大（" + after + "），保留原文件。");
-    }
+    fs.renameSync(tmp, dst);
+    const saved = before
+      ? "（原 " + before + " 字节，" + (before > after ? "省 " + Math.round((1 - after / before) * 100) + "%" : "变大 " + Math.round((after / before - 1) * 100) + "%") + "）"
+      : "";
+    console.log(path.basename(rel) + "：" + after + " 字节" + saved);
   });
 });
