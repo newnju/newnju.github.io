@@ -635,7 +635,7 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 �
 | --- | --- |
 | `npm run validate` | front matter 缺字段、类型不对、permalink 重复、`category` 拼错 |
 | `npm run check:content` | 生成物与数据不同步 —— **只提示，不挡**：后台改完内容生成物必然过期，而后台没法跑生成器，所以 CI 每次 `jekyll build` 之前都会自动重新生成 |
-| `npm run check:structure` | 列表塌成一段、Liquid 漏渲染、页面缺章节、薄包装片段里混进 Liquid |
+| `npm run check:structure` | 列表塌成一段、Liquid 漏渲染、页面缺章节、薄包装片段里混进 Liquid、img 缺 width/height（CLS，图片加载完会把下面内容顶动） |
 | `npm test` | JS 生成器与原 Liquid 模板**现场渲染**结果逐字节一致（40 个） |
 | `npm run check:en` | 改了中文却没动对应 `*_en` 字段 —— **只提醒，不挡**（见下） |
 | `npm run check:links` | 重复 id、假链接、站内 404、缺 alt、横向溢出 —— **只报不挡**（见下） |

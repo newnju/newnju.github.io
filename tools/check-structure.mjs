@@ -13,6 +13,7 @@
 // 所以必须在 deploy 之前单独拦一道。
 import fs from 'node:fs';
 import path from 'node:path';
+import { parse } from 'node-html-parser';
 import { SITE_ROOT, loadData, readText } from './lib/content.mjs';
 
 const problems = [];
@@ -204,6 +205,21 @@ if (!fs.existsSync(siteDir)) {
     for (const group of data.awards?.groups ?? []) {
       if (!timelineText.includes(group.year)) {
         fail('_site/timeline/index.html', `时间轴里找不到年份分组「${group.year}」`);
+      }
+    }
+  }
+
+  // 5) 每个 <img> 必须自带 width 与 height —— 没有比例预留，图片一加载完
+  //    就把下面的内容顶下去（CLS）。头像一直带着；page__hero、archive teaser、
+  //    sidebar 配图这几个分支现在一张都没渲染（没有页面定义 header/teaser），
+  //    将来谁启用了，这道会在部署前把缺尺寸的图拦下来。
+  for (const file of walkHtml(siteDir)) {
+    const rel = path.relative(SITE_ROOT, file);
+    const root = parse(fs.readFileSync(file, 'utf8'));
+    for (const img of root.querySelectorAll('img')) {
+      if (!img.getAttribute('width') || !img.getAttribute('height')) {
+        const hint = (img.getAttribute('src') || '<img>').slice(0, 70);
+        fail(rel, `img 缺 width/height（会带来 CLS）：${hint}`);
       }
     }
   }
