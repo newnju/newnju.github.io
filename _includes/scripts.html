@@ -6,16 +6,18 @@
      defer 的 MathJax（jsDelivr），外链一慢就把排在它后面的 han.js 一起拖住
      （实测缩略图要等 14～19 秒，见 README 第三章第 5 节）。MathJax 现已移除，
      但 async 保留 —— han.js 不依赖其他脚本、也不等 DOMContentLoaded，
-     脚本内部按「解析完成」起步（见 han.js 第 5 节），缩略图能在解析一结束就出现。 -->
+     脚本内部按「解析完成」起步（见 han.js 第 5 节），缩略图能在解析一结束就出现。
+     线上引的是压缩版 han.min.js：改 assets/js/han.js 后跑 npm run build:js 重新生成。 -->
 {% if page.author_profile or layout.author_profile %}
 <!-- vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样引入）：侧栏线稿自绘。
      门控与 sidebar.html 引入 author-profile.html 的条件完全一致——凡是页脚出现
-     电子邮件/GitHub 联系方式列表（即有 #svgpx 线稿）的页面才加载这份 34KB。
+     电子邮件/GitHub 联系方式列表（即有 #svgpx 线稿）的页面才加载这份 12KB
+     （vivus.min.js，源码 34KB 由 build:js 压缩，MIT 头用 --comments 保留）。
      同步加载且排在下面 async 的 han.js 之前——async 脚本要等解析到标签才开始
      下载，因此 han.js 第 8 节执行时 window.Vivus 必然已就绪，不存在竞态。 -->
-<script src="{{ base_path }}/assets/js/vivus.js"></script>
+<script src="{{ base_path }}/assets/js/vivus.min.js"></script>
 {% endif %}
-<script src="{{ base_path }}/assets/js/han.js" async></script>
+<script src="{{ base_path }}/assets/js/han.min.js" async></script>
 
 {%- comment -%}
   微信二维码弹层（assets/js/share-wechat.js）。三道门都得同时成立才输出：

@@ -40,8 +40,10 @@
   },
   "scripts": {
     "uglify": "uglifyjs assets/js/plugins/jquery.greedy-navigation.js assets/js/_main.js assets/js/theme.js -c -m -o assets/js/main.min.js",
-    "watch:js": "onchange \"assets/js/**/*.js\" -e \"assets/js/main.min.js\" -- npm run build:js",
-    "build:js": "npm run uglify",
+    "uglify:vivus": "uglifyjs assets/js/vivus.js -c -m --comments -o assets/js/vivus.min.js",
+    "uglify:han": "uglifyjs assets/js/han.js -c -m -o assets/js/han.min.js",
+    "watch:js": "onchange \"assets/js/**/*.js\" -e \"assets/js/*.min.js\" -- npm run build:js",
+    "build:js": "npm run uglify && npm run uglify:vivus && npm run uglify:han",
     "fonts": "node tools/subset-fonts.js",
     "validate": "node tools/validate.mjs",
     "validate:strict": "node tools/validate.mjs --strict",
