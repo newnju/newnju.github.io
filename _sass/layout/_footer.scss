@@ -20,8 +20,10 @@
      另外别再让 body 预留 padding-bottom 给它让位（见 layout/_base.scss）。 */
   height: auto;
 
-  -webkit-animation: intro 0.3s both;
-          animation: intro 0.3s both;
+  /* 同 #main（layout/_page.scss）：fill 用 backwards，动画结束即卸掉
+     层叠上下文，避免页脚压住正文里 z-index 更高的浮层（分享弹层）。 */
+  -webkit-animation: intro 0.3s backwards;
+          animation: intro 0.3s backwards;
   -webkit-animation-delay: 0.45s;
           animation-delay: 0.45s;
   border-top: 1px solid var(--global-dark-border-color);

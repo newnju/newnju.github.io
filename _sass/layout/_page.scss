@@ -8,7 +8,11 @@
   margin-top: 2em;
   padding-left: 1em;
   padding-right: 1em;
-  animation: intro 0.3s both;
+  /* fill 用 backwards 不用 both：both 会让 intro 动画结束后仍挂着 opacity
+     的层叠上下文，把 #main 里的内容（含分享弹层的 z-index: 20）关进上下文，
+     页脚树序更靠后就反压其上。backwards 只在 delay 期间保持 0%，结束即卸掉，
+     视觉不变、层叠恢复常规规则。 */
+  animation: intro 0.3s backwards;
   animation-delay: 0.35s;
 
   @include breakpoint($x-large) {
