@@ -318,6 +318,13 @@ zh: &DEFAULT_ZH
   less_than                  : "少于"
   minute_read                : "分钟阅读时长"
   share_on_label             : "分享到"
+  share_wechat               : "微信"
+  share_qq                   : "QQ"
+  share_dialog_label         : "微信分享"
+  share_scan_hint            : "用微信扫一扫"
+  share_copy_link            : "复制链接"
+  share_copied_link          : "已复制"
+  share_close                : "关闭"
   meta_label                 :
   tags_label                 : "标签："
   categories_label           : "分类："

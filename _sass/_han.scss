@@ -1613,3 +1613,143 @@ html.theme-transition .han-minimap * {
         }
     }
 }
+
+/* --------------------------------------------------------------------------
+   29. 分享到：微信 / QQ 按钮与二维码弹层
+   --------------------------------------------------------------------------
+   中文页的分享目标只有 微信 · QQ · X（_includes/social-share.html 按 locale 分支），
+   英文页维持原来五个。品牌色就地给两个色值，跟按钮 hover 规则放在一起。
+
+   .han-sharecard 是 assets/js/share-wechat.js 生成的弹层：absolute 挂在
+   .page__share 底下（给它加 position: relative），所以不会被祖先的 overflow 裁掉。
+   二维码底色写死白色 —— 扫码要的是对比度，暗色主题下也必须白底黑码，不跟着反色。
+   -------------------------------------------------------------------------- */
+
+.btn--wechat {
+    background-color: #07c160;
+    border-color: #07c160;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+        background-color: #059748;
+        border-color: #059748;
+    }
+}
+
+.btn--qq {
+    background-color: #12b7f5;
+    border-color: #12b7f5;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+        background-color: #0e9ad2;
+        border-color: #0e9ad2;
+    }
+}
+
+.page__share {
+    position: relative;
+}
+
+.han-sharecard {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% - 0.5em);
+    left: 0;
+    width: max-content;
+    max-width: 260px;
+    padding: 14px;
+    text-align: center;
+    background: var(--global-bg-color);
+    border: 1px solid var(--global-border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+
+    &__hint {
+        margin: 0 0 8px;
+        font-size: $type-size-7;
+        color: var(--global-text-color-light);
+    }
+
+    &__qr {
+        display: inline-block;
+        line-height: 0;
+
+        svg {
+            display: block;
+            border: 1px solid var(--global-border-color);
+        }
+    }
+
+    /* 链接文本可全选：扫码不行时（老设备、某些手机浏览器）还能复制 */
+    &__url {
+        margin: 8px 0 10px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--global-text-color-light);
+        word-break: break-all;
+        user-select: all;
+    }
+
+    &__acts {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    &__copy,
+    &__close {
+        font-family: $sans-serif;
+        font-size: $type-size-7;
+        cursor: pointer;
+        background: transparent;
+        border: 1px solid var(--global-border-color);
+        border-radius: 4px;
+        color: inherit;
+        padding: 4px 10px;
+
+        &:hover {
+            border-color: var(--global-link-color);
+            color: var(--global-link-color);
+        }
+    }
+
+    &__close {
+        font-size: 15px;
+        line-height: 1;
+        padding: 4px 8px;
+    }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .han-sharecard {
+        animation: han-sharecard-in 0.18s ease-out;
+    }
+}
+
+@keyframes han-sharecard-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .han-sharecard {
+        animation: none !important;
+    }
+}
+
+@media print {
+    .han-sharecard {
+        display: none !important;
+    }
+}

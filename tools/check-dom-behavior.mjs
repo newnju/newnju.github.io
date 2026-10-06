@@ -242,6 +242,68 @@ async function newPage(viewport) {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- 6. 微信分享弹层
+// 「分享到」的中文按钮集合由 tests/social-share.test.mjs 断言（渲染层），这里只管
+// 交互：按钮默认隐藏 → 脚本摘掉 hidden → 点开才有二维码 → 二维码库**点开时才**
+// 下载（首屏不该为了一个可能没人点的按钮多带 20KB）。页面用集合详情页，
+// 那一块「分享到」才存在。
+{
+  const { ctx, page } = await newPage({ width: 1366, height: 900 });
+  const requested = [];
+  page.on('request', (r) => {
+    if (/qrcode\.min\.js$/.test(r.url())) requested.push(r.url());
+  });
+  await page.goto(origin + '/publication/2025-four-gods-mirror', { waitUntil: 'load' });
+  await page.waitForTimeout(900);
+
+  const before = await page.evaluate(() => {
+    const btn = document.querySelector('[data-share-wechat]');
+    return {
+      exists: !!btn,
+      hidden: btn ? btn.hasAttribute('hidden') : null,
+      qrRequested: null,
+    };
+  });
+  check('中文详情页有微信按钮', before.exists === true);
+  check('脚本跑完后按钮可见', before.hidden === false, `hidden=${before.hidden}`);
+  check('首屏没有加载二维码库', requested.length === 0, `${requested.length} 个请求`);
+
+  if (before.exists) {
+    await page.click('[data-share-wechat]');
+    await page.waitForTimeout(700);
+    const opened = await page.evaluate(() => {
+      const panel = document.querySelector('.han-sharecard');
+      const svg = panel?.querySelector('svg');
+      const path = svg?.querySelector('path');
+      return {
+        open: !!panel && !panel.hidden,
+        role: panel?.getAttribute('role'),
+        qrLoaded: !!window.qrcode,
+        hasPath: !!path && (path.getAttribute('d') || '').length > 40,
+        hasUrl: (panel?.querySelector('.han-sharecard__url')?.textContent || '').includes('newnju.github.io'),
+        expanded: document.querySelector('[data-share-wechat]')?.getAttribute('aria-expanded'),
+      };
+    });
+    check('点开微信出现弹层', opened.open === true, JSON.stringify(opened));
+    check('弹层是 dialog 且 aria-expanded 同步', opened.role === 'dialog' && opened.expanded === 'true', JSON.stringify(opened));
+    check('二维码库在点开时才加载', requested.length === 1 && opened.qrLoaded === true, `请求 ${requested.length} 个`);
+    check('二维码真的画出来了（path 有内容）', opened.hasPath === true);
+    check('弹层里能看到本页绝对地址', opened.hasUrl === true);
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const closed = await page.evaluate(() => document.querySelector('.han-sharecard')?.hidden);
+    check('ESC 关闭弹层', closed === true, `hidden=${closed}`);
+  }
+
+  // 窄屏也不能溢出
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  check('详情页 1366px 无横向溢出', overflow <= 1, `${overflow}px`);
+  await ctx.close();
+}
+
 await browser.close();
 if (server) server.close();
 

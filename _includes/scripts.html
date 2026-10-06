@@ -18,6 +18,21 @@
 <script src="{{ base_path }}/assets/js/han.js" async></script>
 
 {%- comment -%}
+  微信二维码弹层（assets/js/share-wechat.js）。三道门都得同时成立才输出：
+    page.share ——  _config.yml 的 defaults 给各集合开了，关掉分享的页面不加载；
+    locale 含 zh —— 只有 social-share.html 的中文分支才有那个微信按钮，英文页
+                   渲染出来是 Bluesky/Facebook/…，加载这份脚本纯属浪费；
+    defer 而不是 async —— 脚本第一步就 querySelector 分享区，async 有跑到
+                   文档解析完之前的风险，那时它会判定「没有微信按钮」而直接
+                   return，按钮就永远藏着了。defer 保证在解析完之后执行。
+  二维码库（qrcode.min.js，20KB）不在这儿：点微信时脚本才插 <script>。
+{%- endcomment -%}
+{%- assign _share_locale = page.locale | default: site.locale -%}
+{%- if page.share and _share_locale contains 'zh' -%}
+<script src="{{ base_path }}/assets/js/share-wechat.js" defer></script>
+{%- endif -%}
+
+{%- comment -%}
   第一方访客打点（analytics/README.md）。端点取 _config.yml 的
   analytics.visit_endpoint：留空就不输出这段标签，客户端一行请求都不会发。
   端点填的是 stats.<域名> 这个 Worker，和 oauth-proxy 分开部署。

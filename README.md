@@ -421,6 +421,17 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 
 **减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显、点击涟漪、时间轴点亮）；回到顶部按钮照常显隐、只是没有过渡动画；打印时装饰层不印（含回到顶部按钮与时间轴彩轴）、渐显元素直接给完整不透明度，不会打出来一片空白。
 
+**分享到（中文 微信 · QQ · X，英文维持原五个）**（`_includes/social-share.html` + `assets/js/share-wechat.js` + `_sass/_han.scss` 第 29 节）：分享区按 locale 分叉 —— **中文页只有三个按钮，微信在最左**（微信 → QQ → X），Bluesky / Facebook / LinkedIn / Mastodon 一律不出现；**英文页一个字节都没改**，仍是原来五个、连顺序都保持 Bluesky → Facebook → LinkedIn → Mastodon → X（X 一直排最后，没为了跟中文对齐去动它）。
+
+微信之所以是 `<button>` 而不是链接，是因为它**没有**网页端分享 URL：JS-SDK 的分享接口要公众号 AppID 加服务端签名，静态站凑不出签名，任何 `wxshare://` 之类的私有协议都不能保证到人。所以点了弹出**本页地址的二维码**（微信「扫一扫」直接打开）外加一个「复制链接」，两条路都通；二维码由 `assets/js/qrcode.min.js`（qrcode-generator@1.4.4，MIT，20KB，带原版权头）在**本机**算出来，白底黑码 —— 暗色主题下也不反色，扫码靠的是对比度不是配色。
+
+- **点开才下载**：`qrcode.min.js` 不在首屏，绝大多数访客不会点微信，不该为它付 20KB。二维码库的地址是从 `share-wechat.js` 自己的 `src` 推出来的，所以 `_config.yml` 改 `baseurl` 时它自动跟着走（这条有断言：脚本挂到 `/sub/` 下时要请求 `/sub/assets/js/qrcode.min.js`）。
+- **门控两道**：`_includes/scripts.html` 只在 `page.share` 且 locale 含 `zh` 时输出脚本（英文页渲染出来是 Bluesky 那套，加载它纯属浪费）；按钮 HTML 自带 `hidden`，脚本成功跑完才摘掉 —— 没 JS 时宁可不显示，也不给一个点了没反应的按钮。
+- **用 `defer` 不用 `async`**：脚本第一步就 `querySelector` 分享区，async 有跑到文档解析完之前的风险，那时它会判定「没有微信按钮」直接 return，按钮就永远藏着。
+- **文案一个字都不写在 JS 里**：全部来自 `_data/ui-text.yml` 的 `zh` 段（`share_wechat` / `share_qq` / `share_dialog_label` / `share_scan_hint` / `share_copy_link` / `share_copied_link` / `share_close`），由模板打成 `.page__share` 上的 `data-label-*`。换语言只动 YAML。
+- **图标要重建子集**：`fa-weixin`（U+F1D7）与 `fa-qq`（U+F1D6）是新用到的字形，改完要 `npm run fonts`，否则字体里没有这两个码位、按钮上就是豆腐块（`npm run check:icons` 会拦）。
+- **两条测试**：`tests/social-share.test.mjs` 断言渲染出来的按钮集合（中英各是哪几个、什么顺序、绝对地址、`rel="noopener noreferrer"`、文案与 ui-text 一致）—— 按钮集合的差异只存在于 `{% if %}` 分支里，源码看不出、构建也不报错；`tools/check-dom-behavior.mjs` 第 6 项在浏览器里断言弹层交互与按需加载（按钮显隐、`role="dialog"`、二维码 path、首屏不请求二维码库、ESC 关闭、1366px 无溢出）。
+
 ---
 
 ## 四、日常维护
@@ -478,6 +489,7 @@ git push
 | **履历条目的时间样式**（日期统一 `.han-cv-date`） | 日期是数据而不是文案：`_data/profile.yml` 每个 education / work 条目带 `daterange` / `daterange_en`（中英各一份），渲染时在 `_includes/han-cv-timeline.html`（学位大标题末尾用逗号、条目句首用冒号）与 `_includes/han-education.html`（关于页，句首）包成 `.han-cv-date`；样式只有 `_sass/_han.scss` 第 19 节一处 |
 | **履历时间轴的分期与内容**（博士 / 硕士 / 本科三个学历大块，过渡期内容排在博士与硕士块之间；块内嵌任职、项目、获奖，均为裸列表不加小节标签） | `_data/profile.yml` 的 `period`（phd / gap / master / bachelor）、`_data/awards.yml` 各条目的 `period`、`_portfolio/*` 的 `period`；标题样式在 `_sass/_han.scss` 第 19 节 |
 | **获奖与荣誉的数据**（`/timeline/` 时间轴 + 首页「荣誉」「获奖」两节 + 履历时间轴与「荣誉」节） | `_data/awards.yml`。`key: honours` 那一组是「荣誉」，单独显示在首页与履历页的「荣誉」小节（不参与分期）；其余年份分组显示在「获奖」小节、时间轴页，并按 `period` 进履历时期块 |
+| **分享到**（中文 微信 · QQ · X，英文维持原五个） | 目标按语言分叉在 `_includes/social-share.html`（`_locale contains 'zh'` 走微信/QQ/X，否则原样输出 Bluesky/Facebook/LinkedIn/Mastodon/X）；微信是 button 不是链接 —— 弹层逻辑 `assets/js/share-wechat.js`，由 `_includes/scripts.html` 在「`page.share` 且 locale 含 zh」时以 `defer` 输出；二维码库 `assets/js/qrcode.min.js`（qrcode-generator@1.4.4，MIT）点开才下载，路径从脚本自身 `src` 推导；样式 `_sass/_han.scss` 第 29 节；文案 `_data/ui-text.yml` 的 `zh` 段 `share_*` 七个键（换语言只动 YAML）。**改完记得 `npm run fonts`** —— `fa-weixin` / `fa-qq` 是新字形，不重建子集就是豆腐块。测试 `tests/social-share.test.mjs`（按钮集合）+ `tools/check-dom-behavior.mjs` 第 6 项（弹层交互） |
 | 论文条目 | `_publications/` 下的 Markdown 文件。论文页、履历页「论文列表」、主页「近期成果」（自动取最新 3 篇）与 RSS feed 全部随它更新，不用手改页面 |
 | 项目与作品条目 | `_portfolio/` 下的 Markdown 文件。front matter 的 `date`（排序）、`daterange`（履历展示的日期跨度，如 `2019.09 – 2021.09`）、`period`（进履历哪段时期块）会同步到履历时间轴 |
 | 会议与暑期学校条目 | `_talks/` 下的 Markdown 文件 |

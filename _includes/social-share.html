@@ -1,16 +1,39 @@
 
 {%- comment -%}
   界面文案按当前页面的 locale 取，英文页自然拿到 en 那套；缺了再回落到站点默认。
+
+  分享目标按语言分叉 —— 这是内容差异，不是样式差异：
+    * 中文（zh*）：只有 微信 · QQ · X。微信**没有**网页端分享 URL（JS-SDK 要公众号
+      AppID 加服务端签名，静态站做不了），所以它是个 button，点了由
+      assets/js/share-wechat.js 弹出本页二维码，扫码即达；QQ 走官方分享组件。
+    * 其余语言：维持原来五个（Bluesky / Facebook / LinkedIn / Mastodon / X），
+      顺序也一并维持 —— 那套在用的东西，没必要为了跟中文对齐去改它。
+
+  微信按钮默认 hidden：脚本没跑起来就别露出一个点了没反应的按钮。
 {%- endcomment -%}
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
   {% include base_path %}
 
-<section class="page__share">
+<section class="page__share"
+         data-url="{{ base_path }}{{ page.url }}"
+         data-label-scan="{{ _ui.share_scan_hint | default: '用微信扫一扫' }}"
+         data-label-dialog="{{ _ui.share_dialog_label | default: '微信分享' }}"
+         data-label-copy="{{ _ui.share_copy_link | default: '复制链接' }}"
+         data-label-copied="{{ _ui.share_copied_link | default: '已复制' }}"
+         data-label-close="{{ _ui.share_close | default: '关闭' }}">
   {% if _ui.share_on_label %}
     <h4 class="page__share-title">{{ _ui.share_on_label | default: "Share on" }}</h4>
   {% endif %}
 
+  {% if _locale contains 'zh' %}
+  <button type="button" class="btn btn--wechat" data-share-wechat hidden aria-haspopup="dialog" aria-expanded="false" title="{{ _ui.share_on_label | default: 'Share on' }} {{ _ui.share_wechat | default: '微信' }}"><i class="fab fa-weixin" aria-hidden="true"></i><span> {{ _ui.share_wechat | default: '微信' }}</span></button>
+
+  <a href="https://connect.qq.com/widget/shareqq/index.html?url={{ base_path | append: page.url | url_encode }}&title={{ page.title | default: site.title | url_encode }}" class="btn btn--qq" target="_blank" rel="noopener noreferrer" title="{{ _ui.share_on_label | default: 'Share on' }} {{ _ui.share_qq | default: 'QQ' }}"><i class="fab fa-qq" aria-hidden="true"></i><span> {{ _ui.share_qq | default: 'QQ' }}</span></a>
+
+  <a href="https://x.com/intent/post?text={{ base_path }}{{ page.url }}" class="btn btn--x" title="{{ _ui.share_on_label | default: 'Share on' }} X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span> X (formerly Twitter)</span></a>
+
+  {% else %}
   <a href="https://bsky.app/intent/compose?text={{ base_path }}{{ page.url }}" class="btn btn--bluesky" title="{{ _ui.share_on_label | default: 'Share on' }} Bluesky"><i class="fab fa-bluesky" aria-hidden="true"></i><span> Bluesky</span></a>
 
   <a href="https://www.facebook.com/sharer/sharer.php?u={{ base_path }}{{ page.url }}" class="btn btn--facebook" title="{{ _ui.share_on_label | default: 'Share on' }} Facebook"><i class="fab fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
@@ -20,4 +43,5 @@
   <a href="https://www.addtoany.com/add_to/mastodon?linkurl={{  base_path | append: page.url | url_encode }}" class="btn btn--mastodon" title="{{ _ui.share_on_label | default: 'Share on' }} Mastodon"><i class="fab fa-mastodon" aria-hidden="true"></i><span> Mastodon</span></a>
 
   <a href="https://x.com/intent/post?text={{ base_path }}{{ page.url }}" class="btn btn--x" title="{{ _ui.share_on_label | default: 'Share on' }} X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span> X (formerly Twitter)</span></a>
+  {% endif %}
 </section>
