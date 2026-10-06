@@ -1,0 +1,35 @@
+# Cloudflare Worker + D1 的访客统计。部署步骤见同目录 README.md。
+#
+#   cd analytics
+#   npx wrangler d1 create site-stats      # 把返回的 database_id 填到下面
+#   npx wrangler d1 execute site-stats --file=./schema.sql
+#   npx wrangler secret put STATS_TOKEN
+#   npx wrangler deploy
+#
+# 与 oauth-proxy 分开部署：那个域名负责交 GitHub token，是后台的门；
+# 这个域名负责收访客数据，权限面完全不同，混在一个域名上会让两边都更难收紧。
+
+name = "site-stats"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+# 打点端点用独立子域，和 oauth 那套隔开
+route = { pattern = "stats.oaking.kdns.fr", zone_name = "oaking.kdns.fr", custom_domain = true }
+workers_dev = true
+
+# 访客明细。删掉 database_id 里的引号内容换成上一步拿到的 id
+[[d1_databases]]
+binding = "DB"
+database_name = "site-stats"
+database_id = "在这里填 wrangler d1 create 给的 database_id"
+
+# 明细保留 180 天，到点自动删（UTC 03:17）
+[triggers]
+crons = ["17 3 * * *"]
+
+# 变量走 secret，不写在这个文件里：
+#   npx wrangler secret put STATS_TOKEN       统计面板 / 接口的密码
+#   npx wrangler secret put ALLOWED_ORIGIN    可选，默认 https://newnju.github.io
+#   npx wrangler secret put IP_SALT           可选，换掉等于让历史去重失效
+#   npx wrangler secret put RETENTION_DAYS    可选，默认 180
+#   npx wrangler secret put STORE_RAW_IP      可选，设成 1 才存明文 IP（默认不存）

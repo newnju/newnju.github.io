@@ -17,6 +17,16 @@
 {% endif %}
 <script src="{{ base_path }}/assets/js/han.js" async></script>
 
+{%- comment -%}
+  第一方访客打点（analytics/README.md）。端点取 _config.yml 的
+  analytics.visit_endpoint：留空就不输出这段标签，客户端一行请求都不会发。
+  端点填的是 stats.<域名> 这个 Worker，和 oauth-proxy 分开部署。
+{%- endcomment -%}
+{%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
+{%- if _visit_endpoint and _visit_endpoint != '' %}
+<script src="{{ base_path }}/assets/js/visit.js" async data-endpoint="{{ _visit_endpoint }}"></script>
+{%- endif -%}
+
 {% include analytics.html %}
 
 {% include comments-providers/scripts.html %}

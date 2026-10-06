@@ -283,6 +283,52 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 那样中文页也会优先显示英文，条目一补英译，中文列表就整排变英文。
 中文页的中文标题/摘要/期刊/引用与英文页的英文版本，两边都要抽查。
 
+#### 自动翻译（`tools/translate-en.mjs`，可选）
+
+`*_en` 字段可以由中文自动生成，模型走 OpenAI 兼容的
+`https://index-translate.bilibili.com/v1`（`Index-Translate-35B-A3B`，无需 key）。
+它只覆盖 front matter 与 `_data` 里的成对字段，共 92 处：
+
+```
+npm run translate:en            # 翻译并写回
+npm run check:translate         # 离线检查「中文改了但英文没跟上」（只报不挡）
+node tools/translate-en.mjs --dry-run    # 打印将要写入的内容，不落盘
+node tools/translate-en.mjs --force      # 忽略哈希，全部重译（覆盖人工译文）
+node tools/translate-en.mjs --only talks # 只处理某类
+```
+
+**覆盖策略（唯一要紧的设计）**：状态文件 `tools/translate-state.json` 记着每处英文
+对应的那句**中文**的哈希 ——
+
+| 情况 | 行为 |
+| --- | --- |
+| 中文没变 | 一个字都不碰，人工润色过的译文因此得以保留 |
+| 中文变了 | 重译并覆盖，`中 / 旧 / 新` 三行一组打出来供 review |
+| 英文缺失 | 直接补上 |
+| 首次见到（无记录） | **只登记哈希，不覆盖任何现成英文** |
+
+删掉状态文件即回到「只登记不覆盖」的保守状态。CI 里有一个只报不挡的
+`zh/en translation drift reminder` 步骤盯着漂移。
+
+**刻意不翻**：`citation`（GB/T 7714 与英文引文体例各有一套）、`location`
+（「中国 · 南京」↔「Nanjing, China」，语序分隔符都不同）、`daterange` / `date` /
+`datetext`（英文页有两种日期写法，何时用哪种是人判断的）、`bibtex`。
+页面正文散文（`_pages/en/*.md` 的段落）不在范围内。
+
+**为什么译文能保住术语**：送进模型前，先把术语（`tools/translate-glossary.yml`）、
+Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，随文附一份
+「`[[3]] = 四神博局镜 → four-deity TLV mirror`」的对照说明；模型只译中文散文、
+逐字带回符号。术语表是从现有英文页倒推出来的 —— 英文页是人工润色过的，那里的译法
+就是本站口径。占位符用纯 ASCII 是有原因的：实测 `⟦n⟧` 会被这个模型的分词器偶尔咬坏。
+
+**三道写回前的校验**（任一不过就**保留原值**、只报错 —— 半句译文进页面比旧译文更糟）：
+占位符片段是否都在、译文里有没有漏出来的汉字、译文是否非空。
+写文件时还会重新解析一遍 YAML，确认除目标字段外语义没变；变了就整个放弃写入。
+`--force` 全量重译的实测成功率约 93%（92 处里 6 处被校验拦下），
+拦下的那几处基本都是模型把专名理解错了 —— 这类语义错误校验查不出来，
+所以自动译文始终是**草稿**，要人过一眼再定稿。
+
+
 ### 7. 页脚（跟随正文，位于页面最下面）
 
 页脚**不再钉在视口底部**。它原本是 `position: fixed; bottom: 0`，于是从头滚到尾都占着视口最下面一条；
@@ -336,6 +382,16 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 **回到顶部按钮**（`han.js` 第 13 节 + 第 25 节样式）：JS 生成的右下角紫圆钮（页面 HTML 一行不动），滚过半屏才浮出、点击平滑回顶；≥1200px 自动挪到缩略图左侧不重叠（z-index 40，缩略图 30、导航下拉 100）；reduced-motion 照常显隐只是没有过渡动画，打印不印。
 
 **卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS，每帧最多重算一次（rAF 节流）；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
+
+**首页首段打字机**（`han.js` 第 15 节 + 第 27 节样式）：首页（`/` 与 `/en/`）第一段逐字打出来，行尾挂一根闪烁的竖条，标点后另有停顿。开关是页面 front matter 的 `typed_intro: true` —— `_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`，脚本只取该容器的**第一个 p**（博局镜装饰是 div，不掺和）。几条刻意的取舍：
+
+- **原文始终在 HTML 里**：服务端渲染的就是完整一段，脚本只是把 DOM 逐字改写，所以无 JS、关 JS 打印、抓取、首屏 SEO 都不受影响；reduced-motion 用户脚本直接不跑（第 17 节样式再兜底藏掉光标）。
+- **计时用 rAF 的时间戳**：不是「每帧加一个字」。切走标签页再回来会按真实时间一次性补齐缺的字，不会永远停在半句上。
+- **节奏按字数摊**：停顿写成「几倍基准间隔」而不是固定毫秒，跟着整体速度一起缩放（中文 212 字约 2.9 秒，英文 710 字由 4.2 秒的上限压住 —— 若停顿写成固定值，英文那段光停顿就叠出 3.5 秒，要打 7.9 秒）。
+- **锁住段落高度**：打字期间下面所有内容都在往上爬，等于每次访问白送一次布局位移，所以起步前量一次满行高度写进 `min-height`，打完撤掉。
+- **点一下就好**：`pointerdown` / 滚轮 / 按键任意一次都立刻补完 —— 想选中复制这段文字的人总得先按一下或拖一下，于是「点一下就好」顺带把复制也救了。
+- **行内标签不丢**：按子节点切段，`<strong>` / `<em>` / `<a>` 连标签带属性留着，只往里逐字填 `textContent`，加粗与链接不会被抹平。
+
 
 **性能与跨设备加固**（这一轮的取舍都写在改动处）：
 
@@ -404,13 +460,14 @@ git push
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
 | **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜、项目页字号**（第 22–26 节） | `_sass/_han.scss` 第 22–26 节（第 26 节纯样式、无 JS，包装层在 `_pages/portfolio.html` 与 en 版）+ `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
+| **首页首段打字机**（首页第一段逐字打出、行尾闪烁光标） | 开关是 `_pages/about.md` 与 `_pages/en/about.md` 的 front matter `typed_intro: true`（后台字段在 `admin/config.yml`，键名登记在 `schemas/page.schema.json`）；`_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`；行为在 `assets/js/han.js` 第 15 节（节奏常量也在那一节），光标样式在 `_sass/_han.scss` 第 27 节，reduced-motion 与打印的兜底在第 17 节。**改完正文不用动它**：字数变了按比例自动重算时长 |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
 | **窄屏汉堡菜单**（≤768px 时顶栏条目整体收进汉堡，只留站点名） | 折叠逻辑在 `assets/js/han.js` 第 2 节（六个栏目 + 语言切换 + 主题切换一起进下拉，回到宽屏按原序插回站点名之后）；下拉里的样式（限高 70vh 可滚、主题按钮对齐同级链接）在 `_sass/_han.scss` 第 9 节。汉堡按钮的显示条件是「下拉里确实折了东西」（`.has-overflow`，由 `han.js` 打），不只看窄屏 —— 宽屏放不下时末尾栏目也会被折进去（实测 900px 上下履历正好被折），按钮不出现就点不到。`jquery.greedy-navigation.js` 只负责「量宽度决定往哪折」与量顶栏高度，展开/收起统一由 `han.js` 管 —— 两边都绑 click 会把同一个类切两遍、互相抵消 |
 | **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 58.5px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白。**插件源码改完要跑 `npm run build:js` 重新生成 `assets/js/main.min.js`**（页面加载的是这个打包产物，不是插件文件本身） |
 | **全站已无 jQuery**（`main.min.js` 100.4KB → 17.6KB，gzip 后每页少约 30KB） | 原先 jQuery 只被 `_main.js`（主题切换、联系方式折叠）与 `greedy-navigation.js`（量宽度折行）用到，已全部改写成原生 DOM，行为由 `npm run check:behavior` 逐条断言。文件名 `jquery.greedy-navigation.js` 沿用上游命名、内容已是原生实现，只是改名要动多处引用，不值当。唯一残留的 jQuery 用法在 `_includes/comments-providers/staticman.html`，而 `comments.provider` 是 `false`，那个文件永远不会被 include |
 | **明暗主题**（跟随系统偏好，可手动覆盖） | 落位在 `_includes/head/custom.html` 的内联脚本（首次绘制前定 `data-theme`）+ `_sass/theme/_han_dark.scss` 的变量 mixin（含 `prefers-color-scheme` 兜底）；切换按钮在 `_includes/masthead.html`，文案取 `ui-text.yml` 的 `theme_toggle_label`；点击处理在 `assets/js/_main.js` 的 `toggleTheme`（打进 `main.min.js`，改完要 `npm run build:js`） |
-| **图标字体子集**（首屏大头，277KB → 11KB） | `tools/subset-fonts.js`（`npm run fonts`），码位由源码与 `assets/js` 脚本里出现的 `fa-*` 类名反查 `_sass/vendor/font-awesome/_variables.scss` 得到；完整原字在 `assets/webfonts/full/`（不发布），产物是 `assets/webfonts/fa-{solid-900,brands-400}.{woff2,ttf}` |
+| **图标字体子集**（首屏大头，277KB → 11KB） | `tools/subset-fonts.js`（`npm run fonts`），码位由源码与 `assets/js` 脚本里出现的 `fa-*` 类名反查 `_sass/vendor/font-awesome/_variables.scss` 得到；完整原字在 `assets/webfonts/full/`（不发布），产物是 `assets/webfonts/fa-{solid-900,brands-400}.{woff2,ttf}`。**写图标时家族前缀要对**：Font Awesome 6 里 `fa-rss-square` 已改名 `fa-square-rss` 且搬进 **solid**，写成 `fab` 就是页脚上一个空豆腐块（`npm run check:icons` 专门查这个，纯文本比对，不要 Python） |
 | **首页自我介绍** | `_pages/about.md` |
 | **教育背景、联系方式、工作与任职**（主页中英两版；履历页的「联系方式」章节已按需求删除，不再 include `han-contact.html`） | `_data/profile.yml`（education / work / contact；条目上的 `period` 字段决定它进履历哪段时期块）。渲染逻辑在 `_includes/han-education.html` / `han-contact.html`（现只剩主页在用），履历合并时间轴在 `han-cv-timeline.html`，一般不用动 |
 | **履历页结构**（章节顺序、证书、技能） | `_pages/cv.md` 与 `_pages/en/cv.md`。「学历与经历」标题已按需求删除（合并时间轴直接跟在页题下）；章节顺序为 合并时间轴 → 荣誉 → 论文列表 → 证书 → 技能 → 会议与暑期学校 → 教学与助教。该节内容已改由 `_data` 与集合驱动，见上下几行 |
@@ -422,6 +479,9 @@ git push
 | 会议与暑期学校条目 | `_talks/` 下的 Markdown 文件 |
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
 | **英文版页面** | `_pages/en/` 下的同名文件 |
+| **`*_en` 字段（自动翻译）** | 术语表在 `tools/translate-glossary.yml`、行为与覆盖策略在 `tools/translate-en.mjs`（`npm run translate:en` / `npm run check:translate`）、每处英文对应的中文哈希在 `tools/translate-state.json`（进仓库，删掉即回到保守状态）。中文没变就不覆盖人工译文 —— 见上面「英文版」一节 |
+| **后台登录 / 权限** | `oauth-proxy/worker.js`（Cloudflare Worker）。白名单 `ALLOWED_GITHUB_USERS` 是强制的 —— 不配后台登不进去；postMessage 锁 `SITE_ORIGIN`；state cookie 用完即废；每次登录尝试写一行审计日志。密钥用 `npx wrangler secret put`，**不进仓库**。行为有测试：`node --test tests/oauth-proxy.test.mjs` |
+| **访客统计** | 默认关闭。开关是 `_config.yml` 的 `analytics.visit_endpoint`（留空 = 一个请求都不发）；打点脚本 `assets/js/visit.js`；收数据的 Worker 与库表在 `analytics/`（D1 + Cloudflare GeoIP）。**不存明文 IP**，只存按天轮换盐的哈希；不写 cookie、不引第三方脚本；浏览器开了 Do Not Track / Global Privacy Control 就不上报。部署与看数据见 [`analytics/README.md`](analytics/README.md) |
 | 首页的博局镜图 | `_includes/han-mirror.html` |
 | 头像 | 侧栏显示的是 `images/avatar.webp`（400×400、正方形、背景已抠透明，14KB；由原图转出，原 `avatar.png` 119KB 只留给 `og_image` 分享预览），引用在 `_config.yml` 的 `author.avatar` 与 `_data/authors.yml` —— 换头像时两处一起改、并重转一次 WebP。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片 158px 见方、不加外框（描边 / 光圈 / 内边距都去掉了），大屏下整块**上移 30px**、右移 4px，头像顶端因此固定落在「顶栏下沿 + 6px」。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
 | 项目配图 | 没有默认封面。想加就把图放进 `images/portfolio/`，在条目 front matter 里用 `excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"` 引它（模板自带的示例 SVG 已删除，目录是空的） |
@@ -508,8 +568,36 @@ datetext: "2026.05"              # 可留空，留空则页面上不显示时间
 #### 第一次用前要配一次登录
 
 GitHub 登录走的是自建代理（client secret 不能写进公开仓库），**只需配一次**，
-照 [`oauth-proxy/README.md`](oauth-proxy/README.md) 分四步做完即可；之后任何人打开
-`/admin/` 点登录都能用。
+照 [`oauth-proxy/README.md`](oauth-proxy/README.md) 做完即可；之后**只有白名单里的
+GitHub 账号**打开 `/admin/` 点登录能进，其余一律 403。
+
+除了 OAuth App 的 client id / secret，还要配两个密钥：
+
+```bash
+cd oauth-proxy
+npx wrangler secret put ALLOWED_GITHUB_USERS   # 自己的 GitHub 用户名；不配 = 后台登不进去
+npx wrangler secret put SITE_ORIGIN           # 可选，Decap 前端来源，默认 https://newnju.github.io
+```
+
+**「保存 = 提交」意味着登录权限等于仓库写权限**，所以那道门有三个属性值得记住：
+
+- **默认拒绝**：白名单为空时 `/auth` 直接 503，不会「先放行再说」。改配置前如果
+  `/admin/` 突然登不进去，先看 `npx wrangler secret list` 里有没有这一条。
+- **服务端校验**：白名单是在 Worker 侧拿新换到的 token 调 `GET /user` 核对的，
+  在 token 交到浏览器**之前**；不是靠前端藏按钮。
+- **有审计记录**：每次登录尝试（开始 / 成功 / 被挡下 / state 不匹配 / 换 token 失败）
+  都往 Workers Logs 写一行 JSON（谁、什么时间、哪个 IP、国家、城市）。Workers Logs
+  默认只留 3 天；要留更久就在 `wrangler.toml` 里挂一个 Analytics Engine 的
+  `AUDIT` 绑定，详见 README 的「审计记录」。
+
+真要「随便谁都打不开」，还有一层：Cloudflare Access（Zero Trust）把
+`oauth.oaking.kdns.fr` 挡在邮箱登录后面 —— 免费额度够，代价是多一次登录。
+
+后台行为有单元测试，改 `oauth-proxy/worker.js` 之后跑一遍：
+
+```bash
+node --test tests/oauth-proxy.test.mjs
+```
 
 ### 提交前自检
 
@@ -672,10 +760,11 @@ bundle exec jekyll serve
 ├── _talks/              会议与暑期学校条目
 ├── _teaching/           教学与助教条目
 ├── admin/               Decap CMS 网页后台（config.yml 是字段定义）
-├── oauth-proxy/         GitHub 登录的 Cloudflare Worker 代理（不发布到站点）
+├── oauth-proxy/         GitHub 登录的 Cloudflare Worker 代理（不发布到站点；安全边界见其 README）
+├── analytics/           访客统计的 Cloudflare Worker + D1（不发布到站点；默认关闭，见其 README）
 ├── schemas/             内容校验规则（validate.mjs 读这里）
-├── tools/               内容生成器、校验器、结构检查器、中英同步提醒（npm run check 跑这些）
-├── tests/               回归测试（npm test，40 个）
+├── tools/               内容生成器、校验器、结构检查器、中英同步与自动翻译（npm run check 跑这些）
+├── tests/               回归测试（npm test，66 个：渲染产物、Decap 字段一致性、OAuth 门、访客统计）
 ├── .github/workflows/   CI：先校验测试，再 Jekyll 构建，最后检查产物
 ├── assets/              样式与脚本（han.js 为本站自定义脚本：BibTeX 复制、引用复制、缩略图导航）
 ├── robots.txt           允许全站抓取，并声明 Sitemap 位置

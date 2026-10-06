@@ -162,8 +162,15 @@ social:
 
 
 # Analytics
+# provider 仍是 false：Google Analytics 之类一律没接。
+# visit_endpoint 是**第一方**打点（自己的 Cloudflare Worker + D1，见 analytics/README.md）：
+#   留空 = 全站不发任何统计请求（默认，保持零追踪）；
+#   填上端点后，每次打开页面由 assets/js/visit.js 报一次路径 / 来源 / 语言，
+#   时间、IP、城市由服务端从请求本身取；不写 cookie、不引第三方脚本，
+#   浏览器开了 Do Not Track / Global Privacy Control 就不上报。
 analytics:
   provider               :  false # false（默认）/ "google" / "google-universal" / "google-analytics-4" / "custom"
+  visit_endpoint         :  ""    # 例：https://stats.oaking.kdns.fr/api/visit
   google:
     tracking_id          :
 
@@ -180,6 +187,9 @@ exclude:
   - .bundle
   - .cache
   - .github
+  # analytics/ 与 oauth-proxy/ 是 Worker 的源码与部署配置（wrangler.toml 里
+  # 有 D1 的 database_id、schema.sql 是库结构），一律不发布。
+  - analytics
   - .jekyll-assets-cache
   - .sass-cache
   - assets/js/_main.js
