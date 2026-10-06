@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 交互行为回归：主题切换、联系方式折叠、顶栏折行、顶栏高度变量。
+// 交互行为回归：主题切换、联系方式折叠、顶栏折行、顶栏高度变量、微信分享弹层。
 //
 // 为什么要有这个：把 jQuery 换成原生 JS 时，截图只能看出外观，看不出「点了有没有反应」。
 // 这个文件把交互拆成可断言的行为，换库前后跑同一套，输出必须逐条一致。
@@ -34,6 +34,23 @@ const MIME = {
 
 let origin = BASE;
 let server = null;
+
+/* 把 URL 路径解析成 _site 里的真实文件，本地服务器与下面的改道共用同一套
+   规则 —— 两边对「这个地址有没有对应的本地文件」的判断必须一致。 */
+function resolveInSite(pathname) {
+  let p;
+  try { p = decodeURIComponent(pathname); } catch { p = pathname; }
+  let file = path.join(SITE_DIR, p);
+  if (!file.startsWith(SITE_DIR)) return null;
+  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    const cands = p.endsWith('/')
+      ? [path.join(SITE_DIR, p + 'index.html')]
+      : [path.join(SITE_DIR, p + '/index.html'), path.join(SITE_DIR, p + '.html'), path.join(SITE_DIR, p)];
+    file = cands.find((c) => fs.existsSync(c) && fs.statSync(c).isFile());
+  }
+  return file || null;
+}
+
 if (!origin) {
   if (!fs.existsSync(SITE_DIR)) {
     console.log('behavior: _site 不存在，跳过（先 bundle exec jekyll build）');
@@ -42,14 +59,7 @@ if (!origin) {
   server = http.createServer((req, res) => {
     let p;
     try { p = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400).end(); return; }
-    let file = path.join(SITE_DIR, p);
-    if (!file.startsWith(SITE_DIR)) { res.writeHead(403).end(); return; }
-    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      const cands = p.endsWith('/')
-        ? [path.join(SITE_DIR, p + 'index.html')]
-        : [path.join(SITE_DIR, p + '/index.html'), path.join(SITE_DIR, p + '.html'), path.join(SITE_DIR, p)];
-      file = cands.find((c) => fs.existsSync(c) && fs.statSync(c).isFile());
-    }
+    const file = resolveInSite(p);
     if (!file) { res.writeHead(404).end('not found'); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream' });
     res.end(fs.readFileSync(file));
@@ -66,6 +76,29 @@ const browser = await chromium.launch();
 async function newPage(viewport) {
   const ctx = await browser.newContext({ viewport });
   const page = await ctx.newPage();
+  /* 页面里的资源全是绝对地址（_config.yml 的 site.url → base_path），于是浏览器
+     会去**生产站**拿 CSS/JS，而不是拿我们刚构建的这份：本地检查测的其实是线上
+     旧版 —— 新脚本一天没部署，这台检查就一天测不到它（微信按钮的 hidden 也就
+     永远摘不掉，反过来把「还没上线」判成「上线后是坏的」）。
+     这里把跨 origin 的请求按路径改回本地 _site：磁盘上有就吃本地的（那才是被测
+     对象），没有才放行（打点端点、外链本来就该出去）。--base 是拿别的地址来跑
+     的，不改道。后注册的 route 先匹配，所以 INJECT 仍压得住 main.min.js。 */
+  if (!BASE) {
+    await page.route(/^https?:\/\//, async (route) => {
+      try {
+        const url = new URL(route.request().url());
+        if (url.origin === origin) return await route.continue();
+        const file = resolveInSite(url.pathname);
+        if (!file) return await route.continue();
+        await route.fulfill({
+          body: fs.readFileSync(file),
+          contentType: MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream',
+        });
+      } catch {
+        await route.continue().catch(() => {});
+      }
+    });
+  }
   if (INJECT) {
     const body = fs.readFileSync(path.resolve(INJECT), 'utf8');
     await page.route('**/assets/js/main.min.js', (route) =>
