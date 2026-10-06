@@ -267,7 +267,11 @@ body:hover .visually-hidden button {
     color: $pinterest-color;
   }
 
+  // fa-rss-square 是 FA5 的旧名：Font Awesome 6 里这个图标已经改名为
+  // fa-square-rss，且住在 solid 那套字体里（brands 里没有它的字形）。
+  // 两个名字都留着，免得换主题时颜色掉回继承。
   .fa-rss,
+  .fa-square-rss,
   .fa-rss-square {
     color: $rss-color;
   }

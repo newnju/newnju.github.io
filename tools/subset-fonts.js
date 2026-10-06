@@ -9,8 +9,9 @@
  * 所以**加图标只要写进模板就行**，不用回来改这里；重跑 npm run fonts 即可。
  * 若临时没装 fonttools（pyftsubset 不在 PATH），脚本只报出缺哪些码位、不动文件。
  *
- * 用法：node tools/subset-fonts.js [--check]
+ * 用法：node tools/subset-fonts.js [--check] [--audit]
  *   --check 只打印将使用的码位与预计体积，不写文件（CI/自查用）
+ *   --audit 只查「图标家族对不对得上」，纯文本分析、不要 Python，退出码非 0 即有问题
  */
 
 "use strict";
@@ -20,7 +21,9 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-const CHECK_ONLY = process.argv.indexOf("--check") !== -1;
+const argv = process.argv.slice(2);
+const CHECK_ONLY = argv.indexOf("--check") !== -1;
+const AUDIT_ONLY = argv.indexOf("--audit") !== -1;
 
 // 会渲染图标的源码位置：模板、页面、集合、样式与脚本
 // assets/js 整目录都要扫：图标类名不只出现在模板里，_main.js 切换主题时才会
@@ -60,6 +63,91 @@ const files = SCAN_DIRS.reduce(function (acc, dir) {
     return path.join(ROOT, f);
   })
 );
+
+// 3. 家族审计：fab / fas 写错字形就只剩一个豆腐块，构建成功、截图也看不出来。
+//    页脚那个「订阅」图标就踩过：Font Awesome 6 里 fa-rss-square 已经改名成
+//    fa-square-rss 并搬进 solid 那套字体，模板却还按 FA5 的习惯写 fab，
+//    brands 字体里没有这个字形 → 页脚上是一个空框。
+//    这里不读字体文件，只比对「类名属于哪张图标表」：solid.scss 生成 $fa-icons
+//    里的类名，brands.scss 生成 $fa-brand-icons 里的，两张表互不相干。
+//    （字形是否真在字体里由 --check 之外的 pyftsubset 那一半负责。）
+function auditFamilies(files) {
+  const vars = fs.readFileSync(
+    path.join(ROOT, "_sass/vendor/font-awesome/_variables.scss"),
+    "utf8"
+  );
+  const slice = (from, to) => {
+    const i = vars.indexOf(from);
+    const j = to ? vars.indexOf(to, i) : vars.length;
+    return new Set((vars.slice(i, j).match(/"([a-z0-9-]+)"\s*:/g) || []).map((s) => s.slice(1, -2)));
+  };
+  const SOLID = slice("$fa-icons:", "$fa-brand-icons:");
+  const BRANDS = slice("$fa-brand-icons:");
+
+  // 家族前缀 → 期望的图标表。裸 fa 是 FA4 写法，这里按 solid 算（FA6 的 .fa
+  // 本来就回落到 Free 那套）；fal（duotone）本站没编译字体，不参与。
+  const FAMILY = { fab: BRANDS, fas: SOLID, far: SOLID, fa: SOLID };
+  const USAGE = /class="([^"]*\bfa-[^"]*)"/g;
+  // 修饰类（fa-fw / fa-spin / fa-3x …）不带字形，别当图标查
+  const MODIFIER = /^(solid|regular|brands|duotone|fw|li|ul|s|spin|spin-reverse|pulse|beat|fade|bounce|shake|border|fixed|layers|inverse|stack|normal|auto|left|right|up|down|horizontal|vertical|both|flip|rotate|rotate-180|rotate-by|flip-horizontal|flip-vertical|flip-both|pull-left|pull-right|[1-9]x|10x|xs|sm|lg|xl|2xl)$/;
+
+  const problems = [];
+  let seen = 0;
+  let skipped = 0;
+  files.forEach((file) => {
+    const rel = path.relative(ROOT, file).split(path.sep).join("/");
+    const text = fs.readFileSync(file, "utf8");
+    let m;
+    while ((m = USAGE.exec(text))) {
+      const classes = m[1].split(/\s+/);
+      // 先找具体家族（fab/fas/far），再退回裸 fa —— 一个元素上可能同时写了
+      // `fa fab fa-github`，按出现顺序取会把裸 fa 抢在前面
+      const family =
+        ["fab", "fas", "far"].find((c) => classes.includes(c)) ||
+        (classes.includes("fa") ? "fa" : null);
+      if (!family) continue;
+      const table = FAMILY[family];
+      classes
+        .filter((c) => c.startsWith("fa-") && !Object.prototype.hasOwnProperty.call(FAMILY, c))
+        .forEach((icon) => {
+          const name = icon.slice(3);
+          if (MODIFIER.test(name)) {
+            skipped++;
+            return;
+          }
+          seen++;
+          const line = text.slice(0, m.index).split("\n").length;
+          if (!table.has(name)) {
+            const other = table === BRANDS ? SOLID : BRANDS;
+            const hint = other.has(name)
+              ? `它是 ${table === BRANDS ? "solid" : "brands"} 图标，要写成 ${
+                  table === BRANDS ? "fas" : "fab"
+                } fa-${name}`
+              : `两张图标表里都没有 fa-${name}`;
+            problems.push(`${rel}:${line}  ${family} fa-${name}  —— ${hint}`);
+          }
+        });
+    }
+  });
+
+  if (!seen) {
+    console.log("audit: 没扫到任何带家族前缀的 fa-* 图标用法");
+    return 0;
+  }
+  if (!problems.length) {
+    console.log(
+      `audit: ${seen} 处「家族 + 图标」用法都对得上（修饰类 ${skipped} 处已跳过）`
+    );
+    return 0;
+  }
+  console.error(`audit: ${problems.length} 处家族写错，页面上会是一个豆腐块：`);
+  Array.from(new Set(problems)).forEach((p) => console.error("  x " + p));
+  return 1;
+}
+
+if (AUDIT_ONLY) {
+  process.exit(auditFamilies(files));
+}
 
 // 1. 收集用到的图标名（fa-github / fa-rss-square / fa-sun …）
 const used = new Set();
