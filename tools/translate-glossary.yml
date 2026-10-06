@@ -1,0 +1,120 @@
+# 自动翻译术语表（tools/translate-en.mjs 读）
+# ---------------------------------------------------------------------------
+# 为什么要有这张表：翻译模型不认识「四神博局镜」，直译会给出 "four gods board
+# game mirror" 这种外行译名；「南京大学新闻传播学院」逐词翻出来是
+# "Nanjing University School of Journalism and Communication"，而站内人工译文
+# 一直是 "School of Journalism and Communication, Nanjing University"（院系在前）。
+#
+# 机制：术语在送进模型前先挖成占位符（⟦3⟧），随文附一份对照说明，模型原样带
+# 回来。所以这里写的英文就是**逐字**进入输出的，不需要靠 prompt 祈祷。
+#
+# 词条从现有英文页**倒推**出来 —— 英文页是人工润色过的，那里的译法就是本站的
+# 既定口径；新译文必须跟它一致，否则同一句话会在站内出现两种说法。
+# 改这里的译法 = 改全站口径，同时记得回头改已经译好的 *_en 字段。
+#
+# 只收「通用翻译一定会译错或译得不一样」的词。三类：
+#   1. 专名（器物、人名、机构全称）—— 直译会变成外行词；
+#   2. 有固定英文写法的字段值（学位、奖项等级）；
+#   3. 语序与本站既有习惯相反的机构名（院系在前）。
+# 刻意**不收**：单个通用词（获 / 优秀 / 研究 / 重点）—— 模型本来就译得对，
+# 硬塞进去反而打断句子；数字、日期、缩写（UCLA、GB/T 等）由 protect() 自动保护；
+# citation / location / daterange / date 这类有固定格式的字段工具根本不翻。
+
+# 机构全称（语序与逐词直译相反，必须整条给出）
+南京大学新闻传播学院: School of Journalism and Communication, Nanjing University
+南京晓庄学院新闻传播学院: School of Journalism and Communication, Nanjing Xiaozhuang University
+南京大学艺术学院: School of Arts, Nanjing University
+南京大学历史学院: School of History, Nanjing University
+北京大学数字人文实验室: Digital Humanities Laboratory, Peking University
+
+# 器物与论文专名
+四神博局镜: four-deity TLV mirror
+四神博局纹: four-deity TLV motif
+博局镜: TLV mirror
+博局纹: TLV motif
+柿蒂纹: persimmon-calyx motif
+四神: four deities
+
+# 人名（模型最爱音译错的地方）
+茅家琦: Mao Jiaqi
+
+# 学校与院系
+南京晓庄学院: Nanjing Xiaozhuang University
+上海交通大学: Shanghai Jiao Tong University
+中国人民大学: Renmin University of China
+江苏大学: Jiangsu University
+南京大学: Nanjing University
+北京大学: Peking University
+图宾根大学: University of Tübingen
+加州大学洛杉矶分校: University of California, Los Angeles
+新闻传播学院: School of Journalism and Communication
+艺术学院: School of Arts
+历史学院: School of History
+马克思主义学院: School of Marxism
+数字人文实验室: Digital Humanities Laboratory
+江苏省教育厅: Jiangsu Provincial Department of Education
+党委宣传部: Party Committee Publicity Department
+校团委: Communist Youth League Committee
+团委: Communist Youth League
+
+# 学科与研究方向
+中华民族历史影像: the historical imagery of the Chinese nation
+影像史学: visual history
+历史影像: historical imagery
+美术考古: art archaeology
+汉代物质文化与图像: Han-dynasty material culture and imagery
+物质文化: material culture
+新闻传播学: Journalism and Communication
+广播电视编导: Broadcasting and Television Directing
+美术学: Art History
+数字媒体研究: digital media studies
+数字人文: digital humanities
+新闻学: journalism
+传播学: communication studies
+
+# 学位与培养体系（英文页写法固定：M.A. / Ph.D. / B.A.）
+博士研究生: Ph.D. student
+硕士研究生: M.A. student
+本科课程助教: Undergraduate Teaching Assistant
+课程助教: Teaching Assistant
+交换生: exchange student
+联合培养: joint training
+
+# 奖项等级（与 _data/ui-text.yml 的 award_level_* 同一套说法）
+一等奖: First Prize
+二等奖: Second Prize
+三等奖: Third Prize
+优秀奖: Award of Excellence
+优秀课程设计: Outstanding Course Project
+优秀结项: Certificate of Outstanding Completion
+优秀毕业生: Outstanding Graduate
+优秀研究生: Outstanding Postgraduate
+特等奖: Grand Prize
+国家级一等奖: national First Prize
+国家级: national
+国际级: international
+省级: provincial
+市厅级: municipal
+校级: university-level
+
+# 项目与专项
+项目负责人: project lead
+项目指导教师: supervisor
+校级重点大学生创新训练计划: University-level Key Undergraduate Innovation Training Programme
+大学生创新训练计划: Undergraduate Innovation Training Programme
+江苏高校学生境外学习政府奖学金: Jiangsu Government Scholarship for Overseas Study
+国家留学基金委: China Scholarship Council
+非物质文化遗产: intangible cultural heritage
+
+# 类型标签（_talks / _teaching 的 type 字段，页面上是标题式的标签；
+# 同一批词里若有上面已列的（本科课程助教），以上面的写法为准，别重复写）
+# 这里的词也会出现在句子中间（talk 的标题里有「…暑期学校」），
+# 所以按站内的写法统一首字母大写，而不是句中小写。
+学术会议: Academic conference
+学术讲座: Academic lecture
+暑期学校: Summer school
+工作坊: Workshop
+研究生课程助教: Graduate teaching assistant
+
+# 时间
+至今: present

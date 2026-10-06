@@ -36,6 +36,12 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.before }}
         run: npm run check:en
+      # 同一件事的另一半：tools/translate-en.mjs 记着每个 *_en 对应的中文哈希，
+      # 中文改了而英文没跟上时这里点出来。离线检查（--check 不调模型），
+      # 同样只报不挡 —— 自动译文要人过一遍，不能让它挡住部署。
+      - name: zh/en translation drift reminder
+        if: github.event_name == 'push'
+        run: npm run check:translate
 
   # 第二道关：真的把站点构建出来。
   # 与 check 分开跑（各自独立的 runner），check 那边失败就不会浪费构建时间。

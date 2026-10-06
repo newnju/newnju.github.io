@@ -31,3 +31,7 @@ oauth-proxy/dev.vars
 # 截图的输出目录（每次跑都重建，当次 CI 的 artifact 才是要看的东西）
 screenshots/
 
+# tools/translate-en.mjs 的译文缓存（按「模型 + 掩码文本 + 术语表」哈希存文件，
+# 重跑同一句不花钱；里面的内容是站点上已有的公开文字，但没必要进仓库）
+.cache/
+
