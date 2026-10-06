@@ -415,6 +415,10 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 
 **侧栏线稿自绘**（`assets/js/vivus.js` + `han.js` 第 8 节 + 第 20 节样式）：侧栏联系方式列表（电子邮件、GitHub 等）下方有一幅线稿，滚进视口时由 vivus.js（MIT，maxwellito/vivus v0.4.6，npm dist 原样 vendor 在 `assets/js/vivus.js`）逐笔错峰描出，约 3.3 秒画完。素材是南大官网 www.nju.edu.cn「数说南大」背景 SVG（1 polygon + 8 polyline），内联在 `_includes/author-profile.html` 尾部 —— 只要页面渲染作者侧栏就有这幅图；vivus 的 `<script>` 在 `_includes/scripts.html` 用**同一条件**（`page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏的条件一致，全站各集合 front matter 默认 true）加载，所以凡是有联系方式列表的页面都带动画，没有侧栏的页面两者都不出现。三重兜底：`window.Vivus` 不存在直接退出；`han.js` 里没有 `#svgpx` 直接退出；**reduced-motion 用户不创建 Vivus —— SVG 平时就是完整线稿，只有被创建时才会先藏起来等动画，所以「不创建」= 静态全图**。线稿描边颜色走 `--han-patina`，南大紫 / 青铜绿 / 暗色主题自动跟随。线稿看得见、动得了的前提是侧栏能滚进视口 —— 宽屏侧栏由 `han.js` 第 9 节做 fit 门控：装得下一屏才固定（`.is-fit`），装不下就保持文档流随页滚动，否则左列多出内层滚动条、`inViewport` 永不触发。
 
+**移动端作者名片**（`_han.scss` 第 28 节 + `_includes/author-profile.html`）：窄屏（<925px）上侧栏原本是三个 table-cell 横排 —— 头像｜姓名简介｜关注按钮，而线稿因为塞在按钮那个 `.author__urls-wrapper` 里面，跟着按钮挤在同一格、还沾上了那个容器的 `cursor: pointer`。现在：头像与姓名简介包进 `.author__head`，线稿挪成 `.author-card` 的直接子元素，用两列网格摆位 —— **第 1 行「头像 + 文字」在左、线稿在右，第 2 行关注按钮跨两列**。宽屏整块回到普通块流（`.author__head` 用 `display: contents` 让两个子元素直接参与父级块流；即使浏览器不认，留成普通块也一样，视觉逐像素不变）。线稿宽度 `clamp(84px, 30vw, 132px)`，手机上约 117px。桌面端唯一的差别：线稿在 925–1200px 这一档宽了 14px（原先它被 `.author__urls-wrapper` 的 14px 右内边距压着），≥1200px 仍以 175px 封顶。
+
+**窄屏的横向溢出**（第 18 节末尾）：≤360px 的屏幕上「近期成果」那条引文里的 CNKI 长链接会撑出 40px 横向滚动 —— 它是一整段没有断点机会的**纯文本**（不是 `<a>`，链接那套样式管不到），于是 `<li>` 的盒子仍然是 288px 宽、文字却画到了 360px：量元素边界量不出来，只有 `documentElement.scrollWidth` 看得到（`check:links` 的横向溢出断言在 390px 视口下刚好测不到这一档）。`.page__content` / `.archive` 上补 `overflow-wrap: anywhere`（`break-word` 只在盒子已溢出后才断，治不了这个，所以两条都写）。
+
 **减少动效与打印**（第 17 节）：系统开启「减少动态效果」时新老动效一并静止（含博局镜旋转与呼吸、缩略图进度、流光、光斑、渐显、点击涟漪、时间轴点亮）；回到顶部按钮照常显隐、只是没有过渡动画；打印时装饰层不印（含回到顶部按钮与时间轴彩轴）、渐显元素直接给完整不透明度，不会打出来一片空白。
 
 ---
@@ -461,7 +465,7 @@ git push
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
 | **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜、项目页字号**（第 22–26 节） | `_sass/_han.scss` 第 22–26 节（第 26 节纯样式、无 JS，包装层在 `_pages/portfolio.html` 与 en 版）+ `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
 | **首页首段打字机**（首页第一段逐字打出、行尾闪烁光标） | 开关是 `_pages/about.md` 与 `_pages/en/about.md` 的 front matter `typed_intro: true`（后台字段在 `admin/config.yml`，键名登记在 `schemas/page.schema.json`）；`_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`；行为在 `assets/js/han.js` 第 15 节（节奏常量也在那一节），光标样式在 `_sass/_han.scss` 第 27 节，reduced-motion 与打印的兜底在第 17 节。**改完正文不用动它**：字数变了按比例自动重算时长 |
-| **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`） |
+| **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部（**在 `.author__urls-wrapper` 之外**，作为 `.author-card` 的直接子元素）；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`），**窄屏的两列摆位（按钮另起一行、线稿靠右）在第 28 节** |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
 | **窄屏汉堡菜单**（≤768px 时顶栏条目整体收进汉堡，只留站点名） | 折叠逻辑在 `assets/js/han.js` 第 2 节（六个栏目 + 语言切换 + 主题切换一起进下拉，回到宽屏按原序插回站点名之后）；下拉里的样式（限高 70vh 可滚、主题按钮对齐同级链接）在 `_sass/_han.scss` 第 9 节。汉堡按钮的显示条件是「下拉里确实折了东西」（`.has-overflow`，由 `han.js` 打），不只看窄屏 —— 宽屏放不下时末尾栏目也会被折进去（实测 900px 上下履历正好被折），按钮不出现就点不到。`jquery.greedy-navigation.js` 只负责「量宽度决定往哪折」与量顶栏高度，展开/收起统一由 `han.js` 管 —— 两边都绑 click 会把同一个类切两遍、互相抵消 |
 | **顶栏让位高度**（顶栏 `position: fixed`，内容要让开它） | 真实高度由 `assets/js/plugins/jquery.greedy-navigation.js` 每轮量出（顶栏是 `fit-content`，18px 根字号下约 58.5px），内联写进 `body` 的 `padding-top`，同时写成 CSS 变量 `--han-masthead-h` 给 `_sidebar.scss` 的 `.is-fit` 用；`_sass/theme/_han_*.scss` 的 `$masthead-height`（`3.0889em`）只作无脚本与变量缺省时的兜底。该插件原本还会给 `.sidebar` 加同尺寸的 `padding-top`（原主题里侧栏恒为固定），现已删除 —— 本站侧栏是 fit 门控的两态，无条件加会在流式态凭空多出约 55px 空白。**插件源码改完要跑 `npm run build:js` 重新生成 `assets/js/main.min.js`**（页面加载的是这个打包产物，不是插件文件本身） |
@@ -480,8 +484,8 @@ git push
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
 | **英文版页面** | `_pages/en/` 下的同名文件 |
 | **`*_en` 字段（自动翻译）** | 术语表在 `tools/translate-glossary.yml`、行为与覆盖策略在 `tools/translate-en.mjs`（`npm run translate:en` / `npm run check:translate`）、每处英文对应的中文哈希在 `tools/translate-state.json`（进仓库，删掉即回到保守状态）。中文没变就不覆盖人工译文 —— 见上面「英文版」一节 |
-| **后台登录 / 权限** | `oauth-proxy/worker.js`（Cloudflare Worker）。白名单 `ALLOWED_GITHUB_USERS` 是强制的 —— 不配后台登不进去；postMessage 锁 `SITE_ORIGIN`；state cookie 用完即废；每次登录尝试写一行审计日志。密钥用 `npx wrangler secret put`，**不进仓库**。行为有测试：`node --test tests/oauth-proxy.test.mjs` |
-| **访客统计** | 默认关闭。开关是 `_config.yml` 的 `analytics.visit_endpoint`（留空 = 一个请求都不发）；打点脚本 `assets/js/visit.js`；收数据的 Worker 与库表在 `analytics/`（D1 + Cloudflare GeoIP）。**不存明文 IP**，只存按天轮换盐的哈希；不写 cookie、不引第三方脚本；浏览器开了 Do Not Track / Global Privacy Control 就不上报。部署与看数据见 [`analytics/README.md`](analytics/README.md) |
+| **后台登录 / 权限** | `oauth-proxy/worker.js`（Cloudflare Worker）。白名单 `ALLOWED_GITHUB_USERS` 是强制的 —— 不配后台登不进去；postMessage 锁 `SITE_ORIGIN`；state cookie 用完即废；每次登录尝试写一行审计日志。**部署在 GitHub 上做**（`.github/workflows/workers.yml`，改完推 main 即生效），密钥只进仓库 Secrets、不进仓库文件。行为有测试：`node --test tests/oauth-proxy.test.mjs` |
+| **访客统计** | 默认关闭。开关是 `_config.yml` 的 `analytics.visit_endpoint`（留空 = 一个请求都不发）；打点脚本 `assets/js/visit.js`；收数据的 Worker 与库表在 `analytics/`（D1 + Cloudflare GeoIP）。**不存明文 IP**，只存按天轮换盐的哈希；不写 cookie、不引第三方脚本；浏览器开了 Do Not Track / Global Privacy Control 就不上报。部署（同样走 GitHub Actions）见 [`analytics/README.md`](analytics/README.md) |
 | 首页的博局镜图 | `_includes/han-mirror.html` |
 | 头像 | 侧栏显示的是 `images/avatar.webp`（400×400、正方形、背景已抠透明，14KB；由原图转出，原 `avatar.png` 119KB 只留给 `og_image` 分享预览），引用在 `_config.yml` 的 `author.avatar` 与 `_data/authors.yml` —— 换头像时两处一起改、并重转一次 WebP。尺寸与位置在 `_sass/_han.scss` 第 6 节：照片 158px 见方、不加外框（描边 / 光圈 / 内边距都去掉了），大屏下整块**上移 30px**、右移 4px，头像顶端因此固定落在「顶栏下沿 + 6px」。**头像必须是正方形**，主题用 `border-radius: 50%`，非正方形会被裁成椭圆。`images/profile.svg` 是备用的「武」字头像 |
 | 项目配图 | 没有默认封面。想加就把图放进 `images/portfolio/`，在条目 front matter 里用 `excerpt: "<img src='/images/portfolio/xxx.svg'><br/>一句话简介"` 引它（模板自带的示例 SVG 已删除，目录是空的） |
@@ -571,18 +575,23 @@ GitHub 登录走的是自建代理（client secret 不能写进公开仓库）�
 照 [`oauth-proxy/README.md`](oauth-proxy/README.md) 做完即可；之后**只有白名单里的
 GitHub 账号**打开 `/admin/` 点登录能进，其余一律 403。
 
-除了 OAuth App 的 client id / secret，还要配两个密钥：
+除了 OAuth App 的 client id / secret，还要配两个东西 —— **都填在仓库的
+Settings → Secrets and variables → Actions 里，不要在本机跑 wrangler**：
 
-```bash
-cd oauth-proxy
-npx wrangler secret put ALLOWED_GITHUB_USERS   # 自己的 GitHub 用户名；不配 = 后台登不进去
-npx wrangler secret put SITE_ORIGIN           # 可选，Decap 前端来源，默认 https://newnju.github.io
-```
+| 名字 | 值 |
+| --- | --- |
+| `OAUTH_ALLOWED_USERS` | 自己的 GitHub 用户名。**不配 = workflow 拒绝部署；硬发的话后台登不进去** |
+| `SITE_ORIGIN`（可选，普通变量即可） | Decap 前端来源，默认 `https://newnju.github.io` |
+
+密钥与部署都由 `.github/workflows/workers.yml` 在 GitHub 上完成：推 main 即部署，
+跑完用 `https://oauth.oaking.kdns.fr/healthz` 自检（`allowlist:true` 才算就绪）。
+Cloudflare 的 API token 也只能由你在后台点出来，一次配好长期用 —— 完整清单见
+[`oauth-proxy/README.md`](oauth-proxy/README.md) 第二节。
 
 **「保存 = 提交」意味着登录权限等于仓库写权限**，所以那道门有三个属性值得记住：
 
 - **默认拒绝**：白名单为空时 `/auth` 直接 503，不会「先放行再说」。改配置前如果
-  `/admin/` 突然登不进去，先看 `npx wrangler secret list` 里有没有这一条。
+  `/admin/` 突然登不进去，先看 `healthz` 里的 `allowlist` 是不是 `false`。
 - **服务端校验**：白名单是在 Worker 侧拿新换到的 token 调 `GET /user` 核对的，
   在 token 交到浏览器**之前**；不是靠前端藏按钮。
 - **有审计记录**：每次登录尝试（开始 / 成功 / 被挡下 / state 不匹配 / 换 token 失败）
@@ -765,7 +774,7 @@ bundle exec jekyll serve
 ├── schemas/             内容校验规则（validate.mjs 读这里）
 ├── tools/               内容生成器、校验器、结构检查器、中英同步与自动翻译（npm run check 跑这些）
 ├── tests/               回归测试（npm test，66 个：渲染产物、Decap 字段一致性、OAuth 门、访客统计）
-├── .github/workflows/   CI：先校验测试，再 Jekyll 构建，最后检查产物
+├── .github/workflows/   CI：pages.yml 先校验测试再 Jekyll 构建、检查产物、部署站点；workers.yml 部署两个 Cloudflare Worker
 ├── assets/              样式与脚本（han.js 为本站自定义脚本：BibTeX 复制、引用复制、缩略图导航）
 ├── robots.txt           允许全站抓取，并声明 Sitemap 位置
 └── images/              图片与头像

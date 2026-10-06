@@ -1172,6 +1172,20 @@ html[data-reveal] .han-reveal.is-visible {
     margin: 0;
 }
 
+/* 窄屏（≤360px 左右）上「近期成果」那条引文里的 CNKI 长链接会撑出横向滚动：
+   它是一整段没有断点机会的纯文本（不是 <a>，所以链接样式那套管不到），
+   于是 <li> 的盒子仍然是 288px 宽，可文字画到了 360px —— 量元素边界量不出来，
+   只有 document.documentElement.scrollWidth 看得到（check:links 的横向溢出
+   断言在 390px 视口下刚好测不到这一档）。
+   overflow-wrap: anywhere 会让断行机会参与 min-content 计算，盒子和文字一起收
+   回来；break-word 只在盒子已经溢出后才断，治不了这个，所以两条都写 ——
+   老浏览器认前一条，新浏览器用后一条这条更狠的。 */
+.page__content,
+.archive {
+    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
 /* --------------------------------------------------------------------------
    19. 履历时间轴：学历大块（h2）
    --------------------------------------------------------------------------
@@ -1515,5 +1529,87 @@ html.theme-transition .han-minimap * {
 
     100% {
         opacity: 1;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   28. 移动端作者名片：关注按钮落到头像与文字下方，线稿靠右
+   --------------------------------------------------------------------------
+   原来的窄屏布局是三个 table-cell 横排：头像（只有 36px 宽，见 §6 之外的
+   .author__avatar 基础样式）｜ 姓名简介 ｜ 关注按钮，线稿因为塞在按钮那个
+   .author__urls-wrapper 里，跟着按钮挤在同一格里、还沾上了容器的
+   cursor: pointer。要把按钮挪到下面、线稿挪到右边，靠 table-cell 做不到 ——
+   同一匿名表格行里的单元格只能横排。
+
+   所以 markup 上把头像与姓名简介包进 .author__head（_includes/author-profile.html），
+   线稿挪成 .author-card 的直接子元素，然后用两列网格摆位：
+
+       第 1 行   .author__head（头像 + 文字）   .han-drawline
+       第 2 行   .author__urls-wrapper（关注按钮，跨两列）
+
+   宽屏（≥925px）整块回到普通块流：.author__head 用 display:contents 让它的
+   两个子元素直接参与父级块流，视觉与改动前逐像素一致 —— 即便浏览器不认
+   display:contents，留成普通块也一样（头像与文字本来就是并排的两个
+   table-cell，§6 会把它们改成块级后自然堆叠）。
+
+   线稿宽度用 clamp(84px, 30vw, 132px)：手机 390px 上约 117px，窄到 320px
+   也不至于把左边文字挤没；32vw 封顶 132px 是因为它比侧栏那条 175px 的上限
+   矮一档，视觉上更像背景纹样而不是内容。
+   -------------------------------------------------------------------------- */
+
+.author-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 14px;
+    align-items: start;
+
+    .author__head {
+        display: table;
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+        margin: 0;
+    }
+
+    /* 右侧线稿占了位置，文字这侧的 25px 右内边距就成了纯浪费（窄屏下
+       .author__content 才有那段内边距，见 _sidebar.scss）。 */
+    .author__head .author__content {
+        padding-right: 0;
+    }
+
+    .han-drawline {
+        grid-column: 2;
+        grid-row: 1;
+        width: clamp(84px, 30vw, 132px);
+        max-width: none; // 覆盖 §20 的 175px
+        margin: 0;
+    }
+
+    .author__urls-wrapper {
+        display: block; // 覆盖 _sidebar.scss 的 table-cell
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin-top: 12px;
+    }
+
+    @include breakpoint($large) {
+        display: block;
+
+        .author__head {
+            display: contents;
+        }
+
+        /* 上面那三条窄屏规则（grid-column / width / margin）只属于网格摆位，
+           宽屏回到普通块流后必须逐条撤回 —— 尤其 width：不撤的话线稿会从
+           175px 缩到 132px，桌面端一眼就看出来。 */
+        .han-drawline {
+            width: auto;
+            max-width: 175px;
+            margin-top: 12px;
+        }
+
+        .author__urls-wrapper {
+            margin-top: 0;
+        }
     }
 }
