@@ -9,11 +9,86 @@
 
 | 路径 | 作用 |
 | --- | --- |
-| `GET /auth?provider=github` | 生成随机 `state` 写进 cookie，302 跳到 GitHub 授权页 |
-| `GET /callback?code&state` | 校验 `state`，服务端用 client secret 换 access token，`window.opener.postMessage` 交回 Decap |
+| `GET /auth?provider=github` | 生成随机 `state` 写进 cookie，302 跳到 GitHub 授权页。**白名单没配就 503 直接拒绝** |
+| `GET /callback?code&state` | 校验 `state` → 服务端换 token → **用 token 查一次 `/user` 确认在白名单里** → `postMessage` 交回 Decap，然后作废 state cookie |
+| `GET /healthz` | 只回 `{ok, allowlist}`，不回白名单内容、不回任何密钥 |
 | `GET /` | 健康页，看到「Decap OAuth 代理在跑」就是通了 |
 
 不落数据库、不记日志、不需要 `node_modules`，本地跑也不用装东西。
+
+---
+
+## 安全边界：这个 Worker 是后台唯一的门
+
+先说清楚一件事：**能不能真的改内容，最后由 GitHub 的仓库权限决定**。这个 Worker
+只是把 OAuth 流程走完，push 用的是**登录者自己的 token** —— 一个跟你毫无关系的
+GitHub 账号走完流程会拿到它自己的 token，push 到 `newnju/newnju.github.io` 时
+GitHub 会直接 403。所以「随便一个人登录就能改你的站」这条路本来就是堵着的。
+
+那它还是缺什么呢？缺的是**门本身不该对全世界开着**。一个只有 client_id/secret 的
+代理，对任何拿着任意 GitHub 账号的人都是可用的：它会用你的 secret 换出一个 token
+并交到对方手上，于是这个 Worker 变成一个对全网开放的换 token 中转站，而你的
+OAuth App 会出现在每个人的 GitHub 设置里。所以：
+
+| 措施 | 为什么 |
+| --- | --- |
+| **白名单 `ALLOWED_GITHUB_USERS`，且强制** | 只有名单里的 GitHub 用户名能登录。服务端拿新换到的 token 调一次 `GET /user` 校验，**在把 token 交出去之前**；名单为空时 `/auth` 直接 503 —— 宁可登录不了，也不默认对全网开放 |
+| **postMessage 锁死 `targetOrigin`** | 原来写的是 `'*'`。那样任何打开了本窗口的页面（钓鱼页 `window.open` 一次然后等消息）都能收走这个 token。现在发往 `SITE_ORIGIN`，且 opener 的 origin 不是本站就根本不发 |
+| **交 token 的页面不缓存、不可被套 iframe** | `no-store` + `nosniff` + `X-Frame-Options: DENY` + CSP 把外部资源全禁掉（`default-src 'none'`，只留内联脚本） |
+| **`state` cookie 用完就清** | 成功、失败、state 不匹配三条路都发 `Max-Age=0`，10 分钟内重放同一个 state 不成立 |
+| **每次尝试都记一行结构化日志** | 谁、什么时候、从哪个 IP、哪个国家/城市、成功还是被白名单挡下 |
+
+### 部署后请确认的两件事
+
+1. **白名单配了**（不配后台就是登不进去，这是故意的）：
+   ```bash
+   npx wrangler secret put ALLOWED_GITHUB_USERS   # 填 newnju，多个用逗号隔开
+   npx wrangler secret put SITE_ORIGIN           # 可选，默认 https://newnju.github.io
+   npx wrangler secret list                      # 确认两条都在
+   curl https://oauth.oaking.kdns.fr/healthz     # {"ok":true,"allowlist":true}
+   ```
+2. **GitHub 给 `main` 开了分支保护**：Settings → Branches → Add rule
+   （或 Rules → Rulesets）。建议勾上 *Require status checks to pass*，把
+   `check` / `build` 两个 job 加进去；再打开 *Do not allow bypassing the above settings*。
+   理由见下面「改了东西会怎样上线」。
+
+### 改了东西会怎样上线
+
+`admin/config.yml` 是 `publish_mode: simple`，所以后台每次保存都**直接 push 到 `main`**。
+兜底是 CI：`.github/workflows/pages.yml` 的 `deploy` 依赖 `build` 依赖 `check`，
+而 `check` 里串了五道闸门（validate / check:content / check:structure / npm test /
+check:links / check:behavior / screenshots）—— 任一道红，**部署就不会发生**，线上继续是
+上一个版本。
+
+也就是说：**后台能改坏东西，但改坏的版本上不了线**。代价是内容已经进了 `main`
+（git 里能看到那条 commit，Decap 用的是登录者的身份，提交作者就是他），要修就得再
+提交一次或 revert 那一条。
+
+想要更强的闸门，可以把 `publish_mode` 换成 `editorial_workflow`（走 PR，要合并才上线），
+代价是每次改多一步合并操作。
+
+### 审计记录
+
+每次登录尝试（开始 / 成功 / 被白名单挡下 / state 不匹配 / 换 token 失败 / 查不到身份）
+都写一行 JSON 到 Workers Logs，默认留 3 天。要留更久就配一个 Analytics Engine 绑定：
+
+```bash
+cd oauth-proxy
+npx wrangler deploy --var ...   # 或在 wrangler.toml 里加：
+# [[analytics_engine_datasets]]
+# binding = "AUDIT"
+# dataset = "admin_audit"
+```
+
+配了 `AUDIT` 之后，每次尝试还会额外写一个数据点（`event` / `user` / `ip` / `country` /
+`city` / `ts`），可以在 Cloudflare 的 GraphQL Analytics 里按 `admin_login_ok` 这类
+index 查长期历史。不配也不影响登录。
+
+### 想再收紧一层
+
+Cloudflare Access（Zero Trust）在 `oauth.oaking.kdns.fr` 前面加一层你自己的邮箱
+登录。这样连 OAuth 弹窗都只对你自己开放，日后加协作者时也可以只放行特定邮箱。
+免费额度够用，代价是多一次登录。
 
 ---
 
@@ -69,15 +144,20 @@ route = { pattern = "oauth.oaking.kdns.fr", zone_name = "oaking.kdns.fr", custom
 前提是这个 zone 已经托管到 Cloudflare（NS 指向 `*.ns.cloudflare.com`）。换域名时改这一行重新
 `npx wrangler deploy` 即可，Worker 本身不用动。
 
-## 三、把两个 secret 填进去
+## 三、把密钥填进去
 
 ```bash
 cd oauth-proxy
 npx wrangler secret put GITHUB_OAUTH_ID      # 粘贴 Client ID，回车
 npx wrangler secret put GITHUB_OAUTH_SECRET   # 粘贴 Client secret，回车
+# 必填：白名单。不配后台登不进去（默认拒绝，见「安全边界」）
+npx wrangler secret put ALLOWED_GITHUB_USERS  # 自己的 GitHub 用户名，例如 newnju
+# 可选：Decap 前端所在来源，postMessage 只发到这里
+npx wrangler secret put SITE_ORIGIN          # https://newnju.github.io
 ```
 
-粘贴时终端**不显示任何字符**（防肩窥，正常现象）。填完用 `npx wrangler secret list` 确认两条都在。
+粘贴时终端**不显示任何字符**（防肩窥，正常现象）。填完用 `npx wrangler secret list` 确认几条都在，
+再 `curl https://oauth.oaking.kdns.fr/healthz` 看到 `{"ok":true,"allowlist":true}`。
 
 > 可选：默认申请的权限是 `public_repo,user`（能读写公开仓库 + 读用户信息）。
 > 如果仓库是私有的，再加一个：
@@ -110,7 +190,20 @@ npx wrangler dev
 | 浏览器控制台报 CORS | `base_url` 写成了 `https://` 开头以外的形式，或少了 `auth_endpoint: auth` |
 | 能登录但 push 报 403 | 权限不够：私有仓库要设 `GITHUB_SCOPE=repo,user` |
 | Worker 500 | `GITHUB_OAUTH_ID` / `GITHUB_OAUTH_SECRET` 没填或填错，`npx wrangler secret list` 核对 |
+| 点登录就报「服务端还没配 ALLOWED_GITHUB_USERS」 | 白名单没配。这是默认拒绝，先 `npx wrangler secret put ALLOWED_GITHUB_USERS` |
+| 提示「不在本站后台的白名单里」 | 登录的 GitHub 账号不在名单里。确认大小写不敏感，写的是用户名（不是昵称/邮箱） |
 | 自定义域名报「zone 不在此账号」 | `wrangler.toml` 里的 `zone_name` 要和 Cloudflare 里 zone 的名字完全一致，且该 zone 状态为 active |
+
+## 测试
+
+```bash
+node --test tests/oauth-proxy.test.mjs
+```
+
+全程离线（GitHub 那两个端点用假 fetch 顶掉），断言的是「门」的行为：白名单没配时
+`/auth` 拒绝且不出网、鉴权在 token 之前、白名单外的响应里绝不出现 token、
+postMessage 不许出现 `'*'`、token 页面不缓存不可被套 iframe、state 用完即废、
+`/healthz` 不泄露白名单。改 `worker.js` 之后先跑这个。
 
 > 这个 Worker 只服务于本站后台，改完 `worker.js` 重新 `npx wrangler deploy` 即可，站点本身不受影响。
 > `workers_dev = true` 保留着，方便 `npx wrangler dev` 本地调试；它不影响自定义域名。
