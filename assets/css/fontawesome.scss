@@ -1,10 +1,92 @@
 ---
 ---
 
-// 只把用到的三套图标编译进 main.css，减少产物体积
+// fontawesome.css 只编译用到的图标。
+// 上游 vendor/font-awesome/fontawesome.scss 里的 _icons.scss 是一条扫全表的
+// @each，brands.scss 尾部同理 —— 两本表一千多条规则撑满了 75KB 的产物，而全站
+// 只用几十个图标（字体早已子集化，CSS 还没跟上）。
+//
+// 这里按上游 bundle 的顺序引核心部分（与 vendor/font-awesome/fontawesome.scss
+// 的清单逐行一致，只去掉 icons 那条全量循环），@font-face 与家族权重两段取自
+// 上游 solid.scss / brands.scss —— 那两个文件尾部各自带着全量图标循环，不能
+// 整份引，所以只抄这两段；升级 Font Awesome 时记得对照 vendor 里同名文件。
+//
+// 图标规则由 npm run fonts 生成的名单（_sass/_icon-names.scss）驱动，
+// 与字体子集出自同一次扫描：名单缺一个，字体与这里会一起缺它。
 
 @import
-    "vendor/font-awesome/fontawesome",
-    "vendor/font-awesome/solid",
-    "vendor/font-awesome/brands"
+    "vendor/font-awesome/functions",
+    "vendor/font-awesome/variables",
+    "vendor/font-awesome/mixins",
+    "vendor/font-awesome/core",
+    "vendor/font-awesome/sizing",
+    "vendor/font-awesome/fixed-width",
+    "vendor/font-awesome/list",
+    "vendor/font-awesome/bordered-pulled",
+    "vendor/font-awesome/animated",
+    "vendor/font-awesome/rotated-flipped",
+    "vendor/font-awesome/stacked",
+    "vendor/font-awesome/screen-reader"
 ;
+
+/*!
+ * Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+ * Copyright 2024 Fonticons, Inc.
+ */
+
+// —— 以下两小段 = 上游 solid.scss / brands.scss 除去尾部图标循环的部分 ——
+
+:root, :host {
+  --#{$fa-css-prefix}-style-family-classic: '#{ $fa-style-family }';
+  --#{$fa-css-prefix}-font-solid: normal 900 1em/1 '#{ $fa-style-family }';
+}
+
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 900;
+  font-display: $fa-font-display;
+  src: url('#{$fa-font-path}/fa-solid-900.woff2') format('woff2'),
+    url('#{$fa-font-path}/fa-solid-900.ttf') format('truetype');
+}
+
+.fas,
+.#{$fa-css-prefix}-solid {
+  font-weight: 900;
+}
+
+:root, :host {
+  --#{$fa-css-prefix}-style-family-brands: 'Font Awesome 6 Brands';
+  --#{$fa-css-prefix}-font-brands: normal 400 1em/1 'Font Awesome 6 Brands';
+}
+
+@font-face {
+  font-family: 'Font Awesome 6 Brands';
+  font-style: normal;
+  font-weight: 400;
+  font-display: $fa-font-display;
+  src: url('#{$fa-font-path}/fa-brands-400.woff2') format('woff2'),
+    url('#{$fa-font-path}/fa-brands-400.ttf') format('truetype');
+}
+
+.fab,
+.#{$fa-css-prefix}-brands {
+  font-weight: 400;
+}
+
+// 用到的图标（_sass/_icon-names.scss，npm run fonts 生成）。顺序与上游一致：
+// solid 表在前、brands 表在后，同名时后者生效。
+@import "icon-names";
+
+@each $name in $icon-names-solid {
+  .#{$fa-css-prefix}-#{$name} {
+    #{$fa-icon-property}: unquote("\"#{ map-get($fa-icons, $name) }\"");
+  }
+}
+
+@each $name in $icon-names-brands {
+  .#{$fa-css-prefix}-#{$name} {
+    #{$fa-icon-property}: unquote("\"#{ map-get($fa-brand-icons, $name) }\"");
+  }
+}

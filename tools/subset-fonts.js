@@ -153,10 +153,14 @@ if (AUDIT_ONLY) {
 const used = new Set();
 files.forEach(function (file) {
   const text = fs.readFileSync(file, "utf8");
-  const matches = text.match(/\bfa-([a-z0-9-]+)\b/g) || [];
-  matches.forEach(function (raw) {
-    used.add(raw.slice(3));
-  });
+  const re = /\bfa-([a-z0-9-]+)\b/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    // $fa-icons / $fa-brand-icons 这类 Sass 变量名不是图标类名；其中的
+    // icons 恰好还是真图标（\f86d），不拦会凭空多编一条规则、多打一个字形。
+    if (m.index > 0 && text.charCodeAt(m.index - 1) === 36) continue;
+    used.add(m[1]);
+  }
 });
 
 // 2. 查码位：vendor 变量表里是 $fa-var-github: \f09b; 这种形式
@@ -223,6 +227,43 @@ if (CHECK_ONLY) {
   });
   process.exit(0);
 }
+
+// 2.5 站点图标名单（_sass/_icon-names.scss）：fontawesome.css 只编译用到的图标。
+//     两本表在 _variables.scss 里各是一段 ("name": $fa-var-x, …)：取段内所有键
+//     与 used 求交集。没进表的名字（fa-fw 这类修饰类、fa-brands-400.woff2 这类
+//     文件名、_utilities.scss 里遗留的旧色名）本来就没有上游图标规则，丢掉即可。
+//     这份名单与字体子集出自同一次扫描，漏一个名字会字体与 CSS 一起缺。
+function mapKeys(from, to) {
+  const i = vars.indexOf(from);
+  const j = to ? vars.indexOf(to, i) : vars.length;
+  return new Set((vars.slice(i, j).match(/"([a-z0-9-]+)"\s*:/g) || []).map((s) => s.slice(1, -2)));
+}
+const solidKeys = mapKeys("$fa-icons:", "$fa-brand-icons:");
+const brandKeys = mapKeys("$fa-brand-icons:");
+const siteSolid = Array.from(used).filter((n) => solidKeys.has(n)).sort();
+const siteBrands = Array.from(used).filter((n) => brandKeys.has(n)).sort();
+
+const iconNames = [
+  "/*",
+  " * 生成物：npm run fonts（tools/subset-fonts.js）产出，勿手改。",
+  " * 全站用到的图标名单，与字体子集出自同一次扫描 —— 加图标只要写进模板，",
+  " * 重跑 npm run fonts 即可；名单缺一个，字体与 fontawesome.css 一起缺它。",
+  " * 编译与用法见 assets/css/fontawesome.scss。",
+  " */",
+  "$icon-names-solid: (",
+  siteSolid.map((n) => '  "' + n + '",').join("\n"),
+  ");",
+  "",
+  "$icon-names-brands: (",
+  siteBrands.map((n) => '  "' + n + '",').join("\n"),
+  ");",
+  "",
+].join("\n");
+fs.writeFileSync(path.join(ROOT, "_sass/_icon-names.scss"), iconNames);
+console.log(
+  "icon-names：solid " + siteSolid.length + " 个、brands " + siteBrands.length +
+    " 个（上游全表 " + solidKeys.size + "/" + brandKeys.size + " 个）→ _sass/_icon-names.scss"
+);
 
 // pyftsubset 没有 --version（会返回 2），用 --help 探测
 function findPyftsubset() {
