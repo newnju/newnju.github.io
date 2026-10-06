@@ -1058,31 +1058,14 @@ function flashLabel(el, doneLabel, doneClass) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!window.requestAnimationFrame) return;
 
-  /* 节奏按字数摊，目标 2.6 秒左右：每字的基准间隔 ×（1 + 该字后面的停顿
-     倍数），全段的总时长再按 TARGET_MS / MAX_MS 卡在上下限里。
-     停顿写成「几倍基准间隔」而不是固定毫秒，是为了跟着整体速度一起缩放 ——
-     写成固定值时，英文那段 710 字光停顿就叠出 3.5 秒，整段要打 7.9 秒。
-     中文（212 字）落在 2.9 秒，英文（710 字）由上限压到约 4.2 秒。 */
-  var TARGET_MS = 2600;
-  var MAX_MS = 4200;
-  var MIN_PER_CHAR = 6;
-  var MAX_PER_CHAR = 26;
+  /* 节奏：全段固定 TOTAL_MS 打完，每字的间隔 = 总时长 ÷ 字数，于是速度
+     是**按当前长度算出来**的，中英文一视同仁 —— 中文 212 字、英文 710 字
+     各按自己的长度摊，两段话的总时长一样长，字多的自然打得快。
+     旧版给每字卡了 6 / 26 毫秒的上下限，还有一张标点停顿表：英文 710 字
+     被下限钉在 5.9 毫秒、整段要打 4.2 秒（比中文的 2.9 秒慢一大截），
+     停顿又让速度忽快忽慢。现在全程匀速，写死的只有总时长这一个常量。 */
+  var TOTAL_MS = 2600;
   var START_DELAY = 320;
-  var PAUSE_AFTER = {
-    "，": 5,
-    "、": 4,
-    "；": 6,
-    "：": 5,
-    "。": 9,
-    "！": 9,
-    "？": 9,
-    ",": 4,
-    ";": 5,
-    ":": 4,
-    ".": 8,
-    "!": 8,
-    "?": 8,
-  };
   var SKIP_EVENTS = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"];
 
   /** 按字切开：代理对算一个字，否则 emoji 之类会打出半个码位 */
@@ -1134,26 +1117,12 @@ function flashLabel(el, doneLabel, doneClass) {
     }
     if (!total) return;
 
-    /* 每个字该在第几毫秒出现。先把标点的停顿折成「额外的字数」，于是
-       weighted 就是全段的实际长度（含停顿），速度只需一个比例式。 */
-    var weighted = total;
-    for (var w = 0; w < nodes.length; w++) {
-      var src = nodes[w].nodeType === 3 ? nodes[w].nodeValue : nodes[w].textContent;
-      for (var t = 0; src && t < src.length; t++) {
-        weighted += PAUSE_AFTER[src.charAt(t)] || 0;
-      }
-    }
-    var per = Math.max(MIN_PER_CHAR, Math.min(MAX_PER_CHAR, TARGET_MS / weighted));
-    if (weighted * per > MAX_MS) per = MAX_MS / weighted;
+    /* 每个字该在第几毫秒出现：全程匀速，第 n 个字 = n × 每字间隔。
+       间隔由「总时长 ÷ 字数」算出，所以上下限、标点停顿都不需要 ——
+       字数变了速度自动跟着变，总时长始终是 TOTAL_MS。 */
+    var per = TOTAL_MS / total;
     var times = [];
-    var at = 0;
-    for (var u = 0; u < units.length; u++) {
-      var list = units[u].chars;
-      for (var c = 0; c < list.length; c++) {
-        times.push(at);
-        at += per * (1 + (PAUSE_AFTER[list[c]] || 0));
-      }
-    }
+    for (var n = 0; n < total; n++) times.push(n * per);
 
     /** 把前 count 个字写进 DOM。count 为 0 时把每一段都清空 —— 起步那一下
      *  必须真的抹掉，不能因为「没有可写的字」就留下完整原文闪一下。 */

@@ -383,11 +383,11 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 
 **卡片 3D 轻微倾斜**（`han.js` 第 14 节）：指针在成果卡片（`.archive__item`）上移动时按偏离中心量 ±3.5° 微倾，并保留第 16 节的 hover 上浮 —— 全写在行内 transform 里、指针离开即清空交还 CSS，每帧最多重算一次（rAF 节流）；透视用 transform 内联的 `perspective()` 不动父容器，只在精细指针且允许动效的设备上挂，触屏与 reduced-motion 完全不参与。
 
-**首页首段打字机**（`han.js` 第 15 节 + 第 27 节样式）：首页（`/` 与 `/en/`）第一段逐字打出来，行尾挂一根闪烁的竖条，标点后另有停顿。开关是页面 front matter 的 `typed_intro: true` —— `_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`，脚本只取该容器的**第一个 p**（博局镜装饰是 div，不掺和）。几条刻意的取舍：
+**首页首段打字机**（`han.js` 第 15 节 + 第 27 节样式）：首页（`/` 与 `/en/`）第一段逐字打出来，行尾挂一根闪烁的竖条，全程匀速。开关是页面 front matter 的 `typed_intro: true` —— `_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`，脚本只取该容器的**第一个 p**（博局镜装饰是 div，不掺和）。几条刻意的取舍：
 
 - **原文始终在 HTML 里**：服务端渲染的就是完整一段，脚本只是把 DOM 逐字改写，所以无 JS、关 JS 打印、抓取、首屏 SEO 都不受影响；reduced-motion 用户脚本直接不跑（第 17 节样式再兜底藏掉光标）。
 - **计时用 rAF 的时间戳**：不是「每帧加一个字」。切走标签页再回来会按真实时间一次性补齐缺的字，不会永远停在半句上。
-- **节奏按字数摊**：停顿写成「几倍基准间隔」而不是固定毫秒，跟着整体速度一起缩放（中文 212 字约 2.9 秒，英文 710 字由 4.2 秒的上限压住 —— 若停顿写成固定值，英文那段光停顿就叠出 3.5 秒，要打 7.9 秒）。
+- **全程匀速，速度由字数算出来**：总时长定死 2.6 秒，每字的间隔 = 总时长 ÷ 字数，中英文各按自己的长度摊 —— 中文 212 字与英文 710 字都是 2.6 秒打完，字多的自然打得快。旧版给每字卡了 6 / 26 毫秒的上下限、标点后另有停顿：英文被下限钉在 5.9 毫秒要打 4.2 秒（比中文的 2.9 秒慢一大截），停顿又让速度忽快忽慢。
 - **锁住段落高度**：打字期间下面所有内容都在往上爬，等于每次访问白送一次布局位移，所以起步前量一次满行高度写进 `min-height`，打完撤掉。
 - **点一下就好**：`pointerdown` / 滚轮 / 按键任意一次都立刻补完 —— 想选中复制这段文字的人总得先按一下或拖一下，于是「点一下就好」顺带把复制也救了。
 - **行内标签不丢**：按子节点切段，`<strong>` / `<em>` / `<a>` 连标签带属性留着，只往里逐字填 `textContent`，加粗与链接不会被抹平。
@@ -475,7 +475,7 @@ git push
 | **主题配色** | `_sass/theme/_han_light.scss`、`_han_dark.scss` |
 | **动态背景、光斑、滚动渐显、点击涟漪**（第 13–17、21 节） | `_sass/_han.scss` 末尾几节 + `assets/js/han.js` 第 6–7、10 节；色斑与光斑配色的变量在 `_sass/theme/_han_*.scss` 与 `_han.scss` 第 8 节（点击涟漪 `--han-ripple` 也在第 8 节） |
 | **链接滑入、主题渐变、时间轴点亮、回到顶部、卡片倾斜、项目页字号**（第 22–26 节） | `_sass/_han.scss` 第 22–26 节（第 26 节纯样式、无 JS，包装层在 `_pages/portfolio.html` 与 en 版）+ `assets/js/han.js` 第 11–14 节；明暗切换本体在 `assets/js/_main.js`（`han.js` 第 11 节只负责挂过渡类） |
-| **首页首段打字机**（首页第一段逐字打出、行尾闪烁光标） | 开关是 `_pages/about.md` 与 `_pages/en/about.md` 的 front matter `typed_intro: true`（后台字段在 `admin/config.yml`，键名登记在 `schemas/page.schema.json`）；`_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`；行为在 `assets/js/han.js` 第 15 节（节奏常量也在那一节），光标样式在 `_sass/_han.scss` 第 27 节，reduced-motion 与打印的兜底在第 17 节。**改完正文不用动它**：字数变了按比例自动重算时长 |
+| **首页首段打字机**（首页第一段逐字打出、行尾闪烁光标） | 开关是 `_pages/about.md` 与 `_pages/en/about.md` 的 front matter `typed_intro: true`（后台字段在 `admin/config.yml`，键名登记在 `schemas/page.schema.json`）；`_layouts/single.html` 据此给 `.page__content` 打 `data-typed-intro`；行为在 `assets/js/han.js` 第 15 节（节奏常量也在那一节），光标样式在 `_sass/_han.scss` 第 27 节，reduced-motion 与打印的兜底在第 17 节。**改完正文不用动它**：字数变了速度自动跟着变（间隔 = 总时长 ÷ 字数），总时长始终不变 |
 | **侧栏线稿自绘**（南大官网「数说南大」背景线稿，凡有侧栏联系方式列表的页面） | SVG 内联在 `_includes/author-profile.html` 尾部（**在 `.author__urls-wrapper` 之外**，作为 `.author-card` 的直接子元素）；动画库 vendor 在 `assets/js/vivus.js`、加载在 `_includes/scripts.html`（门控 `page.author_profile or layout.author_profile`，与 `sidebar.html` 引入侧栏同一条件）；初始化是 `assets/js/han.js` 第 8 节；描边颜色与尺寸在 `_sass/_han.scss` 第 20 节（`--han-patina`），**窄屏的两列摆位（按钮另起一行、线稿靠右）在第 28 节** |
 | **侧栏固定 / 滚动行为**（宽屏装得下一屏才固定，否则流式随页滚动） | `_sass/layout/_sidebar.scss` 的 `.is-fit` 规则 + `assets/js/han.js` 第 9 节（fit 门控，预算里的顶栏让位每轮现量，不用写死数值） |
 | **窄屏汉堡菜单**（≤768px 时顶栏条目整体收进汉堡，只留站点名） | 折叠逻辑在 `assets/js/han.js` 第 2 节（六个栏目 + 语言切换 + 主题切换一起进下拉，回到宽屏按原序插回站点名之后）；下拉里的样式（限高 70vh 可滚、主题按钮对齐同级链接）在 `_sass/_han.scss` 第 9 节。汉堡按钮的显示条件是「下拉里确实折了东西」（`.has-overflow`，由 `han.js` 打），不只看窄屏 —— 宽屏放不下时末尾栏目也会被折进去（实测 900px 上下履历正好被折），按钮不出现就点不到。`jquery.greedy-navigation.js` 只负责「量宽度决定往哪折」与量顶栏高度，展开/收起统一由 `han.js` 管 —— 两边都绑 click 会把同一个类切两遍、互相抵消 |
