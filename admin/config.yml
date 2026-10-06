@@ -248,6 +248,7 @@ collections:
               - { label: 空 default, value: default }
           - { label: 显示作者栏, name: author_profile, widget: boolean, required: false }
           - { label: 显示镜像链接, name: mirror, widget: boolean, required: false }
+          - { label: 首段打字机, name: typed_intro, widget: boolean, required: false, hint: "首段逐字打出（终端效果），只对首页有意义；关掉就是一段普通正文" }
           - { label: 不进站点地图, name: sitemap, widget: hidden }
           - label: 旧地址重定向
             name: redirect_from
@@ -304,6 +305,7 @@ collections:
               - { label: default, value: default }
           - { label: Show author profile, name: author_profile, widget: boolean, required: false }
           - { label: Show mirror link, name: mirror, widget: boolean, required: false }
+          - { label: Typewriter intro, name: typed_intro, widget: boolean, required: false, hint: "Types the first paragraph out (terminal effect). Only makes sense on the home page." }
           - label: Body
             name: body
             widget: richtext

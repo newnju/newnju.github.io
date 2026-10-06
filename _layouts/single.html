@@ -45,13 +45,18 @@ layout: default
         </header>
       {% endunless %}
 
-      <section class="page__content" itemprop="text">
+      <section class="page__content" itemprop="text"{% if page.typed_intro %} data-typed-intro{% endif %}>
         {%- comment -%}
           首页的博局镜装饰。放在布局里而不是 Markdown 正文里，
           避免 kramdown 解析 HTML 块时对内联 SVG 做多余处理。
           页面只需在 front matter 写 mirror: true。
         {%- endcomment -%}
         {% if page.mirror %}{% include han-mirror.html %}{% endif %}
+        {%- comment -%}
+          typed_intro: true 只打一个标记，不改内容本身 —— 首段逐字打字的
+          行为在 han.js 第 15 节，样式在 _han.scss 第 27 节。脚本没跑时
+          原文原样在 HTML 里。
+        {%- endcomment -%}
         {{ content }}
 
         {%- comment -%} 附件链接的分隔符走 _data/ui-text.yml 的 sep_pipe（中文「｜」、英文「 | 」） {%- endcomment -%}

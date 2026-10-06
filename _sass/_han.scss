@@ -1060,11 +1060,15 @@ html[data-reveal] .han-reveal.is-visible {
     系统开了「减少动态效果」时：新老动效一并静止（博局镜旋转/呼吸、缩略图
     进度、流光漂移、光斑跟随、滚动渐显），只保留颜色等非位移变化；点击
     涟漪（§21）由 han.js 第 10 节在 JS 层直接不监听，这里再兜底隐藏；
+    首页打字机的光标（§27）同理 —— JS 第 15 节本来就提前退出，这里连伪元素
+    一起收掉，万一以后有人改了那个退出条件，也不会有一根停不下来的竖条
+    杵在正文里；
     时间轴点亮（§24）由 han.js 第 12 节不跑、直接给静态全彩轴；回到顶部
     按钮（§25）照常显隐，只是没有过渡动画。
     打印时：装饰层不印（含回到顶部按钮与时间轴彩轴，见 §24/§25）、
-    渐显元素直接给完整不透明度，避免打出来一片空白。
-   -------------------------------------------------------------------------- */
+    渐显元素直接给完整不透明度，避免打出来一片空白；打字机的光标同样不印
+    （正文本身是完整的一句，照印）。
+    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
 
@@ -1079,6 +1083,10 @@ html[data-reveal] .han-reveal.is-visible {
 
     .han-spotlight,
     .han-ripple {
+        display: none !important;
+    }
+
+    .han-typed.is-typing::after {
         display: none !important;
     }
 
@@ -1115,7 +1123,8 @@ html[data-reveal] .han-reveal.is-visible {
     .han-spotlight,
     .han-ripple,
     .han-top,
-    .han-timeline::after {
+    .han-timeline::after,
+    .han-typed.is-typing::after {
         display: none !important;
     }
 
@@ -1469,5 +1478,42 @@ html.theme-transition .han-minimap * {
 
     .archive__item-excerpt {
         font-size: 0.875em;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   27. 首页首段打字机的光标（行为见 han.js 第 15 节）
+   --------------------------------------------------------------------------
+   光标只是一根 inline-block 的竖条：颜色取 currentColor，明暗两套配色、
+   换 site_theme 都自动跟上，不用再声明一次。两个类都是 JS 打的 ——
+   .han-typed 标记「这段被打过字」，.is-typing 标记「还在打」，打
+   JS 摘掉 .is-typing，光标随之消失，段落回到一段普通的正文。
+   §17 另有 reduced-motion 与 print 的兜底：光标不该闪，也不该被打印。
+   -------------------------------------------------------------------------- */
+
+.han-typed.is-typing::after {
+    content: "";
+    display: inline-block;
+    width: 0.45em;
+    height: 1.05em;
+    /* 贴着刚打出的那个字：左侧留一点缝，底边比基线低一点点，像终端的光标 */
+    margin-left: 0.06em;
+    vertical-align: -0.18em;
+    background-color: currentColor;
+    animation: han-caret 1.05s steps(1, end) infinite;
+}
+
+@keyframes han-caret {
+
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
     }
 }

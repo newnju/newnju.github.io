@@ -1035,3 +1035,194 @@ function flashLabel(el, doneLabel, doneClass) {
     bind(cards[i]);
   }
 })();
+
+/* ==========================================================================
+   15. 首页首段打字机（终端效果，光标样式见 _han.scss §27）
+   --------------------------------------------------------------------------
+   页面 front matter 里写 typed_intro: true 时，_layouts/single.html 给
+   .page__content 打上 data-typed-intro，这里把**第一个 p**（那段自我介绍）
+   逐字打出来，行尾挂一根闪烁的竖条。中文 / 英文首页都开着。
+   照旧遵守全站「动效坏了也不藏内容」：
+   · 没打标记 / 没有 requestAnimationFrame / 用户开了减少动效 → 一个字都
+     不动。原文本来就在服务端渲染好的 HTML 里（无 JS 时也是这样），所以
+     抓取、首屏与打印都不受影响；
+   · 计时用 rAF 的时间戳而不是帧数：标签页切走再回来会一次性补齐缺的字，
+     不会永远停在半句上；
+   · pointerdown / 滚轮 / 按键任意一次都立刻补完 —— 想选中复制这段文字的人
+     总得先按一下或拖一下，于是「点一下就好」顺带把复制也救了；
+   · 段落里的行内元素（strong / em / a…）保留标签与属性，只往里逐字填
+     textContent，加粗与链接不会被抹平。
+   ========================================================================== */
+(function () {
+  if (!window.matchMedia) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!window.requestAnimationFrame) return;
+
+  /* 节奏按字数摊，目标 2.6 秒左右：每字的基准间隔 ×（1 + 该字后面的停顿
+     倍数），全段的总时长再按 TARGET_MS / MAX_MS 卡在上下限里。
+     停顿写成「几倍基准间隔」而不是固定毫秒，是为了跟着整体速度一起缩放 ——
+     写成固定值时，英文那段 710 字光停顿就叠出 3.5 秒，整段要打 7.9 秒。
+     中文（212 字）落在 2.9 秒，英文（710 字）由上限压到约 4.2 秒。 */
+  var TARGET_MS = 2600;
+  var MAX_MS = 4200;
+  var MIN_PER_CHAR = 6;
+  var MAX_PER_CHAR = 26;
+  var START_DELAY = 320;
+  var PAUSE_AFTER = {
+    "，": 5,
+    "、": 4,
+    "；": 6,
+    "：": 5,
+    "。": 9,
+    "！": 9,
+    "？": 9,
+    ",": 4,
+    ";": 5,
+    ":": 4,
+    ".": 8,
+    "!": 8,
+    "?": 8,
+  };
+  var SKIP_EVENTS = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"];
+
+  /** 按字切开：代理对算一个字，否则 emoji 之类会打出半个码位 */
+  function charsOf(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c >= 0xd800 && c <= 0xdbff && i + 1 < str.length) {
+        var d = str.charCodeAt(i + 1);
+        if (d >= 0xdc00 && d <= 0xdfff) {
+          out.push(str.charAt(i) + str.charAt(i + 1));
+          i++;
+          continue;
+        }
+      }
+      out.push(str.charAt(i));
+    }
+    return out;
+  }
+
+  function boot() {
+    var host = document.querySelector("[data-typed-intro]");
+    if (!host) return;
+
+    /* 只认 .page__content 的直接子 p：博局镜装饰（mirror: true）排在正文
+       前面，那是 div；后面 include 出来的荣誉 / 学历也不是 p。 */
+    var para = null;
+    for (var i = 0; i < host.children.length; i++) {
+      if (host.children[i].tagName === "P") {
+        para = host.children[i];
+        break;
+      }
+    }
+    if (!para) return;
+
+    /* 切段：文本节点记 nodeValue，元素节点（strong/em/a…）连标签一起留着，
+       文字逐字填进它的 textContent。 */
+    var units = [];
+    var nodes = Array.prototype.slice.call(para.childNodes);
+    var total = 0;
+    for (var j = 0; j < nodes.length; j++) {
+      var node = nodes[j];
+      var chars = null;
+      if (node.nodeType === 3) chars = charsOf(node.nodeValue || "");
+      else if (node.nodeType === 1) chars = charsOf(node.textContent || "");
+      if (!chars || !chars.length) continue;
+      units.push({ node: node, chars: chars });
+      total += chars.length;
+    }
+    if (!total) return;
+
+    /* 每个字该在第几毫秒出现。先把标点的停顿折成「额外的字数」，于是
+       weighted 就是全段的实际长度（含停顿），速度只需一个比例式。 */
+    var weighted = total;
+    for (var w = 0; w < nodes.length; w++) {
+      var src = nodes[w].nodeType === 3 ? nodes[w].nodeValue : nodes[w].textContent;
+      for (var t = 0; src && t < src.length; t++) {
+        weighted += PAUSE_AFTER[src.charAt(t)] || 0;
+      }
+    }
+    var per = Math.max(MIN_PER_CHAR, Math.min(MAX_PER_CHAR, TARGET_MS / weighted));
+    if (weighted * per > MAX_MS) per = MAX_MS / weighted;
+    var times = [];
+    var at = 0;
+    for (var u = 0; u < units.length; u++) {
+      var list = units[u].chars;
+      for (var c = 0; c < list.length; c++) {
+        times.push(at);
+        at += per * (1 + (PAUSE_AFTER[list[c]] || 0));
+      }
+    }
+
+    /** 把前 count 个字写进 DOM。count 为 0 时把每一段都清空 —— 起步那一下
+     *  必须真的抹掉，不能因为「没有可写的字」就留下完整原文闪一下。 */
+    function write(count) {
+      var left = count;
+      for (var k = 0; k < units.length; k++) {
+        var unit = units[k];
+        var n = left > 0 ? Math.min(unit.chars.length, left) : 0;
+        var text = unit.chars.slice(0, n).join("");
+        if (unit.node.nodeType === 3) unit.node.nodeValue = text;
+        else unit.node.textContent = text;
+        left -= n;
+      }
+    }
+
+    var rafId = 0;
+    var started = null;
+    var cursor = 0;
+    var painted = -1;
+    var finished = false;
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = 0;
+      for (var s = 0; s < SKIP_EVENTS.length; s++) {
+        window.removeEventListener(SKIP_EVENTS[s], finish);
+      }
+      write(total);
+      para.classList.remove("is-typing");
+      para.style.minHeight = "";
+    }
+
+    function frame(ts) {
+      rafId = 0;
+      if (started === null) started = ts;
+      var elapsed = ts - started - START_DELAY;
+      if (elapsed >= 0) {
+        while (cursor < total && times[cursor] <= elapsed) cursor++;
+        if (cursor !== painted) {
+          painted = cursor;
+          write(painted);
+        }
+        if (painted >= total) {
+          finish();
+          return;
+        }
+      }
+      rafId = window.requestAnimationFrame(frame);
+    }
+
+    /* 打字期间下面所有内容都在往上爬 —— 每次访问都白送一次布局位移（CLS）。
+       起步前把满行高度量出来写进 min-height，打完再撤掉（撤掉时高度本来就
+       等于量到的那一档，不会再动一下）。量不到就什么都不锁。 */
+    var full = para.getBoundingClientRect().height;
+    if (full > 0) para.style.minHeight = full + "px";
+
+    para.classList.add("han-typed", "is-typing");
+    write(0);
+    for (var e = 0; e < SKIP_EVENTS.length; e++) {
+      window.addEventListener(SKIP_EVENTS[e], finish, { passive: true });
+    }
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();

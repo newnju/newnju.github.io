@@ -13,6 +13,7 @@
     "permalink": { "type": "string", "minLength": 1 },
     "author_profile": { "type": "boolean" },
     "mirror": { "type": "boolean" },
+    "typed_intro": { "type": "boolean" },
     "sitemap": { "type": "boolean" },
     "locale": { "type": "string", "enum": ["en"] },
     "redirect_from": {

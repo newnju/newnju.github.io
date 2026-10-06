@@ -3,6 +3,7 @@ permalink: /
 title: "主页"
 author_profile: true
 mirror: true
+typed_intro: true
 redirect_from: 
     - /about/
     - /about.html
