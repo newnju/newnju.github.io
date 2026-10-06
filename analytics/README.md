@@ -35,40 +35,60 @@ GitHub Pages 没有服务端，所以访问数据必须由页面里的第一方�
 另外：`assets/js/visit.js` 会读 `navigator.doNotTrack` 与 `navigator.globalPrivacyControl`，
 命中就**一个请求都不发**；服务端另外认一道 `DNT: 1` 的请求头，挡住手工绕过前端的调用。
 
-## 部署
+## 部署（GitHub Actions，不在本机跑 wrangler）
 
-前置：Cloudflare 账号 + `oaking.kdns.fr` 已在你的账号里 active（`oauth-proxy` 已经用过这个 zone）。
+`wrangler deploy` 需要 Cloudflare 的 API token，而那个 token **只能由你在 Cloudflare 后台点出来**
+（它等于把部署权限交给这个仓库）。所以 token 放进 GitHub Secrets，部署由
+[`.github/workflows/workers.yml`](../.github/workflows/workers.yml) 完成：改完 `analytics/**`
+推 main 就自动部署，站点本身由 `pages.yml` 另行构建 —— 两者互不依赖。
+
+**一次性准备：**
+
+1. Cloudflare 后台建 API Token（权限 **Workers Scripts: Edit** + **D1: Edit** + **Account: Read**）。
+2. 仓库 **Settings → Secrets and variables → Actions** 加这几个 Secret：
+
+   | 名字 | 值 |
+   | --- | --- |
+   | `CLOUDFLARE_API_TOKEN` | 上一步的 token |
+   | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 id |
+   | `STATS_TOKEN` | 统计面板 / 接口的密码，自己想一个 |
+
+   可选的普通变量（Variables，不是 Secrets）：`ANALYTICS_ALLOWED_ORIGIN`（默认
+   `https://newnju.github.io`）、`ANALYTICS_IP_SALT`、`ANALYTICS_RETENTION_DAYS`。
+
+   > 跟 oauth-proxy 共用同一对 `CLOUDFLARE_*`，不用重复建。
+
+3. 推 main（或在 Actions 页手动触发 **Workers**）。首次部署时 `wrangler.toml` 里的
+   `database_id` 还是占位串，workflow 会**自动建库**、建表并把 id 填进 runner 上的副本，
+   日志里会打一行 `新库 database_id=…` —— **把那串 id 提交回 `wrangler.toml`**，
+   以后就不用再建了。
+4. 部署完填站点开关，再推一次让 Jekyll 重新构建：
+
+   ```yaml
+   # _config.yml
+   analytics:
+     visit_endpoint: "https://stats.oaking.kdns.fr/api/visit"
+   ```
+
+   留空 = 全站不发任何统计请求（仓库当前就是留空状态）。`scripts.html` 据此决定要不要输出
+   标签，所以**改这一行必须重新构建才生效**。
+
+**别把 `STATS_TOKEN` 写进仓库**：`wrangler.toml` 里没有它，`git` 里也不会有。
+`secret put` 传空值会清掉线上值，所以 workflow 里空值一律跳过。
+
+<details>
+<summary>想在自己机器上部署（备用路径）</summary>
 
 ```bash
 cd analytics
-
-# 1. 建库，把返回的 database_id 填进 wrangler.toml
-npx wrangler d1 create site-stats
-
-# 2. 建表
+npx wrangler login
+npx wrangler d1 create site-stats        # 把 database_id 填进 wrangler.toml
 npx wrangler d1 execute site-stats --file=./schema.sql
-
-# 3. 配密钥（终端不显示字符，正常）
-npx wrangler secret put STATS_TOKEN        # 面板 / 接口的密码，自己想一个
-npx wrangler secret put ALLOWED_ORIGIN     # 可选：允许打点的来源，默认 https://newnju.github.io
-npx wrangler secret put IP_SALT            # 可选：IP 哈希的盐，换掉等于让历史去重失效
-npx wrangler secret put RETENTION_DAYS     # 可选：明细保留天数，默认 180
-
-# 4. 部署
+npx wrangler secret put STATS_TOKEN
 npx wrangler deploy
 ```
 
-拿到地址（形如 `https://stats.oaking.kdns.fr`）后，填进 `_config.yml`：
-
-```yaml
-analytics:
-  visit_endpoint: "https://stats.oaking.kdns.fr/api/visit"
-```
-
-留空 = 全站不发任何统计请求（仓库当前就是留空状态，保持零追踪）。填上以后
-`_includes/scripts.html` 才会输出 `<script … data-endpoint=…>`。
-
-**别把 `STATS_TOKEN` 写进仓库**：`wrangler.toml` 里没有它，`git` 里也不会有。
+</details>
 
 ## 看数据
 
@@ -113,10 +133,11 @@ curl https://stats.oaking.kdns.fr/healthz
 
 | 现象 | 原因 |
 | --- | --- |
+| Actions 报 `::error::仓库 Secrets 里还缺 …` | GitHub Secrets 没配全，见上面的部署清单 |
 | 面板有 PV、UV 一直是 1 | 同一个人多个标签页 / 同一 NAT 出口，算一个人是正常的 |
 | 城市全是「—」 | Cloudflare 对部分 IP（尤其国内一些机房段）没有城市级 GeoIP，只能到国家 |
 | 面板 401 | `STATS_TOKEN` 没配或与浏览器输入的不一致 |
-| `{"error":"D1 未绑定"}` | `wrangler.toml` 里的 `database_id` 还是占位串，重填后重新部署 |
+| `{"error":"D1 未绑定"}` | 首次部署建库那步失败了；看 Actions 日志里 Cloudflare API 的返回 |
 | 站点没请求 | `_config.yml` 的 `analytics.visit_endpoint` 还是空的（要重新构建部署才生效） |
 | 数据里 `host` 是别的域名 | 有人拿你的端点刷别的站；`host` 列就是为此留的。要收紧就把 `ALLOWED_ORIGIN` 反过来校验 `Origin`/`Host` |
 

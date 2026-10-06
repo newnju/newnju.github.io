@@ -40,13 +40,13 @@ OAuth App 会出现在每个人的 GitHub 设置里。所以：
 
 ### 部署后请确认的两件事
 
-1. **白名单配了**（不配后台就是登不进去，这是故意的）：
+1. **白名单到位**（不配后台就是登不进去，这是故意的）：在仓库
+   **Settings → Secrets and variables → Actions** 里填 `OAUTH_ALLOWED_USERS`
+   （自己的 GitHub 用户名，多个用逗号隔开），重跑 Workers workflow，然后
    ```bash
-   npx wrangler secret put ALLOWED_GITHUB_USERS   # 填 newnju，多个用逗号隔开
-   npx wrangler secret put SITE_ORIGIN           # 可选，默认 https://newnju.github.io
-   npx wrangler secret list                      # 确认两条都在
    curl https://oauth.oaking.kdns.fr/healthz     # {"ok":true,"allowlist":true}
    ```
+   `allowlist:false` 就是它还没同步上。
 2. **GitHub 给 `main` 开了分支保护**：Settings → Branches → Add rule
    （或 Rules → Rulesets）。建议勾上 *Require status checks to pass*，把
    `check` / `build` 两个 job 加进去；再打开 *Do not allow bypassing the above settings*。
@@ -70,14 +70,13 @@ check:links / check:behavior / screenshots）—— 任一道红，**部署就�
 ### 审计记录
 
 每次登录尝试（开始 / 成功 / 被白名单挡下 / state 不匹配 / 换 token 失败 / 查不到身份）
-都写一行 JSON 到 Workers Logs，默认留 3 天。要留更久就配一个 Analytics Engine 绑定：
+都写一行 JSON 到 Workers Logs，默认留 3 天。要留更久就在 `wrangler.toml` 里加一个
+Analytics Engine 绑定，然后推 main（部署走 CI）：
 
-```bash
-cd oauth-proxy
-npx wrangler deploy --var ...   # 或在 wrangler.toml 里加：
-# [[analytics_engine_datasets]]
-# binding = "AUDIT"
-# dataset = "admin_audit"
+```toml
+[[analytics_engine_datasets]]
+binding = "AUDIT"
+dataset = "admin_audit"
 ```
 
 配了 `AUDIT` 之后，每次尝试还会额外写一个数据点（`event` / `user` / `ip` / `country` /
@@ -106,21 +105,48 @@ Cloudflare Access（Zero Trust）在 `oauth.oaking.kdns.fr` 前面加一层你�
 4. 记下 **Client ID**（`Iv1.` 开头那串），点 **Generate a new client secret** 记下 **Client secret**
    —— secret **只显示一次**，关掉就看不到了，只能 Regenerate
 
-## 二、部署 Worker
+## 二、让 GitHub 来部署（不再在本机跑 wrangler）
+
+`wrangler deploy` 需要 Cloudflare 的 API token，而那个 token **只能由你在 Cloudflare 后台点出来**
+（它等于把部署权限交给这个仓库），没法写进仓库。所以 token 放在 GitHub Secrets 里，
+由 [`.github/workflows/workers.yml`](.github/workflows/workers.yml) 使用 —— 部署动作发生在
+GitHub 上，你只要改完 `oauth-proxy/**` 推 main 就行。
+
+**一次性准备：**
+
+1. Cloudflare 后台 → My Profile → API Tokens → Create Token
+   权限选 **Workers Scripts: Edit** + **D1: Edit**（analytics 也要用 D1）+ **Account: Read**。
+   生成后复制那串 token。
+2. 仓库 **Settings → Secrets and variables → Actions → New repository secret**，加这几个
+   （名字必须完全一致）：
+
+   | Secret | 值 |
+   | --- | --- |
+   | `CLOUDFLARE_API_TOKEN` | 上一步的 token |
+   | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 id（后端首页右侧，或 API `https://api.cloudflare.com/client/v4/accounts`） |
+   | `OAUTH_GITHUB_ID` | GitHub OAuth App 的 Client ID（第一节生成的） |
+   | `OAUTH_GITHUB_SECRET` | Client secret（只显示一次，丢了就 Regenerate） |
+   | `OAUTH_ALLOWED_USERS` | 白名单，逗号分隔，例如 `newnju`。**留空的话 workflow 会拒绝部署** |
+
+   可选的普通变量（Settings → Variables，不是 Secrets）：`SITE_ORIGIN`（默认 `https://newnju.github.io`）。
+3. 推 main，或在 Actions 页手动触发 **Workers**。跑完会用
+   `https://oauth.oaking.kdns.fr/healthz` 自检，应看到 `{"ok":true,"allowlist":true}`。
+
+workflow 每次会做三件事：先跑 `tests/oauth-proxy.test.mjs`（不过就不部署）→ `wrangler deploy`
+→ 把上面几个密钥同步到 Worker（`secret put`，值为空就跳过、保留线上原值）。
+**同步顺序是先发代码再给密钥**：白名单没到位之前，线上跑的还是旧 Worker，不受影响。
+
+<details>
+<summary>想在自己机器上部署（备用路径）</summary>
 
 ```bash
 cd oauth-proxy
+npx wrangler login
+npx wrangler secret put GITHUB_OAUTH_ID
+npx wrangler secret put GITHUB_OAUTH_SECRET
+npx wrangler secret put ALLOWED_GITHUB_USERS   # 不配 = 后台登不进去（默认拒绝）
 npx wrangler deploy
 ```
-
-第一次会提示登录 Cloudflare（免费账号即可），然后输出：
-
-```
-https://decap-oauth.hidiamond.workers.dev
-oauth.oaking.kdns.fr (custom domain - zone name: oaking.kdns.fr)
-```
-
-### ⚠️ 必须用自定义域名，不要用 workers.dev
 
 `workers.dev` 在部分网络下**完全不可达**，而且这不是配置问题：
 
@@ -142,26 +168,25 @@ route = { pattern = "oauth.oaking.kdns.fr", zone_name = "oaking.kdns.fr", custom
 ```
 
 前提是这个 zone 已经托管到 Cloudflare（NS 指向 `*.ns.cloudflare.com`）。换域名时改这一行重新
-`npx wrangler deploy` 即可，Worker 本身不用动。
+推 main 即可，Worker 本身不用动。
 
-## 三、把密钥填进去
+</details>
 
-```bash
-cd oauth-proxy
-npx wrangler secret put GITHUB_OAUTH_ID      # 粘贴 Client ID，回车
-npx wrangler secret put GITHUB_OAUTH_SECRET   # 粘贴 Client secret，回车
-# 必填：白名单。不配后台登不进去（默认拒绝，见「安全边界」）
-npx wrangler secret put ALLOWED_GITHUB_USERS  # 自己的 GitHub 用户名，例如 newnju
-# 可选：Decap 前端所在来源，postMessage 只发到这里
-npx wrangler secret put SITE_ORIGIN          # https://newnju.github.io
-```
+## 三、密钥同步的顺序与影响
 
-粘贴时终端**不显示任何字符**（防肩窥，正常现象）。填完用 `npx wrangler secret list` 确认几条都在，
-再 `curl https://oauth.oaking.kdns.fr/healthz` 看到 `{"ok":true,"allowlist":true}`。
+CI 里是「先 `wrangler deploy` 再 `secret put`」，所以：
 
-> 可选：默认申请的权限是 `public_repo,user`（能读写公开仓库 + 读用户信息）。
-> 如果仓库是私有的，再加一个：
-> `npx wrangler secret put GITHUB_SCOPE` → 填 `repo,user`。
+- 白名单还没进 Secrets 时，**workflow 会在部署之前就中止**（第二节第 2 步的表格里那一行），
+  不会出现「代码上去了、白名单没有、后台登不进去」的中间态；
+- 万一真出现登录失败，先看 `https://oauth.oaking.kdns.fr/healthz`：
+  `{"ok":true,"allowlist":false}` 就是白名单没到位，去 Secrets 补 `OAUTH_ALLOWED_USERS`
+  再重跑一次 workflow；
+- `secret put` 传空值会**把线上的值清掉**，所以 workflow 里的 `put()` 对空值一律跳过
+  （保留线上原值）。要改某个值就在 Secrets 里改，然后重跑 workflow。
+
+> 默认申请的权限是 `public_repo,user`（能读写公开仓库 + 读用户信息）。
+> 仓库若是私有的，把 `worker.js` 里的 `GITHUB_SCOPE` 默认值改成 `repo,user`
+> （或加一个 `GITHUB_SCOPE` secret）。
 
 ## 四、地址已经填好了
 
@@ -184,14 +209,16 @@ npx wrangler dev
 
 | 现象 | 原因 |
 | --- | --- |
+| Actions 的 Workers 报 `::error::仓库 Secrets 里还缺 …` | GitHub Secrets 没配全，见第二节的一次性准备 |
 | 点登录后弹窗一直转圈 | `base_url` 用了 `*.workers.dev`。那个域名在部分网络下被按 SNI 丢包，重试和换 DNS 都没用，必须用自定义域名（见第二节） |
 | 点登录后弹窗一闪就关 / 控制台报 `state` 不匹配 | OAuth App 的 callback URL 和 Worker 实际地址对不上 |
 | GitHub 报 `redirect_uri mismatch` | 同上，回 GitHub 核对 callback URL，注意结尾必须是 `/callback`，且要和 `wrangler.toml` 里的 `route.pattern` 一致 |
 | 浏览器控制台报 CORS | `base_url` 写成了 `https://` 开头以外的形式，或少了 `auth_endpoint: auth` |
 | 能登录但 push 报 403 | 权限不够：私有仓库要设 `GITHUB_SCOPE=repo,user` |
-| Worker 500 | `GITHUB_OAUTH_ID` / `GITHUB_OAUTH_SECRET` 没填或填错，`npx wrangler secret list` 核对 |
-| 点登录就报「服务端还没配 ALLOWED_GITHUB_USERS」 | 白名单没配。这是默认拒绝，先 `npx wrangler secret put ALLOWED_GITHUB_USERS` |
-| 提示「不在本站后台的白名单里」 | 登录的 GitHub 账号不在名单里。确认大小写不敏感，写的是用户名（不是昵称/邮箱） |
+| Worker 500 | `GITHUB_OAUTH_ID` / `GITHUB_OAUTH_SECRET` 没同步上，看 Actions 日志里 `secret … 已同步` 那几行 |
+| 点登录就报「服务端还没配 ALLOWED_GITHUB_USERS」 | 白名单没到位。这是默认拒绝，去 Secrets 补 `OAUTH_ALLOWED_USERS` 再重跑 workflow |
+| 提示「不在本站后台的白名单里」 | 登录的 GitHub 账号不在名单里。大小写不敏感，但要写**用户名**（不是昵称/邮箱） |
+| 部署跑完但登录还是旧行为 | 代码没推 main（workflow 只在 push 到 main 时部署），或浏览器缓存了 `/auth` 的 302 |
 | 自定义域名报「zone 不在此账号」 | `wrangler.toml` 里的 `zone_name` 要和 Cloudflare 里 zone 的名字完全一致，且该 zone 状态为 active |
 
 ## 测试
@@ -203,7 +230,8 @@ node --test tests/oauth-proxy.test.mjs
 全程离线（GitHub 那两个端点用假 fetch 顶掉），断言的是「门」的行为：白名单没配时
 `/auth` 拒绝且不出网、鉴权在 token 之前、白名单外的响应里绝不出现 token、
 postMessage 不许出现 `'*'`、token 页面不缓存不可被套 iframe、state 用完即废、
-`/healthz` 不泄露白名单。改 `worker.js` 之后先跑这个。
+`/healthz` 不泄露白名单。改 `worker.js` 之后先跑这个 —— CI 的 Workers workflow
+也会先跑它，不过就不部署。
 
-> 这个 Worker 只服务于本站后台，改完 `worker.js` 重新 `npx wrangler deploy` 即可，站点本身不受影响。
+> 这个 Worker 只服务于本站后台，改完 `worker.js` 推 main 即可，站点本身不受影响。
 > `workers_dev = true` 保留着，方便 `npx wrangler dev` 本地调试；它不影响自定义域名。
