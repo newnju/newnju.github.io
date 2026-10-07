@@ -43,7 +43,21 @@
             <button type="button" aria-label="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}" title="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true"></i></button>
           </li>
           <li id="login-link" class="masthead__menu-item persist tail">
-            <a href="{{ base_path }}/admin/" aria-label="{{ _ui.login_label | default: "账号登录" }}" title="{{ _ui.login_label | default: "账号登录" }}"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i></a>
+            {%- comment -%}
+              登录按钮两态（assets/js/login-state.js 按 localStorage['decap-cms-user']
+              切换，那是 Decap 自己的登录态存储键）：
+                未登录 → GitHub 图标，点击进 /admin/ 登录（默认渲染就是这个态，
+                         JS 不跑也正确）；
+                已登录 → 换回登录图标，点击弹确认框退出登录（清掉同一个键）。
+              文案由 data-* 从 ui-text 带上，脚本切态时直接取。
+            {%- endcomment -%}
+            <a href="{{ base_path }}/admin/"
+               data-state="out"
+               data-login-label="{{ _ui.login_label | default: "账号登录" }}"
+               data-logout-label="{{ _ui.logout_label | default: "退出登录" }}"
+               data-logout-confirm="{{ _ui.logout_confirm | default: "退出后台登录？" }}"
+               aria-label="{{ _ui.login_label | default: "账号登录" }}"
+               title="{{ _ui.login_label | default: "账号登录" }}"><i class="fab fa-github" aria-hidden="true"></i></a>
           </li>
         </ul>
         <ul class="hidden-links hidden"></ul>

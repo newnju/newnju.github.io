@@ -337,6 +337,63 @@ async function newPage(viewport) {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- 7. 登录按钮两态
+// 未登录：GitHub 图标（静态默认，JS 不跑也是它），点击进 /admin/；
+// 已登录：Decap 的登录态键（decap-cms-user）存在 → 换回登录图标，点击弹
+// 确认框退出。这里用「手工塞键 + 刷新」模拟登录成功，确认/取消两条路都测。
+{
+  const { ctx, page } = await newPage({ width: 1366, height: 900 });
+  const read = () =>
+    page.evaluate(() => {
+      const a = document.querySelector('#login-link a');
+      const i = a && a.querySelector('i');
+      return {
+        icon: i ? i.className : null,
+        href: a ? a.getAttribute('href') : null,
+        aria: a ? a.getAttribute('aria-label') : null,
+        state: a ? a.getAttribute('data-state') : null,
+        stored: localStorage.getItem('decap-cms-user'),
+      };
+    });
+
+  await page.goto(origin + '/', { waitUntil: 'load' });
+  await page.waitForTimeout(900);
+  const out = await read();
+  check('默认（未登录）是 GitHub 图标', /fa-github/.test(out.icon ?? ''), out.icon);
+  check('默认 data-state=out 且指向 /admin/', out.state === 'out' && /\/admin\/$/.test(out.href ?? ''), `${out.state} ${out.href}`);
+
+  // 模拟 Decap 登录成功写入的那份键
+  await page.evaluate(() =>
+    localStorage.setItem('decap-cms-user', JSON.stringify({ backendName: 'github', login: 'newnju', token: 'fake' })),
+  );
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(900);
+  const inS = await read();
+  check('有登录态时图标切回登录图标', /fa-right-to-bracket/.test(inS.icon ?? ''), inS.icon);
+  check('有登录态时 data-state=in 且 aria 是退出文案', inS.state === 'in' && /退出|Sign out/.test(inS.aria ?? ''), `${inS.state} ${inS.aria}`);
+
+  // 点击 → 确认框 → 接受：键被清、图标回到 GitHub
+  page.once('dialog', (d) => d.accept());
+  await page.click('#login-link a');
+  await page.waitForTimeout(400);
+  const cleared = await read();
+  check('确认退出后登录键被清除', cleared.stored === null, String(cleared.stored));
+  check('确认退出后图标回到 GitHub', /fa-github/.test(cleared.icon ?? ''), cleared.icon);
+
+  // 取消确认：登录态原样保留
+  await page.evaluate(() =>
+    localStorage.setItem('decap-cms-user', JSON.stringify({ backendName: 'github', login: 'newnju', token: 'fake' })),
+  );
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(700);
+  page.once('dialog', (d) => d.dismiss());
+  await page.click('#login-link a');
+  await page.waitForTimeout(400);
+  const kept = await read();
+  check('取消确认则保持登录', kept.stored !== null && /fa-right-to-bracket/.test(kept.icon ?? ''), kept.icon);
+  await ctx.close();
+}
+
 await browser.close();
 if (server) server.close();
 

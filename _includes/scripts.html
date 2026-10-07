@@ -1,6 +1,11 @@
 {% include base_path %}
 <script type="module" src="{{ base_path }}/assets/js/main.min.js"></script>
 
+<!-- 顶栏登录按钮两态（未登录 GitHub 图标→/admin/，已登录→点击退出）。
+     全站每页都有顶栏，所以无条件输出；脚本自己按 #login-link 是否存在与
+     DOM 就绪状态兜底（见 assets/js/login-state.js 头注释）。 -->
+<script src="{{ base_path }}/assets/js/login-state.js" async></script>
+
 <!-- 本站脚本：BibTeX 复制、引用复制、缩略图导航等渐进增强。
      用 async 而不是 defer：defer 脚本严格按文档顺序执行，页脚里曾经有一条
      defer 的 MathJax（jsDelivr），外链一慢就把排在它后面的 han.js 一起拖住
