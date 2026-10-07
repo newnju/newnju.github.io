@@ -21,7 +21,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "site-stats"
-database_id = "在这里填 wrangler d1 create 给的 database_id"
+database_id = "ddb24480-577f-415b-b5b0-b51465958b74"
 
 # 明细保留 180 天，到点自动删（UTC 03:17）
 [triggers]

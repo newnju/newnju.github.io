@@ -170,7 +170,7 @@ social:
 #   浏览器开了 Do Not Track / Global Privacy Control 就不上报。
 analytics:
   provider               :  false # false（默认）/ "google" / "google-universal" / "google-analytics-4" / "custom"
-  visit_endpoint         :  ""    # 例：https://stats.oaking.kdns.fr/api/visit
+  visit_endpoint         :  "https://stats.oaking.kdns.fr/api/visit" # 填上才输出 visit.js 标签
   google:
     tracking_id          :
 

@@ -144,7 +144,9 @@ jobs:
             echo "::notice::新库 database_id=$dbid —— 请把它填回 analytics/wrangler.toml 并提交，下次就不用再建"
             sed -i "s|database_id = \"[^\"]*\"|database_id = \"$dbid\"|" wrangler.toml
           fi
-          npx wrangler@4 d1 execute site-stats --file=./schema.sql
+          # --remote 必须有：wrangler v4 的 d1 execute 默认只写本地 state，
+          # 少了它建表语句根本不进线上库（worker 一写就 no such table）。
+          npx wrangler@4 d1 execute site-stats --remote --file=./schema.sql
           npx wrangler@4 deploy
           put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
           put STATS_TOKEN "$STATS_TOKEN"
@@ -156,11 +158,18 @@ jobs:
       - name: 部署后的健康检查
         run: |
           set -eu
-          for url in https://oauth.oaking.kdns.fr/healthz https://stats.oaking.kdns.fr/healthz; do
+          # 硬性通过条件看 workers.dev：zone（oaking.kdns.fr）的防 Bot 挑战会把
+          # runner 的数据中心 IP 拦成 403 页（本机浏览器访问是通的），拿它当门槛
+          # 会永远红。自定义域名只打印状态供核对——它才面向真人用户。
+          for url in https://decap-oauth.hidiamond.workers.dev/healthz https://site-stats.hidiamond.workers.dev/healthz; do
             code=$(curl -sS -o /tmp/h -w '%{http_code}' --max-time 20 "$url" || echo 000)
             echo "$url -> HTTP $code  $(cat /tmp/h 2>/dev/null | head -c 120)"
             if [ "$code" != "200" ]; then
               echo "::error::$url 健康检查没通过"
               exit 1
             fi
+          done
+          for url in https://oauth.oaking.kdns.fr/healthz https://stats.oaking.kdns.fr/healthz; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$url" || echo 000)
+            echo "（信息）$url -> HTTP $code —— 若是403/挑战页属 zone 防 Bot 拦 runner，不代表 worker 故障"
           done
