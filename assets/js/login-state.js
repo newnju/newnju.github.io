@@ -5,7 +5,8 @@
    decap-cms 3.x 的 authStore：登录成功后写入 JSON，退出登录 removeItem
    同一个键 —— 我们只是读它、退出时清它，不另起炉灶存第二份）。
 
-   · 未登录（默认渲染，JS 不跑也是这个态）：GitHub 图标，点击正常跳 /admin/；
+   · 未登录（默认渲染，JS 不跑也是这个态）：人像图标（fa-circle-user，
+     中性「账号」语义，不再拿 GitHub 品牌当登录入口的门面），点击跳 /admin/；
    · 已登录：换回登录图标（fa-right-to-bracket），aria/title 换成「退出登录」，
      点击弹一次确认，确认后清键、当场切回未登录态（不整页刷新）；
    · 另开标签页登录/退出（storage 事件）也同步过来。
@@ -17,7 +18,7 @@
   "use strict";
 
   var STORAGE_KEY = "decap-cms-user"; // Decap authStore.storageKey
-  var ICON_OUT = "fab fa-github"; // 未登录：GitHub 图标
+  var ICON_OUT = "fa-solid fa-circle-user"; // 未登录：人像图标
   var ICON_IN = "fa-solid fa-right-to-bracket"; // 已登录：登录图标（即上线前的原样）
 
   function readStoredUser() {

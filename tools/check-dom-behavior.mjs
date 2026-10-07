@@ -338,7 +338,7 @@ async function newPage(viewport) {
 }
 
 // ---------------------------------------------------------------- 7. 登录按钮两态
-// 未登录：GitHub 图标（静态默认，JS 不跑也是它），点击进 /admin/；
+// 未登录：人像图标 fa-circle-user（静态默认，JS 不跑也是它），点击进 /admin/；
 // 已登录：Decap 的登录态键（decap-cms-user）存在 → 换回登录图标，点击弹
 // 确认框退出。这里用「手工塞键 + 刷新」模拟登录成功，确认/取消两条路都测。
 {
@@ -359,7 +359,7 @@ async function newPage(viewport) {
   await page.goto(origin + '/', { waitUntil: 'load' });
   await page.waitForTimeout(900);
   const out = await read();
-  check('默认（未登录）是 GitHub 图标', /fa-github/.test(out.icon ?? ''), out.icon);
+  check('默认（未登录）是人像图标', /fa-circle-user/.test(out.icon ?? ''), out.icon);
   check('默认 data-state=out 且指向 /admin/', out.state === 'out' && /\/admin\/$/.test(out.href ?? ''), `${out.state} ${out.href}`);
 
   // 模拟 Decap 登录成功写入的那份键
@@ -372,13 +372,13 @@ async function newPage(viewport) {
   check('有登录态时图标切回登录图标', /fa-right-to-bracket/.test(inS.icon ?? ''), inS.icon);
   check('有登录态时 data-state=in 且 aria 是退出文案', inS.state === 'in' && /退出|Sign out/.test(inS.aria ?? ''), `${inS.state} ${inS.aria}`);
 
-  // 点击 → 确认框 → 接受：键被清、图标回到 GitHub
+  // 点击 → 确认框 → 接受：键被清、图标回到人像
   page.once('dialog', (d) => d.accept());
   await page.click('#login-link a');
   await page.waitForTimeout(400);
   const cleared = await read();
   check('确认退出后登录键被清除', cleared.stored === null, String(cleared.stored));
-  check('确认退出后图标回到 GitHub', /fa-github/.test(cleared.icon ?? ''), cleared.icon);
+  check('确认退出后图标回到人像', /fa-circle-user/.test(cleared.icon ?? ''), cleared.icon);
 
   // 取消确认：登录态原样保留
   await page.evaluate(() =>
