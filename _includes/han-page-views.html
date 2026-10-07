@@ -9,7 +9,15 @@
 {%- assign _pv_locale = page.locale | default: site.locale -%}
 {%- assign _pv_ui = site.data.ui-text[_pv_locale] | default: site.data.ui-text[site.locale] -%}
 {%- assign _pv_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
-{%- if page.collection and _pv_endpoint and _pv_endpoint != '' -%}
+{%- comment -%}
+  集合条目的 page.collection 为空的两种情况都要算上：
+  · 首页、履历这类普通页 —— 两边都空，整块不输出；
+  · _pages/en/ 下生成的英文条目页（tools/render-en.mjs）—— 不在集合目录里，
+    page.collection 为空，但 front matter 带 zh_url（回指中文原文），凭它放行。
+{%- endcomment -%}
+{%- assign _pv_show = false -%}
+{%- if page.collection or page.zh_url -%}{%- assign _pv_show = true -%}{%- endif -%}
+{%- if _pv_show and _pv_endpoint and _pv_endpoint != '' -%}
 <p class="page__views" data-summary="{{ _pv_endpoint | replace: '/api/visit', '/api/summary' }}" data-path="{{ page.url }}" hidden>
   {{ _pv_ui.page_views_label | default: "本文阅读" }} <b data-fill="page_pv">—</b>{{ _pv_ui.page_views_suffix }}
 </p>

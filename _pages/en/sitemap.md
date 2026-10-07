@@ -13,11 +13,13 @@ Every page and entry on this site is listed below. There is also an [XML version
 <h2>Pages</h2>
 {%- comment -%}
   这里只列英文页（locale 含 'en'），中文页归 /sitemap/ 那张图，两张不重复。
+  带 zh_url 的是生成的英文条目页（tools/render-en.mjs），它们已由下面四个
+  条目小节（链接经 archive-single 指向 /en/…）覆盖，这里跳过免得重复列。
 {%- endcomment -%}
 {% for post in site.pages %}
   {% assign _pl = post.locale | default: '' %}
   {% if _pl contains 'en' %}
-    {% unless post.url == page.url or post.sitemap == false %}
+    {% unless post.url == page.url or post.sitemap == false or post.zh_url %}
       {% include archive-single.html %}
     {% endunless %}
   {% endif %}

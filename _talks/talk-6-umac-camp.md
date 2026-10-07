@@ -10,5 +10,7 @@ venue_en: "Faculty of Social Sciences, University of Macau"
 location: "中国澳门"
 location_en: "Macao SAR, China"
 excerpt_en: "Attended the Outstanding Postgraduate Summer School at the Faculty of Social Sciences, University of Macau."
+body_en: |-
+  Participated in the Outstanding Graduate Summer School of the Faculty of Social Sciences, University of Macau.
 ---
 参加澳门大学社会科学学院优秀研究生暑期学校。

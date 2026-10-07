@@ -394,6 +394,66 @@ async function newPage(viewport) {
   await ctx.close();
 }
 
+// ------------------------------------------------- 8. 英文条目页（/en/…）
+// tools/render-en.mjs 生成的页面要像真正的英文页：标题与正文是英文译文（不是
+// 中文原文顶着英文外壳）、语言切换回得到中文原文、分享是英文五件套（无微信）、
+// 阅读数容器凭 zh_url 放行、页面自身没有 JS 报错。
+{
+  const { ctx, page } = await newPage({ width: 1366, height: 900 });
+  const pageErrors = [];
+  page.on('pageerror', (e) => pageErrors.push(String(e)));
+
+  await page.goto(origin + '/en/publication/2025-four-gods-zhi-wen', { waitUntil: 'load' });
+  await page.waitForTimeout(1200);
+  const info = await page.evaluate(() => {
+    const h1 = document.querySelector('h1');
+    const content = document.querySelector('.page__content');
+    const sw = document.querySelector('.lang-switch a');
+    const share = document.querySelector('.page__share');
+    const btns = share ? [...share.querySelectorAll('.btn')] : [];
+    const pv = document.querySelector('.page__views');
+    const nav = [...document.querySelectorAll('#site-nav .visible-links li:not(.lang-switch) a')].map(
+      (a) => a.getAttribute('href'),
+    );
+    return {
+      h1: h1 ? h1.textContent : '',
+      content: content ? content.textContent : '',
+      swHref: sw ? sw.getAttribute('href') : null,
+      shareCount: btns.length,
+      shareHidden: btns.filter((b) => b.hidden).length,
+      wechat: !!document.querySelector('[data-share-wechat]'),
+      pvPath: pv ? pv.getAttribute('data-path') : null,
+      pvText: pv ? pv.textContent : '',
+      nav,
+    };
+  });
+
+  check('英文条目页 h1 是英文标题', /Zhi and Wen/.test(info.h1) && !/质与文/.test(info.h1), info.h1.trim());
+  check(
+    '英文条目页正文是英文译文',
+    /The paper was presented/.test(info.content) && !/本文在南京大学历史学院/.test(info.content),
+  );
+  check('语言切换回中文原文', info.swHref === '/publication/2025-four-gods-zhi-wen', String(info.swHref));
+  check(
+    '英文分享是五件套且无隐藏',
+    info.shareCount === 5 && info.shareHidden === 0,
+    `${info.shareCount} 个 / hidden=${info.shareHidden}`,
+  );
+  check('英文页没有微信按钮', info.wechat === false);
+  check(
+    '阅读数容器按 zh_url 放行且路径是本页',
+    info.pvPath === '/en/publication/2025-four-gods-zhi-wen' && /Reads/.test(info.pvText),
+    `${info.pvPath} ${info.pvText.trim()}`,
+  );
+  check(
+    '英文导航链接都带 /en 前缀',
+    info.nav.filter((h) => h && !h.startsWith('/en') && !/^https?:/.test(h)).length === 0,
+    JSON.stringify(info.nav),
+  );
+  check('英文页没有 JS 报错', pageErrors.length === 0, pageErrors.join('; '));
+  await ctx.close();
+}
+
 await browser.close();
 if (server) server.close();
 

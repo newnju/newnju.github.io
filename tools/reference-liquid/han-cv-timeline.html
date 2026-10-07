@@ -65,7 +65,7 @@
 {% assign _pn = _projs | size %}
 {% if _pn > 0 %}
 {% for p in _projs %}
-* [{% if _en and p.title_en %}{{ p.title_en }}{% else %}{{ p.title }}{% endif %}]({{ p.url | relative_url }}){% if _en %} ({% else %}（{% endif %}<span class="han-cv-date">{{ p.daterange }}</span>{% if _en %}){% else %}）{% endif %}
+* [{% if _en and p.title_en %}{{ p.title_en }}{% else %}{{ p.title }}{% endif %}]({% if _en %}{{ '/en' | relative_url }}{% endif %}{{ p.url | relative_url }}){% if _en %} ({% else %}（{% endif %}<span class="han-cv-date">{{ p.daterange }}</span>{% if _en %}){% else %}）{% endif %}
 {% assign _ex = p.excerpt %}
 {% if _en and p.excerpt_en %}{% assign _ex = p.excerpt_en %}{% endif %}
 {% if _ex %}

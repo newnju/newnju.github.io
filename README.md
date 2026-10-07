@@ -244,7 +244,7 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 
 ### 6. 英文版（`/en/`）
 
-导航栏最右侧的地球图标在 `/` 与 `/en/` 之间切换。
+导航栏最右侧的地球图标在**当前页**的中英对译页之间切换：英文页回中文原文，中文页进 `/en/…` 的英文页；两边按 URL 找得到对译页才切换，找不到（比如新加的页面还没做英文版）就回落到 `ui-text.yml` 里 `lang_switch_href` 给的默认地址（`_includes/masthead.html` 里按 `site.pages` + `site.documents` 查找）。
 
 英文版**不复制内容**，而是共用同一份数据，只把界面文案换成英文：
 
@@ -264,17 +264,20 @@ link: "https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&filename=HXWH202
 | `description`（页面级简介） | `description_en` |
 | `type` / `venue` / `location`（会议条目） | `type_en` / `venue_en` / `location_en` |
 | `text` / `note` / `year`（获奖数据，`_data/awards.yml`） | `text_en` / `note_en` / `year_en` |
+| `body`（正文，front matter 之外的 Markdown） | `body_en`（英文页的正文；**不在**自动翻译的覆盖范围里，要人工写、人工审） |
 
 界面文案（页脚、缩略图提示、镜图图注等）一并按 `page.locale` 取 `_data/ui-text.yml`，
 因此英文页的页脚是 Follow / Feed / Sitemap，首页镜图的图注也是英文
 （键为 `mirror_caption` / `mirror_aria`）。
 
-条目列表层的中英已经齐全；条目**详情页**（`/portfolio/xxx`、`/publication/xxx`）目前仍是中文正文，
-它们与中文列表共用同一批 URL，暂未拆分英文副本。
+条目列表层的中英已经齐全；条目**详情页**也有英文副本：每个条目在 `/en/<原地址>` 有一份生成的英文页（`tools/render-en.mjs` 产出，落位 `_pages/en/<集合>/<slug>.md`，随仓库提交）。英文页 front matter 里模板会读的字段（标题 / 摘要 / 期刊 / 引用 / 类型 / 日期 / 外链）优先取 `*_en`、缺了回落中文；正文取条目的 `body_en`，有中文正文但还没写 `body_en` 时页面显示一段回链块（文案键 `body_en_pending` / `original_zh_label`，链回中文原文）——**绝不用中文正文冒充英文页**。列表卡片上的链接在英文页自动指到 `/en/…`（`archive-single*.html` 的 `_purl`，`/en` 开头的不重复加前缀），中文页仍指中文地址；履历页时间轴的项目链接同理（`tools/lib/render.mjs` 与 `tools/reference-liquid/han-cv-timeline.html` 两侧逐字节同步）。
+
+生成器每次 `npm run build:content` 都会重新生成（CI 的 build job 在 `jekyll build` 前跑，所以**部署出去的永远是刚生成的那份**）；`npm run check:content` 只提示漂移、不挡部署 —— 后台（Decap）能改条目但跑不了脚本，「改一个字发不上去」不可接受。改完条目想立刻同步仓库里这份，跑一次 `npm run build:content` 即可。生成逻辑的单测在 `tests/render-en.test.mjs`（地址规则、字段白名单、正文三分支、两次生成逐字节一致），英文详情页的渲染行为在 `tools/check-dom-behavior.mjs` 第 8 项（CI 跑）。
 
 页脚与站点地图也分语言：英文页页脚署 `author.name_en`、Sitemap 指向 `/en/sitemap/`，
 中文页仍是 `site.name` 与 `/sitemap/`。英文站点地图在 `_pages/en/sitemap.md`，
-只列 `locale: en` 的页面；中文那份继续列全部页面。给某个条目补英译之后，
+只列 `locale: en` 的页面（带 `zh_url` 的生成条目页由下面四个条目小节覆盖，不重复列）；
+中文那份列中文页面，英文页归英文图 —— 两张图各自一种语言。给某个条目补英译之后，
 首页、列表页、履历页三处的卡片都会自动跟着变，不用另外改模板。
 
 **约定：`*_en` 字段只在英文页生效。** 列表卡片（`_includes/archive-single*.html`）
@@ -497,7 +500,8 @@ git push
 | 项目与作品条目 | `_portfolio/` 下的 Markdown 文件。front matter 的 `date`（排序）、`daterange`（履历展示的日期跨度，如 `2019.09 – 2021.09`）、`period`（进履历哪段时期块）会同步到履历时间轴 |
 | 会议与暑期学校条目 | `_talks/` 下的 Markdown 文件 |
 | 教学 / 助教条目 | `_teaching/` 下的 Markdown 文件 |
-| **英文版页面** | `_pages/en/` 下的同名文件 |
+| **英文版页面** | 手写页在 `_pages/en/` 顶层的同名文件；**条目详情页的英文副本是生成的**，落位 `_pages/en/<集合>/<slug>.md`，别手改（改了下次 `build:content` 会覆盖）—— 生成器 `tools/render-en.mjs` + `tools/lib/render-en.mjs`，链在 `package.json` 的 `build:content` / `check:content` 上，规则见上面「英文版」一节 |
+| **条目的英文正文** | 各条目（`_publications/` 等）front matter 的 `body_en`（块标量）；没写时英文页显示回链中文原文的待译块。键名登记在 `schemas/*.schema.json`，后台字段在 `admin/config.yml` |
 | **`*_en` 字段（自动翻译）** | 术语表在 `tools/translate-glossary.yml`、行为与覆盖策略在 `tools/translate-en.mjs`（`npm run translate:en` / `npm run check:translate`）、每处英文对应的中文哈希在 `tools/translate-state.json`（进仓库，删掉即回到保守状态）。中文没变就不覆盖人工译文 —— 见上面「英文版」一节 |
 | **后台登录 / 权限** | `oauth-proxy/worker.js`（Cloudflare Worker）。白名单 `ALLOWED_GITHUB_USERS` 是强制的 —— 不配后台登不进去；postMessage 锁 `SITE_ORIGIN`；state cookie 用完即废；每次登录尝试写一行审计日志。**部署在 GitHub 上做**（`.github/workflows/workers.yml`，改完推 main 即生效），密钥只进仓库 Secrets、不进仓库文件。行为有测试：`node --test tests/oauth-proxy.test.mjs` |
 | **访客统计** | 默认关闭。开关是 `_config.yml` 的 `analytics.visit_endpoint`（留空 = 一个请求都不发）；打点脚本 `assets/js/visit.js`；收数据的 Worker 与库表在 `analytics/`（D1 + Cloudflare GeoIP）。**不存明文 IP**，只存按天轮换盐的哈希；不写 cookie、不引第三方脚本；浏览器开了 Do Not Track / Global Privacy Control 就不上报。部署（同样走 GitHub Actions）见 [`analytics/README.md`](analytics/README.md)。**站内显示**走免鉴权的 `/api/summary`（只回计数、60 秒缓存，绝不回传维度）：页脚「本站访问量 · 今日」在 `_includes/footer.html`，文章页「本文阅读」在 `_includes/han-page-views.html`（仅集合条目，single/talk 布局引入），两者都初始 `hidden`、由 `visit.js` 取回数字才揭开；文案四个键 `site_pv_label` / `site_today_label` / `page_views_label` / `page_views_suffix` 在 `ui-text.yml`。过期明细删除前会按路径累计进 `lifetime_path`（`scheduled` 里与 DELETE 同一事务），所以累计数不会随 180 天保留期回退 |

@@ -119,7 +119,13 @@ function renderTimeline(data, collections, en) {
   const comma = en ? ', ' : '，';
   const education = data.profile.education;
   const work = data.profile.work;
-  const projects = collections.portfolio.map((p) => ({ ...p.data, url: p.data.permalink }));
+  // 英文页的项目链接指到 /en/… 的英文条目页 —— 与 reference-liquid/
+  // han-cv-timeline.html L68 的 {% if _en %}{{ '/en' | relative_url }}{% endif %}
+  // 必须逐字节一致（tests/render.test.mjs 拿两边输出互比）。
+  const projects = collections.portfolio.map((p) => ({
+    ...p.data,
+    url: en ? `/en${p.data.permalink}` : p.data.permalink,
+  }));
 
   // 模板头部注释与逐行 assign 各自带的换行（见 reference-liquid/han-cv-timeline.html）。
   let out = '\n'.repeat(9);

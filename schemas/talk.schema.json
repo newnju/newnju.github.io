@@ -22,6 +22,10 @@
       "type": "string"
     },
     "excerpt": { "type": "string" },
-    "excerpt_en": { "type": "string" }
+    "excerpt_en": { "type": "string" },
+    "body_en": {
+      "description": "正文（body）的英文译文，Markdown。留空时英文条目页显示中文原文链接。",
+      "type": "string"
+    }
   }
 }

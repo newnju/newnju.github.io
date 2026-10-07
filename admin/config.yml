@@ -91,6 +91,7 @@ collections:
         widget: richtext
         modes: [raw]
         required: false
+      - { label: 英文正文, name: body_en, widget: text, required: false, hint: "正文的英文译文（Markdown）。留空时英文条目页回链中文原文" }
 
   # -------------------------------------------------------------- 项目
   - name: portfolio
@@ -139,6 +140,7 @@ collections:
         widget: richtext
         modes: [raw]
         required: false
+      - { label: 英文正文, name: body_en, widget: text, required: false, hint: "正文的英文译文（Markdown）。留空时英文条目页回链中文原文" }
 
   # -------------------------------------------------------------- 会议 / 暑校
   - name: talks
@@ -180,6 +182,7 @@ collections:
         widget: richtext
         modes: [raw]
         required: false
+      - { label: 英文正文, name: body_en, widget: text, required: false, hint: "正文的英文译文（Markdown）。留空时英文条目页回链中文原文" }
 
   # -------------------------------------------------------------- 教学
   - name: teaching
@@ -221,6 +224,7 @@ collections:
         widget: richtext
         modes: [raw]
         required: false
+      - { label: 英文正文, name: body_en, widget: text, required: false, hint: "正文的英文译文（Markdown）。留空时英文条目页回链中文原文" }
 
   # -------------------------------------------------------------- 中文页面
   - name: pages_zh

@@ -36,8 +36,24 @@
               <a href="{{ base_path }}{{ _url }}">{{ _title }}</a>
             </li>
           {% endfor %}
+          {%- comment -%}
+            语言切换按页找对译页：英文页 → 去掉 /en 前缀回中文原文；中文页 →
+            /en + 原址（条目页就是 tools/render-en.mjs 生成的 /en/… 页）。
+            手写页在 site.pages、条目在 site.documents，两边按 URL 查得到才用；
+            查不到（将来加的页面忘了做英文版）就回落 ui-text 的 lang_switch_href。
+          {%- endcomment -%}
+          {%- assign _sw = _ui.lang_switch_href -%}
+          {%- if _en -%}
+            {%- assign _sw = page.url | remove_first: '/en' -%}
+          {%- else -%}
+            {%- assign _sw = '/en' | append: page.url -%}
+          {%- endif -%}
+          {%- assign _sw_found = false -%}
+          {%- for _p in site.pages -%}{%- if _p.url == _sw -%}{%- assign _sw_found = true -%}{%- endif -%}{%- endfor -%}
+          {%- for _d in site.documents -%}{%- if _d.url == _sw -%}{%- assign _sw_found = true -%}{%- endif -%}{%- endfor -%}
+          {%- unless _sw_found -%}{%- assign _sw = _ui.lang_switch_href -%}{%- endunless -%}
           <li class="masthead__menu-item persist lang-switch">
-            <a href="{{ base_path }}{{ _ui.lang_switch_href }}"><i class="fa-solid fa-language" aria-hidden="true"></i>{{ _ui.lang_switch_label | default: "English" }}</a>
+            <a href="{{ base_path }}{{ _sw }}"><i class="fa-solid fa-language" aria-hidden="true"></i>{{ _ui.lang_switch_label | default: "English" }}</a>
           </li>
           <li id="theme-toggle" class="masthead__menu-item persist tail">
             <button type="button" aria-label="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}" title="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true"></i></button>

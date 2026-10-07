@@ -8,6 +8,10 @@ date: 2018-05-01
 daterange: "2018.05 – 2019.05"
 period: bachelor
 permalink: /portfolio/microfilm-website
+body_en: |-
+  * **Type**: University-level Key Undergraduate Innovation Training Program (Project No. 2018XSKY017)
+  * **Role**: Project leader
+  * **Period**: May 2018 – May 2019
 ---
 
 * **项目类型**：校级重点大学生创新训练计划（项目编号 2018XSKY017）

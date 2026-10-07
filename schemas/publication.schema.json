@@ -18,6 +18,10 @@
     "permalink": { "$ref": "#/definitions/permalink", "pattern": "^/publication/[a-z0-9][a-z0-9-]*/?$" },
     "excerpt": { "type": "string", "minLength": 1 },
     "excerpt_en": { "type": "string", "minLength": 1 },
+    "body_en": {
+      "description": "正文（body）的英文译文，Markdown。留空时英文条目页显示中文原文链接。",
+      "type": "string"
+    },
     "date": { "$ref": "#/definitions/isoDate" },
     "venue": { "type": "string", "minLength": 1 },
     "venue_en": { "type": "string", "minLength": 1 },

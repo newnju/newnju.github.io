@@ -7,6 +7,10 @@
 {%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
 {%- assign _en = false -%}
 {%- if _locale contains 'en' -%}{%- assign _en = true -%}{%- endif -%}
+{%- comment -%} 英文页的条目链接指向 /en/… 英文页；已是 /en/ 开头就不重复加前缀 {%- endcomment -%}
+{%- assign _purl = post.url -%}
+{%- assign _purl_head = post.url | slice: 0, 4 -%}
+{%- if _en and _purl_head != '/en/' -%}{%- assign _purl = post.url | prepend: '/en' -%}{%- endif -%}
 
 {% if post.header.teaser %}
   {% capture teaser %}{{ post.header.teaser }}{% endcapture %}
@@ -45,9 +49,9 @@
     {% endif %}
     <h3 class="archive__item-title" itemprop="headline">
       {% if post.link %}
-        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ post.url }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="{{ _ui.permalink_label | default: '固定链接' }}"></i><span class="sr-only">{{ _ui.permalink_label | default: '固定链接' }}</span></a>
+        <a href="{{ post.link }}">{{ title }}</a> <a href="{{ base_path }}{{ _purl }}" rel="permalink"><i class="fa fa-link" aria-hidden="true" title="{{ _ui.permalink_label | default: '固定链接' }}"></i><span class="sr-only">{{ _ui.permalink_label | default: '固定链接' }}</span></a>
       {% else %}
-        <a href="{{ base_path }}{{ post.url }}" rel="permalink">{{ title }}</a>
+        <a href="{{ base_path }}{{ _purl }}" rel="permalink">{{ title }}</a>
       {% endif %}
     </h3>
     {% if post.read_time %}

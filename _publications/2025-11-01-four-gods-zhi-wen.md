@@ -20,6 +20,8 @@ bibtex: |
     note      = {获优秀奖},
     language  = {chinese}
   }
+body_en: |-
+  The paper was presented at the Fifth Mao Jiaqi History Forum, School of History, Nanjing University, where it received the Award of Excellence. Drawing on the traditional pair of categories “Zhi” and “Wen”, the paper discusses the ornament of the four-deity TLV mirror.
 ---
 
 本文在南京大学历史学院第五届茅家琦史学论坛上报告，获优秀奖。论文借“质”与“文”这一对传统范畴讨论四神博局镜的纹饰。

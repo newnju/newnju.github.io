@@ -78,6 +78,22 @@ function listFiles(relativeDir, filter = () => true) {
     .map((name) => path.posix.join(relativeDir, name));
 }
 
+/** 递归列出目录下所有命中 filter 的文件（相对路径，posix 分隔）。 */
+function listFilesDeep(relativeDir, filter = () => true) {
+  const absolute = path.join(SITE_ROOT, relativeDir);
+  if (!fs.existsSync(absolute)) return [];
+  const out = [];
+  const walk = (rel) => {
+    for (const name of fs.readdirSync(path.join(SITE_ROOT, rel)).sort()) {
+      const child = path.posix.join(rel, name);
+      if (fs.statSync(path.join(SITE_ROOT, child)).isDirectory()) walk(child);
+      else if (filter(name)) out.push(child);
+    }
+  };
+  walk(relativeDir);
+  return out;
+}
+
 const isMarkdown = (name) => /\.(md|html)$/.test(name);
 
 export function loadCollections() {
@@ -93,6 +109,13 @@ export function loadPages() {
   return {
     zh: listFiles('_pages', isMarkdown).map(loadFrontMatter),
     en: listFiles('_pages/en', isMarkdown).map(loadFrontMatter),
+    // _pages/en/<集合>/<slug>.md：tools/render-en.mjs 生成的英文条目页。
+    // 手写的页面都在 _pages/en 顶层（深度 3），所以「深度 > 3」就是生成页 ——
+    // validate 对它们做 schema / permalink / layout 校验，但**不做**「中英同名
+    // 页面配对」（它们是条目的镜像，不是 _pages 手写页的译本）。
+    entries: listFilesDeep('_pages/en', isMarkdown)
+      .filter((rel) => rel.split('/').length > 3)
+      .map(loadFrontMatter),
   };
 }
 

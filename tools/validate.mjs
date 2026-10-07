@@ -67,7 +67,7 @@ for (const [name, entries] of Object.entries(collections)) {
 }
 
 const pages = loadPages();
-for (const entry of [...pages.zh, ...pages.en]) check('page', entry.file, entry.data);
+for (const entry of [...pages.zh, ...pages.en, ...pages.entries]) check('page', entry.file, entry.data);
 
 const data = loadData();
 check('profile', '_data/profile.yml', data.profile);
@@ -87,7 +87,7 @@ const claim = (permalink, where) => {
 for (const entries of Object.values(collections)) {
   for (const entry of entries) claim(entry.data.permalink, entry.file);
 }
-for (const entry of [...pages.zh, ...pages.en]) {
+for (const entry of [...pages.zh, ...pages.en, ...pages.entries]) {
   claim(entry.data.permalink, entry.file);
   for (const from of entry.data.redirect_from ?? []) claim(from, `${entry.file} (redirect_from)`);
 }
@@ -113,7 +113,7 @@ for (const p of pages.zh) {
 }
 
 // 4) layout 必须真实存在
-for (const entry of [...pages.zh, ...pages.en]) {
+for (const entry of [...pages.zh, ...pages.en, ...pages.entries]) {
   const layout = entry.data.layout;
   if (layout && !fs.existsSync(path.join(SITE_ROOT, '_layouts', `${layout}.html`))) {
     err(entry.file, `layout: ${layout} 在 _layouts/ 下不存在`);
@@ -133,6 +133,11 @@ for (const entries of Object.values(collections)) {
   for (const entry of entries) {
     for (const [zh, en] of enPairs) {
       if (entry.data[zh] && !entry.data[en]) warn(entry.file, `有 ${zh} 但没有 ${en}，英文页会显示中文`);
+    }
+    // 正文的英译是 body_en 字段（不在 front matter 配对表里，因为 zh 那侧是
+    // 正文本身而不是字段）。缺了不挡构建 —— 英文条目页会回链中文原文。
+    if (entry.body?.trim() && !entry.data.body_en?.trim()) {
+      warn(entry.file, '有正文但没有 body_en，英文条目页只显示中文原文链接');
     }
   }
 }
@@ -161,7 +166,11 @@ const total =
   pages.zh.length +
   pages.en.length;
 
-console.log(`校验了 ${Object.keys(collections).length} 个集合共 ${total} 个条目、${pages.zh.length + pages.en.length} 个页面、3 个数据文件`);
+console.log(
+  `校验了 ${Object.keys(collections).length} 个集合共 ${total} 个条目、` +
+    `${pages.zh.length + pages.en.length + pages.entries.length} 个页面` +
+    `${pages.entries.length ? `（含生成的英文条目页 ${pages.entries.length}）` : ''}、3 个数据文件`,
+);
 console.log(`  permalink 共 ${permalinkOwners.size} 条，全部唯一`);
 
 if (warnings.length) {

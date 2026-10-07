@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "page.schema.json",
   "title": "页面 front matter",
-  "description": "_pages/*.md 与 _pages/en/*.md。additionalProperties: false 是故意的 —— 拼错字段名（permalnk、aithor_profile）会被当成未知字段拦下来，而不是静默失效。",
+  "description": "_pages/*.md 与 _pages/en/*.md（含 _pages/en/<集合>/ 下由 tools/render-en.mjs 生成的英文条目页）。additionalProperties: false 是故意的 —— 拼错字段名（permalnk、aithor_profile）会被当成未知字段拦下来，而不是静默失效。",
   "type": "object",
   "additionalProperties": false,
   "required": ["title", "permalink"],
@@ -19,6 +19,19 @@
     "redirect_from": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
-    }
+    },
+    "share": { "type": "boolean" },
+    "zh_url": {
+      "description": "生成的英文条目页回指中文原文的 permalink（tools/render-en.mjs 写入）。阅读数门控（han-page-views.html）与两张站点地图的去重靠它。",
+      "type": "string",
+      "pattern": "^/"
+    },
+    "excerpt": { "type": "string" },
+    "venue": { "type": "string" },
+    "type": { "type": "string" },
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "citation": { "type": "string" },
+    "bibtex": { "type": "string" },
+    "link": { "type": "string" }
   }
 }
