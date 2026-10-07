@@ -217,12 +217,24 @@ async function stats(env, days) {
   };
 }
 
-/** 读接口的钥匙：Bearer 头（给脚本）或 URL 上的 ?key=（给浏览器面板） */
+/** 读接口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（浏览器弹框）或 URL 上的 ?key=（给链接） */
 function authorised(request, env, url) {
   if (!env.STATS_TOKEN) return false;
   const header = request.headers.get('authorization') || '';
-  const bearer = /^Bearer\s+(.+)$/i.exec(header)?.[1] ?? url.searchParams.get('key');
-  return bearer === env.STATS_TOKEN;
+  const bearer = /^Bearer\s+(.+)$/i.exec(header)?.[1];
+  if (bearer) return bearer === env.STATS_TOKEN;
+  const basic = /^Basic\s+(\S+)$/i.exec(header)?.[1];
+  if (basic) {
+    // 浏览器对 401+WWW-Authenticate: Basic 会弹框，用户名随便、密码填 STATS_TOKEN；
+    // 以前这里没解 Basic，弹了框也永远进不去（只认 Bearer 和 ?key=）。
+    try {
+      const decoded = atob(basic);
+      return decoded.slice(decoded.indexOf(':') + 1) === env.STATS_TOKEN;
+    } catch {
+      return false;
+    }
+  }
+  return url.searchParams.get('key') === env.STATS_TOKEN;
 }
 
 const esc = (s) =>

@@ -206,6 +206,24 @@ test('面板：未授权时用 HTTP Basic 弹密码框，且不发 noindex', asy
   assert.match(res.headers.get('www-authenticate'), /Basic/);
 });
 
+test('面板：弹框后 Basic 密码对就放行、错就拒绝（以前没解 Basic，弹框是死循环）', async () => {
+  const DB = fakeDb();
+  const ok = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { authorization: 'Basic ' + Buffer.from('任意用户名:let-me-in').toString('base64') },
+  }), { ...ENV, DB });
+  assert.equal(ok.status, 200);
+
+  const wrong = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { authorization: 'Basic ' + Buffer.from('x:wrong').toString('base64') },
+  }), { ...ENV, DB });
+  assert.equal(wrong.status, 401);
+
+  const malformed = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { authorization: 'Basic not-base64!!!' },
+  }), { ...ENV, DB });
+  assert.equal(malformed.status, 401);
+});
+
 test('定时任务按 RETENTION_DAYS 删过期明细', async () => {
   const DB = fakeDb();
   await worker.scheduled({ cron: '17 3 * * *' }, { ...ENV, DB, RETENTION_DAYS: '30' });
