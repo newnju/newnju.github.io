@@ -412,9 +412,16 @@ async function newPage(viewport) {
     const share = document.querySelector('.page__share');
     const btns = share ? [...share.querySelectorAll('.btn')] : [];
     const pv = document.querySelector('.page__views');
-    const nav = [...document.querySelectorAll('#site-nav .visible-links li:not(.lang-switch) a')].map(
-      (a) => a.getAttribute('href'),
-    );
+    const nav = [
+      ...document.querySelectorAll(
+        '#site-nav .visible-links li:not(.lang-switch):not(#login-link) a',
+      ),
+    ].map((a) => a.getAttribute('href'));
+    // base_path 是完整域名（_includes/base_path），站内链接一律绝对地址 ——
+    // 统一折成 pathname 再判前缀，外链（GitHub 等）丢弃不参与。
+    const navPaths = nav
+      .filter((h) => h && (!/^https?:\/\//.test(h) || h.startsWith(location.origin)))
+      .map((h) => new URL(h, location.origin).pathname);
     return {
       h1: h1 ? h1.textContent : '',
       content: content ? content.textContent : '',
@@ -424,7 +431,7 @@ async function newPage(viewport) {
       wechat: !!document.querySelector('[data-share-wechat]'),
       pvPath: pv ? pv.getAttribute('data-path') : null,
       pvText: pv ? pv.textContent : '',
-      nav,
+      navPaths,
     };
   });
 
@@ -433,7 +440,14 @@ async function newPage(viewport) {
     '英文条目页正文是英文译文',
     /The paper was presented/.test(info.content) && !/本文在南京大学历史学院/.test(info.content),
   );
-  check('语言切换回中文原文', info.swHref === '/publication/2025-four-gods-zhi-wen', String(info.swHref));
+  {
+    const swPath = info.swHref ? new URL(info.swHref, origin).pathname : '';
+    check(
+      '语言切换回中文原文',
+      swPath === '/publication/2025-four-gods-zhi-wen',
+      `${info.swHref} → ${swPath}`,
+    );
+  }
   check(
     '英文分享是五件套且无隐藏',
     info.shareCount === 5 && info.shareHidden === 0,
@@ -447,8 +461,8 @@ async function newPage(viewport) {
   );
   check(
     '英文导航链接都带 /en 前缀',
-    info.nav.filter((h) => h && !h.startsWith('/en') && !/^https?:/.test(h)).length === 0,
-    JSON.stringify(info.nav),
+    info.navPaths.length >= 3 && info.navPaths.filter((h) => !h.startsWith('/en')).length === 0,
+    JSON.stringify(info.navPaths),
   );
   check('英文页没有 JS 报错', pageErrors.length === 0, pageErrors.join('; '));
   await ctx.close();
