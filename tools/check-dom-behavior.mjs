@@ -481,6 +481,65 @@ async function newPage(viewport) {
   await ctx.close();
 }
 
+// ------------------------------------------------- 9. 页脚（层叠 + 计数行）
+// 短视口（1280×720）滚到底时，fit 态固定侧栏（position: fixed + transform，
+// 定位绘制层）的线稿 .han-drawline 会压在普通流页脚的文字上（实测重叠 48px）；
+// 页脚靠 position: relative 也进定位层、按 DOM 序赢 —— 断言重叠区命中测试顶层
+// 是页脚而不是线稿。计数行 markup 要有 pv / 今日 / 今日访客 三组数字和
+// 「统计详情」链接，字号与最底下的版权行取同一个 $type-size-7。
+// （visit.js 在 127.0.0.1 上按设计不取数，整块保持 hidden —— 可见性与数字
+//  的回填留给线上验证，这里只查 markup 与层叠。）
+{
+  const { ctx, page } = await newPage({ width: 1280, height: 720 });
+  await page.goto(origin + '/', { waitUntil: 'load' });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(600);
+  const info = await page.evaluate(() => {
+    const footer = document.querySelector('.page__footer');
+    const drawline = document.querySelector('.han-drawline');
+    const vis = document.querySelector('.page__footer-visits');
+    const copy = document.querySelector('.page__footer-copyright');
+    if (!footer || !drawline || !vis || !copy) return { missing: true };
+    const fb = footer.getBoundingClientRect();
+    const vb = drawline.getBoundingClientRect();
+    const oy0 = Math.max(fb.y, vb.y);
+    const oy1 = Math.min(fb.bottom, vb.bottom);
+    let hit = null;
+    if (oy1 > oy0) {
+      const e = document.elementFromPoint(vb.x + vb.width / 2, (oy0 + oy1) / 2);
+      hit = e
+        ? { el: e.getAttribute('class') || e.tagName, inFooter: footer.contains(e), inDrawline: drawline.contains(e) }
+        : null;
+    }
+    return {
+      missing: false,
+      footerPos: getComputedStyle(footer).position,
+      overlap: Math.round(oy1 - oy0),
+      hit,
+      visHTML: vis.innerHTML.replace(/\s+/g, ' '),
+      visFont: getComputedStyle(vis).fontSize,
+      copyFont: getComputedStyle(copy).fontSize,
+    };
+  });
+  check('页脚 position: relative（进定位绘制层）', info.footerPos === 'relative', info.footerPos);
+  check(
+    '线稿与页脚重叠区的顶层是页脚（线稿不盖页脚文字）',
+    info.overlap <= 0 || (info.hit && info.hit.inFooter && !info.hit.inDrawline),
+    `overlap=${info.overlap}px hit=${JSON.stringify(info.hit)}`,
+  );
+  check(
+    '计数行含 pv / 今日 / 今日访客 与统计详情链接',
+    /data-fill="pv"/.test(info.visHTML) &&
+      /data-fill="today_pv"/.test(info.visHTML) &&
+      /data-fill="today_uv"/.test(info.visHTML) &&
+      /<a[^>]+href="[^"]*\/stats"/.test(info.visHTML),
+    info.visHTML.slice(0, 200),
+  );
+  check('计数行字号与版权行一致', info.visFont === info.copyFont, `${info.visFont} vs ${info.copyFont}`);
+  await ctx.close();
+}
+
 await browser.close();
 if (server) server.close();
 

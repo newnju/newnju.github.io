@@ -120,10 +120,13 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 
 - **只回计数**：国家、城市、来源、语言这些维度一概不带 —— 这个接口免鉴权，
   带维度就等于把面板公开了。`STATS_TOKEN` 不进前端。
-- 页脚「本站访问量 · 今日」在 `_includes/footer.html`，文章页「本文阅读 N 次」在
-  `_includes/han-page-views.html`（只对集合条目输出）；两块都初始 `hidden`，
-  由 `assets/js/visit.js` 一次请求取回、填进 `[data-fill]` 才揭开 —— 取不回来
-  就不显示，绝不显示假 0。与打点同一个开关，`visit_endpoint` 留空则整块不输出。
+- 页脚「本站访问量 · 今日 · 今日访客 · 统计详情」在 `_includes/footer.html`
+  （「统计详情」链到 `/stats` 面板，公开页脚只放裸地址、不拼 `?key=` —— 带 key
+  的链接进了页面源码等于公开 `STATS_TOKEN`，收藏夹里自己留一条带 key 的即可），
+  文章页「本文阅读 N 次」在 `_includes/han-page-views.html`（只对集合条目输出）；
+  两块都初始 `hidden`，由 `assets/js/visit.js` 一次请求取回、填进 `[data-fill]`
+  才揭开 —— 取不回来就不显示，绝不显示假 0。与打点同一个开关，`visit_endpoint`
+  留空则整块不输出。
 - 响应 `Cache-Control: public, max-age=60`，浏览器一分钟内不会重复打 D1。
 
 ## 维护

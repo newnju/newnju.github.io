@@ -47,14 +47,20 @@
 </div>
 
 {%- comment -%}
-  页脚公开计数（「本站访问量」）。与 visit.js 同一个开关（analytics.visit_endpoint
-  非空才输出），端点由它换成 /api/summary；数字由 visit.js 取回后填进 data-fill
-  并揭掉 hidden —— 取不回来就整块保持隐藏，绝不显示假 0。
+  页脚公开计数（「本站访问量 · 今日 · 今日访客」+ 统计详情链接）。与 visit.js
+  同一个开关（analytics.visit_endpoint 非空才输出），端点由它换成 /api/summary；
+  数字由 visit.js 取回后填进 data-fill 并揭掉 hidden —— 取不回来就整块保持隐藏，
+  绝不显示假 0。
+  详情链接指向 Worker 的 /stats 面板。那个页面要 Basic 鉴权（用户名随意、
+  密码 = STATS_TOKEN），所以公开页脚只放裸地址、**绝不**拼 ?key= —— key 带在
+  URL 里进了页面源码等于把钥匙贴给所有人；带 key 的链接自己收藏夹里留着用。
 {%- endcomment -%}
 {%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
 {%- if _visit_endpoint and _visit_endpoint != '' -%}
 <div class="page__footer-visits" data-summary="{{ _visit_endpoint | replace: '/api/visit', '/api/summary' }}" hidden>
   {{ _ui.site_pv_label | default: "本站访问量" }} <b data-fill="pv">—</b>
   {%- if _ui.site_today_label %} · {{ _ui.site_today_label }} <b data-fill="today_pv">—</b>{% endif -%}
+  {%- if _ui.site_today_uv_label %} · {{ _ui.site_today_uv_label }} <b data-fill="today_uv">—</b>{% endif -%}
+  {%- if _ui.stats_detail_label %} · <a href="{{ _visit_endpoint | replace: '/api/visit', '/stats' }}" target="_blank" rel="noopener">{{ _ui.stats_detail_label }}</a>{% endif -%}
 </div>
 {%- endif -%}

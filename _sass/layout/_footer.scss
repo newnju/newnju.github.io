@@ -14,6 +14,16 @@
   width: 100%;
   clear: both;
 
+  /* 绘制顺序：页脚必须压住线稿。fit 态侧栏（.sidebar.is-fit，han.js 第 9 节）
+     是 position: fixed + transform —— transform 让它进入「定位元素」绘制层，
+     而页脚是普通流块，于是短视口（如 1280×720）滚到底时，侧栏线稿
+     （.han-drawline）会盖在页脚文字上（实测重叠 48px，命中测试顶层是 svg）。
+     给页脚加 position: relative 把它也送进定位层；两者的 z-index 都是 auto，
+     按 DOM 序页脚在后、赢。刻意**不写 z-index**：写了就新建层叠上下文，
+     与下面 intro 动画的注释同理 —— 分享弹层(z-20)、涟漪(z-60) 要继续盖在
+     页脚之上，靠 z-index auto 的空层级拿绘制顺序就够了。 */
+  position: relative;
+
   /* 页脚留在正常文档流里：跟在正文之后，位于页面最下面。
      这里**不要**写 position: fixed / sticky —— 那会让它一直贴在视口底部常驻，
      长页面滚动时始终占着一条，把正文挤在中间。历史上就是这么写的，已改回。
@@ -59,10 +69,12 @@
 
   /* 公开计数（footer.html 的 .page__footer-visits）：数字用等宽数字。
      整块初始 hidden，visit.js 取回 /api/summary 才揭开 —— 所以这里
-     不写 display，别把 hidden 顶掉。 */
+     不写 display，别把 hidden 顶掉。
+     字号与最底下的 .page__footer-copyright 取同一个 $type-size-7 ——
+     原来 0.9em（约 16.2px）比版权行（12.375px）大一圈，违和。 */
   .page__footer-visits {
     margin-top: 6px;
-    font-size: 0.9em;
+    font-size: $type-size-7;
 
     b {
       font-variant-numeric: tabular-nums;
