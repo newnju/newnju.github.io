@@ -250,6 +250,19 @@
       }
     }
 
+    /* 主题切换右边的登录入口（图标链接 → /admin/）。44×44 触摸目标与主题
+       按钮对齐；但不能套进上面 #theme-toggle 那条 —— position: static 是
+       专为抹平 button 浏览器默认样式写的，链接要留着 .visible-links 的
+       position: relative，:before 下划线才会锚在图标这一格而不是整条导航。 */
+    #login-link a {
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
     a {
       position: relative;
 

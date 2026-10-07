@@ -4,7 +4,8 @@
   --------------------------------------------------------------------------
   · 中英共用 _data/navigation.yml：英文页优先取 title_en，并自动给链接加上 /en 前缀
   · 末尾的语言切换项文案取自 _data/ui-text.yml 的 lang_switch_label / lang_switch_href
-  · 语言项与主题切换项都带 persist，不会被 greedy-nav 折叠进「更多」菜单
+  · 语言项、主题切换项与登录项都带 persist，不会被 greedy-nav 折叠进「更多」菜单
+  · 登录项是进 Decap 后台（/admin/）的入口，固定排在主题切换右边
 {%- endcomment -%}
 {%- assign _locale = page.locale | default: site.locale -%}
 {%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
@@ -40,6 +41,9 @@
           </li>
           <li id="theme-toggle" class="masthead__menu-item persist tail">
             <button type="button" aria-label="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}" title="{{ _ui.theme_toggle_label | default: "切换明暗主题" }}"><i id="theme-icon" class="fa-solid fa-sun" aria-hidden="true"></i></button>
+          </li>
+          <li id="login-link" class="masthead__menu-item persist tail">
+            <a href="{{ base_path }}/admin/" aria-label="{{ _ui.login_label | default: "账号登录" }}" title="{{ _ui.login_label | default: "账号登录" }}"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i></a>
           </li>
         </ul>
         <ul class="hidden-links hidden"></ul>
