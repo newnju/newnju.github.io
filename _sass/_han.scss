@@ -678,8 +678,19 @@ html[data-theme="dark"][data-color-theme="nju"] {
     }
 
     /* 主题切换在下拉里是个 button（为了键盘可达），样式对齐同级的 a，
-       并撑满一行免得点到旁边空白处 */
+       并撑满一行免得点到旁边空白处。position/z-index/height/background
+       必须一起复位：.greedy-nav button 的通用规则是 absolute + right:0 +
+       z-index:100 + 实色背景（那是给汉堡按钮的），主题按钮被 han.js 折进
+       下拉后会以流外定位压在下一行（登录项）头上，整行点不动 —— 在
+       visible-links 里这条由 _navigation.scss 的 #theme-toggle 规则复位，
+       下拉里归这里管。原先主题项是最后一行、静态落点正好在列表末尾才没
+       露馅，登录项排到它后面就把问题顶出来了。 */
     .greedy-nav .hidden-links #theme-toggle button {
+        position: static;
+        right: auto;
+        z-index: auto;
+        height: auto;
+        background: none;
         display: flex;
         align-items: center;
         justify-content: flex-start;
@@ -688,7 +699,6 @@ html[data-theme="dark"][data-color-theme="nju"] {
         color: inherit;
         font: inherit;
         text-align: left;
-        background: none;
         border: 0;
     }
 
