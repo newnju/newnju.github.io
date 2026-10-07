@@ -417,10 +417,23 @@ async function newPage(viewport) {
         '#site-nav .visible-links li:not(.lang-switch):not(#login-link) a',
       ),
     ].map((a) => a.getAttribute('href'));
-    // base_path 是完整域名（_includes/base_path），站内链接一律绝对地址 ——
-    // 统一折成 pathname 再判前缀，外链（GitHub 等）丢弃不参与。
+    /* base_path 是完整域名（_includes/base_path），站内链接一律绝对地址；而本地
+       测试页跑在 127.0.0.1 上，两者 origin 不同 —— 站内 origin 从站点标题链接
+       （= base_path + /en/）推导，跟它同源的折成 pathname 参与检查，真正的外链
+       （github.com 等）丢弃。 */
+    const home = document.querySelector('#site-nav .masthead__menu-item--lg a');
+    const siteOrigin = home
+      ? new URL(home.getAttribute('href'), location.origin).origin
+      : location.origin;
     const navPaths = nav
-      .filter((h) => h && (!/^https?:\/\//.test(h) || h.startsWith(location.origin)))
+      .filter((h) => {
+        try {
+          const u = new URL(h, location.origin);
+          return u.origin === siteOrigin || u.origin === location.origin;
+        } catch {
+          return false;
+        }
+      })
       .map((h) => new URL(h, location.origin).pathname);
     return {
       h1: h1 ? h1.textContent : '',
