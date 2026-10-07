@@ -54,7 +54,7 @@
 {%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
 {%- if _visit_endpoint and _visit_endpoint != '' -%}
 <div class="page__footer-visits" data-summary="{{ _visit_endpoint | replace: '/api/visit', '/api/summary' }}" hidden>
-  {{ _ui.site_pv_label | default: "本站访问量" }} <b data-fill="site_pv">—</b>
-  {%- if _ui.site_today_label %} · {{ _ui.site_today_label }} <b data-fill="site_today">—</b>{% endif -%}
+  {{ _ui.site_pv_label | default: "本站访问量" }} <b data-fill="pv">—</b>
+  {%- if _ui.site_today_label %} · {{ _ui.site_today_label }} <b data-fill="today_pv">—</b>{% endif -%}
 </div>
 {%- endif -%}

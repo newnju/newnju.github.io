@@ -91,6 +91,10 @@ for (const name of fs.readdirSync(path.join(SITE_ROOT, '_includes', 'generated')
 
 const siteDir = path.join(SITE_ROOT, '_site');
 
+// /api/summary 会回给前端的全部字段（analytics/worker.js 的 summary()），
+// 产物里所有 data-fill 只准写这里面的键。
+const SUMMARY_FIELDS = new Set(['pv', 'today_pv', 'today_uv', 'page_pv']);
+
 function walkHtml(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -220,6 +224,17 @@ if (!fs.existsSync(siteDir)) {
       if (!img.getAttribute('width') || !img.getAttribute('height')) {
         const hint = (img.getAttribute('src') || '<img>').slice(0, 70);
         fail(rel, `img 缺 width/height（会带来 CLS）：${hint}`);
+      }
+    }
+
+    // data-fill 的键必须是 /api/summary 真能回的字段 —— visit.js 按 attr 名
+    // 取响应里的同名键，键写错（写成 site_pv，接口回的是 pv）不会抛错，只会
+    // 永远显示「—」且整块保持 hidden，只有上线才看得出来。集合与
+    // analytics/worker.js 的 summary() 输出对齐。
+    for (const el of root.querySelectorAll('[data-fill]')) {
+      const key = el.getAttribute('data-fill');
+      if (!SUMMARY_FIELDS.has(key)) {
+        fail(rel, `data-fill="${key}" 不是 /api/summary 的字段（只认 ${[...SUMMARY_FIELDS].join(' / ')}）`);
       }
     }
   }
