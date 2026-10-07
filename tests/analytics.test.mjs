@@ -34,6 +34,12 @@ function fakeDb(overrides = {}) {
         },
       };
     },
+    // scheduled() 用 batch 把「rollup 进 lifetime_path + 删除」放进一个事务。
+    // 这里照单执行每条语句；prepare 的调用记录仍按顺序留在 calls 里，
+    // 测试照旧按 SQL 文本断言先后与参数。
+    async batch(statements) {
+      return Promise.all(statements.map((s) => s.run()));
+    },
   };
 }
 
@@ -224,7 +230,7 @@ test('面板：弹框后 Basic 密码对就放行、错就拒绝（以前没解 
   assert.equal(malformed.status, 401);
 });
 
-test('定时任务按 RETENTION_DAYS 删过期明细', async () => {
+test('定时任务按 RETENTION_DAYS 删过期明细（删前先按路径累计进 lifetime_path）', async () => {
   const DB = fakeDb();
   await worker.scheduled({ cron: '17 3 * * *' }, { ...ENV, DB, RETENTION_DAYS: '30' });
   const purge = DB.calls.at(-1);
@@ -232,6 +238,14 @@ test('定时任务按 RETENTION_DAYS 删过期明细', async () => {
   const cutoff = purge.args[0];
   const days = (Date.now() / 1000 - cutoff) / 86400;
   assert.ok(Math.abs(days - 30) < 0.01, `实际清了 ${days} 天`);
+
+  // 累计必须先于删除、用同一个 cutoff —— 两件事在 scheduled 的同一个 batch 里，
+  // 否则页脚/阅读数会随保留期回退，或同一批行被算两遍
+  const rollup = DB.calls.find((c) => c.sql.includes('INSERT INTO lifetime_path'));
+  assert.ok(rollup, '删除前要先 rollup 进 lifetime_path');
+  assert.match(rollup.sql, /ON CONFLICT\(path\) DO UPDATE/);
+  assert.equal(rollup.args[0], cutoff);
+  assert.ok(DB.calls.indexOf(rollup) < DB.calls.indexOf(purge), '先累计后删除');
 });
 
 test('healthz 只说有没有绑定，不泄露任何密钥', async () => {
@@ -248,4 +262,90 @@ test('OPTIONS 预检：只对本站来源放行', async () => {
   }), ENV);
   assert.equal(res.status, 204);
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://newnju.github.io');
+});
+
+// ---------------------------------------------------------------- 公开计数
+// 页脚「本站访问量」与文章页「本文阅读」用它。免鉴权，所以**只能**回计数 ——
+// 任何维度（国家/城市/来源/明细路径）出现在这个响应里，就等于把面板公开了。
+
+const k = (sql) => sql.trim().slice(0, 24);
+const SUM = {
+  live: 'SELECT COUNT(*) AS n FROM visits',
+  today: 'SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv FROM visits WHERE day = ?',
+  life: 'SELECT COALESCE(SUM(pv), 0) AS n FROM lifetime_path',
+  pageLive: 'SELECT COUNT(*) AS page_pv FROM visits WHERE path = ?',
+  pageLife: 'SELECT COALESCE(pv, 0) AS n FROM lifetime_path WHERE path = ?',
+};
+
+test('公开计数：免鉴权 200、60 秒缓存、只回四个数字键', async () => {
+  const DB = fakeDb({
+    [k(SUM.live)]: [{ n: 10 }],
+    [k(SUM.life)]: [{ n: 5 }],
+    [k(SUM.today)]: [{ pv: 3, uv: 2 }],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/summary`), { ...ENV, DB });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
+  assert.equal(res.headers.get('access-control-allow-origin'), 'https://newnju.github.io');
+
+  const body = await res.json();
+  assert.deepEqual(Object.keys(body).sort(), ['generated_at', 'pv', 'today_pv', 'today_uv']);
+  assert.equal(body.pv, 15, '累计 = 现库 10 + 过期 rollup 5');
+  assert.equal(body.today_pv, 3);
+  assert.equal(body.today_uv, 2);
+
+  const raw = JSON.stringify(body);
+  for (const leak of ['let-me-in', 'country', 'city', 'ref_host', 'ip_hash', 'path']) {
+    assert.ok(!raw.includes(leak), `公开响应不能出现「${leak}」`);
+  }
+});
+
+test('?path= 与打点同一套归一化，单页阅读数 = 现库 + 过期累计', async () => {
+  const DB = fakeDb({
+    [k(SUM.live)]: [{ n: 10 }],
+    [k(SUM.life)]: [{ n: 5 }],
+    [k(SUM.today)]: [{ pv: 3, uv: 2 }],
+    [k(SUM.pageLive)]: [{ page_pv: 7 }],
+    [k(SUM.pageLife)]: [{ n: 4 }],
+  });
+  const res = await worker.fetch(
+    new Request(`${ORIGIN}/api/summary?path=${encodeURIComponent('/cv/?from=secret')}`),
+    { ...ENV, DB },
+  );
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.path, '/cv/');
+  assert.equal(body.page_pv, 11, '查询串丢掉后按 pathname 累计');
+  const pageCall = DB.calls.find((c) => c.sql.includes('page_pv'));
+  assert.equal(pageCall.args[0], '/cv/', '绑定给 SQL 的必须是归一化后的路径');
+});
+
+test('公开计数不依赖 STATS_TOKEN（没配也能读）', async () => {
+  const DB = fakeDb({
+    [k(SUM.live)]: [{ n: 1 }],
+    [k(SUM.life)]: [{ n: 0 }],
+    [k(SUM.today)]: [{ pv: 0, uv: 0 }],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/summary`), { ...ENV, DB, STATS_TOKEN: '' });
+  assert.equal(res.status, 200);
+});
+
+test('/api/summary 只收 GET', async () => {
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/summary`, { method: 'POST' }), {
+    ...ENV,
+    DB: fakeDb(),
+  });
+  assert.equal(res.status, 405);
+});
+
+test('/api/summary 数据库挂了回 503，不吐栈', async () => {
+  const DB = {
+    prepare() {
+      throw new Error('boom secret detail');
+    },
+  };
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/summary`), { ...ENV, DB });
+  assert.equal(res.status, 503);
+  const text = await res.text();
+  assert.ok(!text.includes('boom'), '公开端点不能回错误细节');
 });

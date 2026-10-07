@@ -1,0 +1,16 @@
+{%- comment -%}
+  文章页阅读数（「本文阅读 N 次」）。single / talk 布局的 page__meta 里引入，
+  只在集合条目（论文 / 项目 / 会议 / 教学）上生效 —— 首页、履历这类普通页
+  page.collection 为空，整块不输出。
+
+  与页脚计数共用同一次 /api/summary 请求：data-summary 是端点，data-path 由
+  visit.js 拼成 ?path=，响应里多回一个 page_pv。数字取不回来就保持 hidden。
+{%- endcomment -%}
+{%- assign _pv_locale = page.locale | default: site.locale -%}
+{%- assign _pv_ui = site.data.ui-text[_pv_locale] | default: site.data.ui-text[site.locale] -%}
+{%- assign _pv_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
+{%- if page.collection and _pv_endpoint and _pv_endpoint != '' -%}
+<p class="page__views" data-summary="{{ _pv_endpoint | replace: '/api/visit', '/api/summary' }}" data-path="{{ page.url }}" hidden>
+  {{ _pv_ui.page_views_label | default: "本文阅读" }} <b data-fill="page_pv">—</b>{{ _pv_ui.page_views_suffix }}
+</p>
+{%- endif -%}

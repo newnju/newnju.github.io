@@ -35,8 +35,10 @@
 {%- endif -%}
 
 {%- comment -%}
-  第一方访客打点（analytics/README.md）。端点取 _config.yml 的
+  第一方访客打点 + 公开计数（analytics/README.md）。端点取 _config.yml 的
   analytics.visit_endpoint：留空就不输出这段标签，客户端一行请求都不会发。
+  visit.js 除了打点，还负责把页脚「本站访问量」与文章页「本文阅读」的
+  [data-summary] 容器填上（同一端点换成 /api/summary）。
   端点填的是 stats.<域名> 这个 Worker，和 oauth-proxy 分开部署。
 {%- endcomment -%}
 {%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}

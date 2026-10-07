@@ -45,3 +45,16 @@
   &copy; {{ site.time | date: '%Y' }} {{ _owner }}, {{ _ui.powered_by | default: "Powered by" }} <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://github.com/academicpages/academicpages.github.io">AcademicPages</a>, a fork of <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.<br />
   Site last updated {{ "now" | date: '%Y-%m-%d' }}, <a href="{{ _sitemap_path }}" style="text-transform: uppercase;">{{ _ui.site_map | default: "Sitemap" }}</a>
 </div>
+
+{%- comment -%}
+  页脚公开计数（「本站访问量」）。与 visit.js 同一个开关（analytics.visit_endpoint
+  非空才输出），端点由它换成 /api/summary；数字由 visit.js 取回后填进 data-fill
+  并揭掉 hidden —— 取不回来就整块保持隐藏，绝不显示假 0。
+{%- endcomment -%}
+{%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
+{%- if _visit_endpoint and _visit_endpoint != '' -%}
+<div class="page__footer-visits" data-summary="{{ _visit_endpoint | replace: '/api/visit', '/api/summary' }}" hidden>
+  {{ _ui.site_pv_label | default: "本站访问量" }} <b data-fill="site_pv">—</b>
+  {%- if _ui.site_today_label %} · {{ _ui.site_today_label }} <b data-fill="site_today">—</b>{% endif -%}
+</div>
+{%- endif -%}

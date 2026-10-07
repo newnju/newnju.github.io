@@ -109,6 +109,23 @@ curl https://stats.oaking.kdns.fr/healthz
 「人数」的口径是 **按天去重的 UV**：同一天同一个 IP 算一个人；跨天不合并 ——
 因为哈希里掺了日期，跨天本来就无法关联（见上面隐私设计）。
 
+### 站内显示（页脚计数与文章阅读数）
+
+网页上想直接看到数字（不用输密码）走公开的 `/api/summary`：
+
+```bash
+curl "https://stats.oaking.kdns.fr/api/summary"                    # {pv, today_pv, today_uv, generated_at}
+curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {path, page_pv}
+```
+
+- **只回计数**：国家、城市、来源、语言这些维度一概不带 —— 这个接口免鉴权，
+  带维度就等于把面板公开了。`STATS_TOKEN` 不进前端。
+- 页脚「本站访问量 · 今日」在 `_includes/footer.html`，文章页「本文阅读 N 次」在
+  `_includes/han-page-views.html`（只对集合条目输出）；两块都初始 `hidden`，
+  由 `assets/js/visit.js` 一次请求取回、填进 `[data-fill]` 才揭开 —— 取不回来
+  就不显示，绝不显示假 0。与打点同一个开关，`visit_endpoint` 留空则整块不输出。
+- 响应 `Cache-Control: public, max-age=60`，浏览器一分钟内不会重复打 D1。
+
 ## 维护
 
 - **定时任务**：每天 UTC 03:17 删掉超过 `RETENTION_DAYS` 的明细，别让库无限长。
@@ -126,6 +143,7 @@ curl https://stats.oaking.kdns.fr/healthz
 | --- | --- | --- | --- |
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>` | 统计 JSON |
+| `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
 | `/stats` | GET | HTTP Basic（密码 = `STATS_TOKEN`） | 统计面板 |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
 

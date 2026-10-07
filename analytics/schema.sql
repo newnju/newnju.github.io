@@ -31,3 +31,11 @@ CREATE INDEX IF NOT EXISTS idx_visits_day     ON visits(day);
 CREATE INDEX IF NOT EXISTS idx_visits_path    ON visits(path);
 CREATE INDEX IF NOT EXISTS idx_visits_country ON visits(country);
 CREATE INDEX IF NOT EXISTS idx_visits_ts      ON visits(ts);
+
+-- 已过保留期被删掉的明细，在删除前按路径 rollup 进这张表（worker.js 的
+-- scheduled 里，与 DELETE 同一个事务）。页脚「本站访问量」和文章页「本文
+-- 阅读」是**累计**口径：没有它，180 天保留期一到数字就往回掉。
+CREATE TABLE IF NOT EXISTS lifetime_path (
+  path TEXT PRIMARY KEY,
+  pv   INTEGER NOT NULL DEFAULT 0
+);

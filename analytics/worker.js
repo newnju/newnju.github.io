@@ -10,6 +10,8 @@
  * 端点：
  *   POST /api/visit    页面打点（无 cookie、无第三方脚本、带 DNT 判断）
  *   GET  /api/stats    统计 JSON（Bearer 令牌）
+ *   GET  /api/summary  公开计数（免鉴权：只回 pv / 今日 pv·uv，带 ?path= 时
+ *                      多回该页的累计阅读数 —— 页脚计数与文章页阅读数用它）
  *   GET  /stats        统计面板（HTTP Basic，浏览器自己弹密码框）
  *   GET  /healthz      健康检查
  *
@@ -217,6 +219,42 @@ async function stats(env, days) {
   };
 }
 
+/** 公开计数：免鉴权，只回数字。绝不带国家/城市/来源这类维度 —— 这个接口给
+ *  页脚「本站访问量」与文章页「本文阅读」直接从浏览器读，所以钥匙不进前端。 */
+async function summary(env, url) {
+  const q = (sql, ...args) => env.DB.prepare(sql).bind(...args).all();
+  const [live, today, life] = await Promise.all([
+    q('SELECT COUNT(*) AS n FROM visits'),
+    q('SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv FROM visits WHERE day = ?', dayKey(Math.floor(Date.now() / 1000))),
+    q('SELECT COALESCE(SUM(pv), 0) AS n FROM lifetime_path'),
+  ]);
+  const num = (r, k = 'n') => Number((r.results ?? [])[0]?.[k] ?? 0);
+  const out = {
+    pv: num(live) + num(life),
+    today_pv: num(today, 'pv'),
+    today_uv: num(today, 'uv'),
+    generated_at: new Date().toISOString(),
+  };
+  const rawPath = url.searchParams.get('path');
+  if (rawPath) {
+    // 与打点同一套归一化：丢查询串、只留 pathname + hash，上限 300
+    let p = '/';
+    try {
+      const u = new URL(String(rawPath), 'https://x.invalid');
+      p = (u.pathname + u.hash).slice(0, 300) || '/';
+    } catch {
+      /* 脏值当根路径处理，不 500 */
+    }
+    const [pageLive, pageLife] = await Promise.all([
+      q('SELECT COUNT(*) AS page_pv FROM visits WHERE path = ?', p),
+      q('SELECT COALESCE(pv, 0) AS n FROM lifetime_path WHERE path = ?', p),
+    ]);
+    out.path = p;
+    out.page_pv = num(pageLive, 'page_pv') + num(pageLife);
+  }
+  return out;
+}
+
 /** 读接口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（浏览器弹框）或 URL 上的 ?key=（给链接） */
 function authorised(request, env, url) {
   if (!env.STATS_TOKEN) return false;
@@ -299,6 +337,20 @@ export default {
       return json({ ok: true, db: Boolean(env.DB), token: Boolean(env.STATS_TOKEN) });
     }
 
+    if (url.pathname === '/api/summary') {
+      if (request.method !== 'GET') {
+        return json({ error: 'method not allowed' }, 405, corsHeaders(env, request));
+      }
+      try {
+        const data = await summary(env, url);
+        // 免鉴权但只回计数；60 秒缓存让浏览器少打几次 D1（数字晚一分钟无所谓）
+        return json(data, 200, { ...corsHeaders(env, request), 'cache-control': 'public, max-age=60' });
+      } catch (err) {
+        console.log(JSON.stringify({ event: 'summary_failed', error: String(err) }));
+        return json({ error: 'unavailable' }, 503, corsHeaders(env, request));
+      }
+    }
+
     if (url.pathname === '/api/stats' || url.pathname === '/stats') {
       if (!authorised(request, env, url)) {
         if (url.pathname === '/api/stats') {
@@ -326,15 +378,25 @@ export default {
   },
 
   // 明细过期就删掉，别让库无限长。UTC 03:17 —— 整点的 cron 在全球都很挤。
+  // 删除前先把要删的行按路径 rollup 进 lifetime_path：页脚总访问量与「本文
+  // 阅读」是累计口径，不能保留期一到就往回掉。两条语句放进同一个 batch
+  // （D1 里就是一个事务）—— 先累计后删，中途断掉也不会把同一批行算两遍。
   async scheduled(event, env, ctx) {
     const days = Number(env.RETENTION_DAYS) || 180;
     const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
-    const { meta } = await env.DB.prepare('DELETE FROM visits WHERE ts < ?').bind(cutoff).run();
+    const upsert = env.DB.prepare(
+      `INSERT INTO lifetime_path (path, pv)
+         SELECT path, COUNT(*) FROM visits WHERE ts < ? GROUP BY path
+       ON CONFLICT(path) DO UPDATE SET pv = lifetime_path.pv + excluded.pv`,
+    ).bind(cutoff);
+    const del = env.DB.prepare('DELETE FROM visits WHERE ts < ?').bind(cutoff);
+    const results = await env.DB.batch([upsert, del]);
+    const changes = results?.[1]?.meta?.changes ?? 0;
     console.log(
       JSON.stringify({
         event: 'retention_purge',
         cutoff_day: dayKey(cutoff),
-        rows_deleted: meta?.changes ?? 0,
+        rows_deleted: changes,
         retention_days: days,
         cron: event?.cron,
       }),

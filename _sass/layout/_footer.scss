@@ -56,6 +56,19 @@
   .fal {
     color: var(--global-text-color-light);
   }
+
+  /* 公开计数（footer.html 的 .page__footer-visits）：数字用等宽数字。
+     整块初始 hidden，visit.js 取回 /api/summary 才揭开 —— 所以这里
+     不写 display，别把 hidden 顶掉。 */
+  .page__footer-visits {
+    margin-top: 6px;
+    font-size: 0.9em;
+
+    b {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+  }
 }
 
 /* 说明：页脚曾用 position: fixed 钉在视口底部，长页面滚动时一直占着一条。

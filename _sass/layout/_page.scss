@@ -250,6 +250,17 @@
   text-transform: uppercase;
 }
 
+/* 文章页阅读数（han-page-views.html）：整块初始 hidden，visit.js 取回
+   /api/summary 才揭开 —— 所以不写 display，别把 hidden 顶掉。 */
+.page__views {
+  margin-top: 6px;
+
+  b {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}
+
 
 /*
    Page taxonomy
