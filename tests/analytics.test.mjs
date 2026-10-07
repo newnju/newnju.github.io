@@ -206,13 +206,22 @@ test('没配 STATS_TOKEN 就等于把读接口彻底关掉', async () => {
   assert.equal(res.status, 401);
 });
 
-test('面板：未授权时用 HTTP Basic 弹密码框，且不发 noindex', async () => {
+test('面板：未授权时 302 去登录页（不再发 401 弹原生密码框），登录页渲染表单且 noindex', async () => {
   const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB: fakeDb() });
-  assert.equal(res.status, 401);
-  assert.match(res.headers.get('www-authenticate'), /Basic/);
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/login');
+  assert.equal(res.headers.get('www-authenticate'), null, '有 WWW-Authenticate 浏览器就弹框');
+
+  const page = await worker.fetch(new Request(`${ORIGIN}/login`), { ...ENV, DB: fakeDb() });
+  assert.equal(page.status, 200);
+  const body = await page.text();
+  assert.match(body, /<form method="post" action="\/login">/);
+  assert.match(body, /name="key"/);
+  assert.match(body, /noindex/);
+  assert.ok(!body.includes('let-me-in'), '登录页不泄露令牌');
 });
 
-test('面板：弹框后 Basic 密码对就放行、错就拒绝（以前没解 Basic，弹框是死循环）', async () => {
+test('面板：Basic 密码对就放行、错就跳登录页（Basic/?key= 兼容保留，弹框流程废弃）', async () => {
   const DB = fakeDb();
   const ok = await worker.fetch(new Request(`${ORIGIN}/stats`, {
     headers: { authorization: 'Basic ' + Buffer.from('任意用户名:let-me-in').toString('base64') },
@@ -222,12 +231,13 @@ test('面板：弹框后 Basic 密码对就放行、错就拒绝（以前没解 
   const wrong = await worker.fetch(new Request(`${ORIGIN}/stats`, {
     headers: { authorization: 'Basic ' + Buffer.from('x:wrong').toString('base64') },
   }), { ...ENV, DB });
-  assert.equal(wrong.status, 401);
+  assert.equal(wrong.status, 302);
+  assert.equal(wrong.headers.get('location'), '/login');
 
   const malformed = await worker.fetch(new Request(`${ORIGIN}/stats`, {
     headers: { authorization: 'Basic not-base64!!!' },
   }), { ...ENV, DB });
-  assert.equal(malformed.status, 401);
+  assert.equal(malformed.status, 302);
 });
 
 test('定时任务按 RETENTION_DAYS 删过期明细（删前先按路径累计进 lifetime_path）', async () => {
@@ -348,4 +358,115 @@ test('/api/summary 数据库挂了回 503，不吐栈', async () => {
   assert.equal(res.status, 503);
   const text = await res.text();
   assert.ok(!text.includes('boom'), '公开端点不能回错误细节');
+});
+
+// ---------------------------------------------------------------------------
+// 面板会话：/login 表单 → HttpOnly 签名 cookie → 30 天免登录（替代原生弹框）
+// ---------------------------------------------------------------------------
+
+const login = (key) =>
+  new Request(`${ORIGIN}/login`, {
+    method: 'POST',
+    body: new URLSearchParams({ key }),
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+  });
+
+test('登录：密码对 → 302 面板 + HttpOnly/Secure/SameSite=Strict 的签名 cookie', async () => {
+  const res = await worker.fetch(login('let-me-in'), { ...ENV, DB: fakeDb() });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/stats');
+
+  const setCookie = res.headers.get('set-cookie') || '';
+  assert.match(setCookie, /^stats_sess=/);
+  assert.match(setCookie, /HttpOnly/);
+  assert.match(setCookie, /Secure/);
+  assert.match(setCookie, /SameSite=Strict/);
+  assert.match(setCookie, /Max-Age=2592000/);
+  assert.match(setCookie, /Path=\//);
+  assert.ok(!setCookie.includes('let-me-in'), 'cookie 里不能是明文密码');
+
+  const value = setCookie.match(/^stats_sess=([^;]+)/)[1];
+  const [exp, sig] = value.split('.');
+  assert.match(exp, /^\d{10,}$/, 'exp 是未来时间戳');
+  assert.match(sig, /^[0-9a-f]{64}$/, 'sig 是 HMAC-SHA256 十六进制');
+  assert.ok(Number(exp) > Date.now() / 1000 + 29 * 24 * 3600, '有效期约 30 天');
+});
+
+test('登录：密码错 → 重新渲染表单、报错、绝不下发 Set-Cookie', async () => {
+  const res = await worker.fetch(login('wrong'), { ...ENV, DB: fakeDb() });
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  assert.match(body, /密码不对/);
+  assert.match(body, /<form method="post" action="\/login">/);
+  assert.equal(res.headers.get('set-cookie'), null);
+});
+
+test('登录：没配 STATS_TOKEN 时任何密码都进不去（读接口整体关闭的语义一致）', async () => {
+  const res = await worker.fetch(login('anything'), { ...ENV, DB: fakeDb(), STATS_TOKEN: '' });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('set-cookie'), null);
+});
+
+test('拿着登录拿到的 cookie：/stats 直接 200，/login 直接 302 回面板（跳过表单）', async () => {
+  const loginRes = await worker.fetch(login('let-me-in'), { ...ENV, DB: fakeDb() });
+  const cookie = (loginRes.headers.get('set-cookie') || '').split(';')[0];
+
+  const panel = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { cookie },
+  }), { ...ENV, DB: fakeDb() });
+  assert.equal(panel.status, 200);
+
+  const again = await worker.fetch(new Request(`${ORIGIN}/login`, {
+    headers: { cookie },
+  }), { ...ENV, DB: fakeDb() });
+  assert.equal(again.status, 302);
+  assert.equal(again.headers.get('location'), '/stats');
+});
+
+test('cookie 改一位就作废：篡改签名 / 过期时间都进不了面板', async () => {
+  const loginRes = await worker.fetch(login('let-me-in'), { ...ENV, DB: fakeDb() });
+  const value = (loginRes.headers.get('set-cookie') || '').match(/^stats_sess=([^;]+)/)[1];
+  const [exp, sig] = value.split('.');
+
+  const tamperedSig = `stats_sess=${exp}.${'0'.repeat(63)}${sig.at(-1) === '0' ? '1' : '0'}`;
+  const tampered = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { cookie: tamperedSig },
+  }), { ...ENV, DB: fakeDb() });
+  assert.equal(tampered.status, 302);
+  assert.equal(tampered.headers.get('location'), '/login');
+
+  const expired = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { cookie: `stats_sess=1000000000.${sig}` },
+  }), { ...ENV, DB: fakeDb() });
+  assert.equal(expired.status, 302);
+});
+
+test('换掉 STATS_TOKEN 即全部旧会话作废（签名密钥就是令牌本身）', async () => {
+  const loginRes = await worker.fetch(login('let-me-in'), { ...ENV, DB: fakeDb() });
+  const cookie = (loginRes.headers.get('set-cookie') || '').split(';')[0];
+
+  const after = await worker.fetch(new Request(`${ORIGIN}/stats`, {
+    headers: { cookie },
+  }), { ...ENV, DB: fakeDb(), STATS_TOKEN: 'rotated' });
+  assert.equal(after.status, 302);
+  assert.equal(after.headers.get('location'), '/login');
+});
+
+test('会话 cookie 只开面板，不开 JSON 口（/api/stats 仍必须 Bearer）', async () => {
+  const loginRes = await worker.fetch(login('let-me-in'), { ...ENV, DB: fakeDb() });
+  const cookie = (loginRes.headers.get('set-cookie') || '').split(';')[0];
+
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/stats`, {
+    headers: { cookie },
+  }), { ...ENV, DB: fakeDb() });
+  assert.equal(res.status, 401);
+});
+
+test('/login 只收 GET/HEAD/POST，其它方法 405 且不发 WWW-Authenticate', async () => {
+  const res = await worker.fetch(new Request(`${ORIGIN}/login`, { method: 'DELETE' }), {
+    ...ENV,
+    DB: fakeDb(),
+  });
+  assert.equal(res.status, 405);
+  assert.equal(res.headers.get('www-authenticate'), null);
 });

@@ -12,8 +12,16 @@
  *   GET  /api/stats    统计 JSON（Bearer 令牌）
  *   GET  /api/summary  公开计数（免鉴权：只回 pv / 今日 pv·uv，带 ?path= 时
  *                      多回该页的累计阅读数 —— 页脚计数与文章页阅读数用它）
- *   GET  /stats        统计面板（HTTP Basic，浏览器自己弹密码框）
+ *   GET  /stats        统计面板（有会话 cookie 或带 Basic/?key= 凭据就直接出；
+ *                      否则 302 到 /login —— 不再发 401+WWW-Authenticate，
+ *                      那会触发浏览器原生密码框、体验差且每次重新问）
+ *   GET  /login        密码表单（已有有效会话就直接 302 回面板）
+ *   POST /login        校验密码 → Set-Cookie(stats_sess) → 302 面板
  *   GET  /healthz      健康检查
+ *
+ * 会话 cookie：`<过期时间戳>.<HMAC-SHA256(STATS_TOKEN, 时间戳)>` —— 无状态、
+ * 可离线校验、带 30 天有效期，服务端不存任何东西；HttpOnly + Secure +
+ * SameSite=Strict，只有站长的浏览器拿着它，不参与打点、也不给访客下发。
  *
  * 变量（`npx wrangler secret put`）：
  *   STATS_TOKEN   统计接口与面板的密码，**必填**（没配就只留打点、不给读）
@@ -25,7 +33,9 @@
  * ---------------------------------------------------------------------------
  * 隐私：这里存的是访客数据，默认按「能不存就不存」设计
  * ---------------------------------------------------------------------------
- * · 不写任何 cookie，不用 localStorage，不做跨站跟踪，没有第三方脚本；
+ * · 不给访客写 cookie，不用 localStorage，不做跨站跟踪，没有第三方脚本
+ *   （唯一例外：站长登录面板的 stats_sess 会话 cookie —— HttpOnly、SameSite
+ *     =Strict、只在 /login 成功时下发，与打点链路完全无关，访客拿不到）；
  * · **不存明文 IP**，只存 ip_hash = SHA-256(IP + 当天日期 + IP_SALT) 的前 16 位。
  *   每日掺入日期 ⇒ 同一访客跨天无法被串起来，仍能当天算去重人数；
  * · 地理位置用 Cloudflare 自带的 GeoIP，不引入任何第三方定位 SDK；
@@ -255,7 +265,8 @@ async function summary(env, url) {
   return out;
 }
 
-/** 读接口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（浏览器弹框）或 URL 上的 ?key=（给链接） */
+/** 读接口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（curl -u / 旧收藏夹）或 URL 上的 ?key=（给链接）。
+ *  面板的「无凭据 → 302 /login」在路由里另判，这里只管凭据本身对不对 */
 function authorised(request, env, url) {
   if (!env.STATS_TOKEN) return false;
   const header = request.headers.get('authorization') || '';
@@ -273,6 +284,110 @@ function authorised(request, env, url) {
     }
   }
   return url.searchParams.get('key') === env.STATS_TOKEN;
+}
+
+// ---------------------------------------------------------------------------
+// 面板会话：无状态签名 cookie（进 /stats 不再弹浏览器原生密码框）
+// ---------------------------------------------------------------------------
+
+const SESSION_COOKIE = 'stats_sess';
+const SESSION_TTL = 30 * 24 * 3600; // 30 天：够久了，过期重新输一次密码
+
+async function hmacHex(key, msg) {
+  const k = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** cookie 值 = "<exp>.<HMAC(STATS_TOKEN, exp)>"：换密码（STATS_TOKEN）即全站会话作废 */
+async function sessionCookieValue(env) {
+  const exp = Math.floor(Date.now() / 1000) + SESSION_TTL;
+  return `${exp}.${await hmacHex(env.STATS_TOKEN, String(exp))}`;
+}
+
+async function sessionValid(request, env) {
+  if (!env.STATS_TOKEN) return false;
+  const m = /(?:^|;\s*)stats_sess=([^;\s]+)/.exec(request.headers.get('cookie') || '');
+  if (!m) return false;
+  const [exp, sig] = m[1].split('.');
+  if (!/^\d{10,}$/.test(exp || '') || !/^[0-9a-f]{64}$/.test(sig || '')) return false;
+  if (Number(exp) < Math.floor(Date.now() / 1000)) return false;
+  // 定长十六进制直接全等；这里是拿公开 cookie 验自己的签名，不存在可利用的时序面
+  return sig === (await hmacHex(env.STATS_TOKEN, exp));
+}
+
+const SESSION_COOKIE_ATTRS = `Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_TTL}`;
+
+/** 登录页：自绘表单替代 401 弹框。无脚本、无外链，CSP 收到只剩内联样式与本域提交 */
+function loginPage(error = '') {
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>访客统计 · 登录</title>
+<style>
+ body{font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;padding:24px;background:#fbf8f1;color:#1d2321}
+ h1{font-size:20px;margin:0 0 4px} .note{color:#6b6558;font-size:12px;max-width:640px}
+ .err{color:#a4262c;font-size:13px}
+ form{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+ input{font:14px system-ui;padding:8px 12px;border:1px solid #e6e0d4;border-radius:8px;background:#fff;min-width:220px}
+ button{font:14px system-ui;padding:8px 18px;border:0;border-radius:8px;background:#5c2e83;color:#fff;cursor:pointer}
+</style></head><body>
+<h1>访客统计</h1>
+${error ? `<p class="err">${esc(error)}</p>` : `<p class="note">输入密码进入统计面板，30 天内免登录。</p>`}
+<form method="post" action="/login">
+ <input type="password" name="key" placeholder="密码" autocomplete="current-password" autofocus required>
+ <button type="submit">进入</button>
+</form>
+</body></html>`;
+}
+
+const LOGIN_HEADERS = {
+  'cache-control': 'no-store',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'x-frame-options': 'DENY',
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
+};
+
+const html = (body, status = 200, headers = {}) =>
+  new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', ...LOGIN_HEADERS, ...headers } });
+
+const redirect = (location) =>
+  new Response(null, { status: 302, headers: { location, 'cache-control': 'no-store' } });
+
+async function handleLogin(request, env) {
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    if (await sessionValid(request, env)) return redirect('/stats');
+    return html(loginPage(), 200);
+  }
+  if (request.method !== 'POST') {
+    return json({ error: 'method not allowed' }, 405, LOGIN_HEADERS);
+  }
+
+  let key = '';
+  try {
+    key = String(((await request.formData()).get('key')) ?? '');
+  } catch {
+    return html(loginPage('请求格式不对，请用页面上的表单。'), 400);
+  }
+  // 没配 STATS_TOKEN 等于读接口整体关闭，登录自然也过不去（绝不放空密码）
+  if (env.STATS_TOKEN && key === env.STATS_TOKEN) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: '/stats',
+        'cache-control': 'no-store',
+        'set-cookie': `${SESSION_COOKIE}=${await sessionCookieValue(env)}; ${SESSION_COOKIE_ATTRS}`,
+      },
+    });
+  }
+  return html(loginPage('密码不对，再试一次。'), 200);
 }
 
 const esc = (s) =>
@@ -351,15 +466,18 @@ export default {
       }
     }
 
+    if (url.pathname === '/login') {
+      return await handleLogin(request, env);
+    }
+
     if (url.pathname === '/api/stats' || url.pathname === '/stats') {
-      if (!authorised(request, env, url)) {
-        if (url.pathname === '/api/stats') {
-          return json({ error: 'unauthorized' }, 401);
-        }
-        return new Response('需要密码', {
-          status: 401,
-          headers: { 'www-authenticate': 'Basic realm="stats", charset="UTF-8"', 'cache-control': 'no-store' },
-        });
+      const isPanel = url.pathname === '/stats';
+      // 面板认三种凭据：会话 cookie（/login 发的）/ HTTP Basic / ?key=。
+      // 全都没有时**不再**回 401+WWW-Authenticate（浏览器会弹原生密码框、
+      // 每次都问），改 302 去自绘登录页；curl 带 Basic 或 ?key= 的照旧直通。
+      if (!(await authorised(request, env, url)) && !(isPanel && (await sessionValid(request, env)))) {
+        if (!isPanel) return json({ error: 'unauthorized' }, 401); // JSON 口永远只认 Bearer
+        return redirect('/login');
       }
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
       const data = await stats(env, days);

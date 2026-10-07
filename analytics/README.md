@@ -93,7 +93,9 @@ npx wrangler deploy
 ## 看数据
 
 ```bash
-# 面板（浏览器自己弹密码框，用户名随便填）
+# 面板：第一次打开会跳到 /login 密码页，输入 STATS_TOKEN 后下发
+# HttpOnly+Secure+SameSite=Strict 的签名 cookie（30 天免登录）；
+# 也仍认 HTTP Basic（curl -u）与 ?key=，旧收藏夹照旧能用
 https://stats.oaking.kdns.fr/stats
 
 # JSON，给脚本用
@@ -121,8 +123,10 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 - **只回计数**：国家、城市、来源、语言这些维度一概不带 —— 这个接口免鉴权，
   带维度就等于把面板公开了。`STATS_TOKEN` 不进前端。
 - 页脚「本站访问量 · 今日 · 今日访客 · 统计详情」在 `_includes/footer.html`
-  （「统计详情」链到 `/stats` 面板，公开页脚只放裸地址、不拼 `?key=` —— 带 key
-  的链接进了页面源码等于公开 `STATS_TOKEN`，收藏夹里自己留一条带 key 的即可），
+  （「统计详情」链到 `/stats` 面板：未登录时 Worker 自动 302 到 `/login`
+  密码页，输一次密码 30 天内直开 —— **不再弹浏览器原生密码框**；公开页脚只放
+  裸地址、不拼 `?key=` —— 带 key 的链接进了页面源码等于公开 `STATS_TOKEN`，
+  收藏夹里自己留一条带 key 的即可），
   文章页「本文阅读 N 次」在 `_includes/han-page-views.html`（只对集合条目输出）；
   两块都初始 `hidden`，由 `assets/js/visit.js` 一次请求取回、填进 `[data-fill]`
   才揭开 —— 取不回来就不显示，绝不显示假 0。与打点同一个开关，`visit_endpoint`
@@ -147,7 +151,9 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>` | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | HTTP Basic（密码 = `STATS_TOKEN`） | 统计面板 |
+| `/stats` | GET | 会话 cookie（`/login` 下发）或 HTTP Basic（密码 = `STATS_TOKEN`）或 `?key=`；都没有 → 302 `/login` | 统计面板 |
+| `/login` | GET | 无（已有有效 cookie 则 302 回 `/stats`） | 密码表单（`noindex`、无脚本、CSP 只允许本域提交） |
+| `/login` | POST | 表单字段 `key` 等于 `STATS_TOKEN` | 校验通过 → `Set-Cookie: stats_sess=<exp>.<HMAC>`（HttpOnly/Secure/SameSite=Strict，30 天）→ 302 `/stats`；失败重新渲染表单、不下发 cookie |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
 
 ## 常见问题
