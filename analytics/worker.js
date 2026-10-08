@@ -216,7 +216,7 @@ async function stats(env, days) {
            FROM visits WHERE ts >= ? GROUP BY day ORDER BY day`,
         since,
       ),
-      q(`SELECT path, COUNT(*) AS pv FROM visits WHERE ts >= ? GROUP BY path ORDER BY pv DESC LIMIT 25`, since),
+      q(`SELECT path, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY path ORDER BY n DESC LIMIT 25`, since),
       q(`SELECT COALESCE(country,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
       q(`SELECT COALESCE(region,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
       q(`SELECT COALESCE(city,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
