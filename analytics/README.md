@@ -13,29 +13,31 @@
 | Google Analytics | 本站一直没接（`_config.yml` 的 `analytics.provider` 是 `false`），而且它是第三方脚本、要 cookie，与本站「零追踪」的现状冲突 |
 | Umami / Plausible 等 | 仍是第三方脚本，要放行域名、要 cookie，隐私口径上没比这套好 |
 
-**这套的特点**：代码在你自己账号下、零第三方脚本、零 cookie；明细里有 IP，但**只有
-带密码的面板和同凭据的 CSV 导出能看**，公开页脚与免鉴权接口永远只有合计数，过期行
+**这套的特点**：代码在你自己账号下、零第三方脚本、零 cookie；明细里有 IP，**面板
+（`/stats`）与同源的 CSV 导出不设密码、点开就看**（站长的口径选择，等于把 access log
+摆在这自己的域名下），公开页脚走的 `/api/summary` 与免鉴权接口永远只有合计数，过期行
 自动删。代价是 GitHub Pages 没有服务端，所以访问数据必须由页面里的第一方脚本主动送
 过来（`assets/js/visit.js`）。
 
 ## 隐私与数据口径（先看这段）
 
 访客数据是个人信息，境内还要过《个人信息保护法》。这套东西的定位等价于**你自己服务器
-的 access log**：你既是控制者，明细只进你自己的面板，且不无限保留。具体口径：
+的 access log**：你既是控制者，明细只进你自己的域名，且不无限保留。具体口径：
 
 | 存 | 不存 |
 | --- | --- |
 | 路径（只有 `pathname + hash`，**查询串在前端就丢掉了**） | 完整 referrer URL（只留域名，完整 URL 里常有搜索词） |
-| 明文 IP（`visits.ip`，只在 `/stats` 面板与 `/stats.csv` 导出里出现） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器） |
+| 明文 IP（`visits.ip`，出现在 `/stats` 面板与 `/stats.csv` 导出 —— **两者都是公开的**） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器） |
 | 国家 / 省 / 城市 / 邮编 / 时区 / 经纬度 / ASN / 接入机房（Cloudflare 自带 GeoIP 按 IP **推断**，不是精确定位，零第三方 SDK） | 任何 cookie / localStorage / 广告标识（访客侧） |
-| `ip_hash`（UV 去重口径）与界面语言 | 公开页面与免鉴权接口里的 IP、维度、明细路径 |
+| `ip_hash`（UV 去重口径）与界面语言 | 公开页脚与免鉴权接口 `/api/summary` 里的 IP、维度、明细路径 |
 
 `ip_hash = SHA-256(IP + 当天日期 + IP_SALT)` 取前 16 位。**掺当天日期**是刻意的：
 同一个人的哈希逐日不同，所以既能在当天算独立访客数（UV），又无法把他在不同天的
 两次访问串成一个人 —— 去重从来不靠明文 IP。明文 IP 留着只是给你回查「这行是谁刷的」；
-它和维度一起只在密码后面出现，`RETENTION_DAYS`（默认 180 天）到期由定时任务**连行删除**
-（删除前先按路径累计进 `lifetime_path`，页脚的累计口径不会往回掉）。给面板设强密码、
-别把带 `?key=` 的链接贴出去，就是这套口径下你能做的关键控制。
+`RETENTION_DAYS`（默认 180 天）到期由定时任务**连行删除**（删除前先按路径累计进
+`lifetime_path`，页脚的累计口径不会往回掉）。**面板不设密码是刻意的取舍**：方便随时点开
+就看，代价是知道这个地址的人都能看到明细 IP；如果你更在意后者，把 `/stats` 的路由加回
+鉴权即可（git 历史里有现成的密码流程实现）。
 
 另外：`assets/js/visit.js` 会读 `navigator.doNotTrack` 与 `navigator.globalPrivacyControl`，
 命中就**一个请求都不发**；服务端另外认一道 `DNT: 1` 的请求头，挡住手工绕过前端的调用。
@@ -56,7 +58,7 @@
    | --- | --- |
    | `CLOUDFLARE_API_TOKEN` | 上一步的 token |
    | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 id |
-   | `STATS_TOKEN` | 统计面板 / 接口的密码，自己想一个 |
+   | `STATS_TOKEN` | `/api/stats` JSON 口的令牌，自己想一个（面板已公开，用不到它） |
 
    可选的普通变量（Variables，不是 Secrets）：`ANALYTICS_ALLOWED_ORIGIN`（默认
    `https://newnju.github.io`）、`ANALYTICS_IP_SALT`、`ANALYTICS_RETENTION_DAYS`。
@@ -98,16 +100,15 @@ npx wrangler deploy
 ## 看数据
 
 ```bash
-# 面板：第一次打开会跳到 /login 密码页，输入 STATS_TOKEN 后下发
-# HttpOnly+Secure+SameSite=Strict 的签名 cookie（30 天免登录）；
-# 也仍认 HTTP Basic（curl -u）与 ?key=，旧收藏夹照旧能用
+# 面板：公开，点开就看（不设密码、不需要 cookie 或 ?key=）
+# 旧地址 /login 一律 302 回这里
 https://stats.oaking.kdns.fr/stats
 
-# JSON，给脚本用
+# JSON，给脚本用（这个口仍要令牌）
 curl -H "Authorization: Bearer <STATS_TOKEN>" "https://stats.oaking.kdns.fr/api/stats?days=30"
 
-# 明细 CSV 导出（与面板同一套凭据；含 IP 与全部地址推断字段）
-curl -u "任意用户名:<STATS_TOKEN>" "https://stats.oaking.kdns.fr/stats.csv?days=30" -o visits.csv
+# 明细 CSV 导出（与面板一样公开；含 IP 与全部地址推断字段）
+curl "https://stats.oaking.kdns.fr/stats.csv?days=30" -o visits.csv
 
 # 健康检查：只说绑定有没有配，不泄露密钥
 curl https://stats.oaking.kdns.fr/healthz
@@ -117,15 +118,16 @@ curl https://stats.oaking.kdns.fr/healthz
 `?days=N`）与 CSV 导出按钮；主体是关键指标卡（PV / UV / 今日 / 覆盖面）、PV-UV 趋势
 SVG、设备构成环形图、地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片、页面
 排行 Top 25，最后是**访客明细表**（最近 50 条：时间、页面、明文 IP、推断位置、
-ASN·机房、设备·浏览器、来源、语言 —— 全部只在密码后面）。整页服务端渲染、零 JS，
-CSP 依旧 `default-src 'none'`。`?days=N` 可以改范围（1–365）。
+ASN·机房、设备·浏览器、来源、语言）。整页服务端渲染、零 JS，CSP 依旧
+`default-src 'none'`。`?days=N` 可以改范围（1–365）。配色沿用主站「汉 · 南大紫」
+（宣纸底 `#fbf8f1` + 南大紫 `#5C2E83` + 鎏金 `#c8a45c`，标题衬线）。
 
 「人数」的口径是 **按天去重的 UV**：同一天同一个 IP 算一个人；跨天不合并 ——
 因为哈希里掺了日期，跨天本来就无法关联（见上面隐私设计）。
 
 ### 站内显示（页脚计数与文章阅读数）
 
-网页上想直接看到数字（不用输密码）走公开的 `/api/summary`：
+网页上想直接看到数字走公开的 `/api/summary`：
 
 ```bash
 curl "https://stats.oaking.kdns.fr/api/summary"                    # {pv, today_pv, today_uv, generated_at}
@@ -133,12 +135,11 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 ```
 
 - **只回计数**：国家、城市、来源、语言这些维度一概不带 —— 这个接口免鉴权，
-  带维度就等于把面板公开了。`STATS_TOKEN` 不进前端。
+  带维度就等于在页脚上摊开明细（维度在面板、CSV 与要令牌的 `/api/stats` 里才有）。
+  `STATS_TOKEN` 不进前端。
 - 页脚「本站访问量 · 今日 · 今日访客 · 统计详情」在 `_includes/footer.html`
-  （「统计详情」链到 `/stats` 面板：未登录时 Worker 自动 302 到 `/login`
-  密码页，输一次密码 30 天内直开 —— **不再弹浏览器原生密码框**；公开页脚只放
-  裸地址、不拼 `?key=` —— 带 key 的链接进了页面源码等于公开 `STATS_TOKEN`，
-  收藏夹里自己留一条带 key 的即可），
+  （「统计详情」链到 `/stats` 面板，公开直开；**不再需要密码，也没有 `/login`**，
+  旧收藏夹里的 `/login` 会 302 回面板），
   文章页「本文阅读 N 次」在 `_includes/han-page-views.html`（只对集合条目输出）；
   两块都初始 `hidden`，由 `assets/js/visit.js` 一次请求取回、填进 `[data-fill]`
   才揭开 —— 取不回来就不显示，绝不显示假 0。与打点同一个开关，`visit_endpoint`
@@ -161,12 +162,11 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | 路径 | 方法 | 鉴权 | 作用 |
 | --- | --- | --- | --- |
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
-| `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>` | 统计 JSON |
+| `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>`（也认 Basic 密码半段与 `?key=`，给 curl） | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | 会话 cookie（`/login` 下发）或 HTTP Basic（密码 = `STATS_TOKEN`）或 `?key=`；都没有 → 302 `/login` | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细） |
-| `/stats.csv?days=30` | GET | 与 `/stats` 同一套凭据；都没有 → 302 `/login` | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、来源、语言） |
-| `/login` | GET | 无（已有有效 cookie 则 302 回 `/stats`） | 密码表单（`noindex`、无脚本、CSP 只允许本域提交） |
-| `/login` | POST | 表单字段 `key` 等于 `STATS_TOKEN` | 校验通过 → `Set-Cookie: stats_sess=<exp>.<HMAC>`（HttpOnly/Secure/SameSite=Strict，30 天）→ 302 `/stats`；失败重新渲染表单、不下发 cookie |
+| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细） |
+| `/stats.csv?days=30` | GET | 无（**公开**，与面板一致） | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、来源、语言）；GET/HEAD 之外 405 |
+| `/login` | 任何方法 | 无 | 旧地址兼容：一律 302 `/stats`（密码流程已下线，不再有表单与会话 cookie） |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
 
 ## 常见问题
@@ -176,7 +176,7 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | Actions 报 `::error::仓库 Secrets 里还缺 …` | GitHub Secrets 没配全，见上面的部署清单 |
 | 面板有 PV、UV 一直是 1 | 同一个人多个标签页 / 同一 NAT 出口，算一个人是正常的 |
 | 城市全是「—」 | Cloudflare 对部分 IP（尤其国内一些机房段）没有城市级 GeoIP，只能到国家 |
-| 面板 401 | `STATS_TOKEN` 没配或与浏览器输入的不一致 |
+| `/api/stats` 返回 401 | 没带 `Authorization: Bearer <STATS_TOKEN>`（这个口仍要令牌；面板是公开的，不走它） |
 | `{"error":"D1 未绑定"}` | 首次部署建库那步失败了；看 Actions 日志里 Cloudflare API 的返回 |
 | 站点没请求 | `_config.yml` 的 `analytics.visit_endpoint` 还是空的（要重新构建部署才生效） |
 | 数据里 `host` 是别的域名 | 有人拿你的端点刷别的站；`host` 列就是为此留的。要收紧就把 `ALLOWED_ORIGIN` 反过来校验 `Origin`/`Host` |
@@ -189,5 +189,5 @@ node --test tests/analytics.test.mjs
 
 用假的 D1 binding 跑，断言「到底往库里写了什么」：明文 IP 与 GeoIP 扩展字段
 （continent/postal/tz/colo…）都落库、同一天同 IP 同哈希、跨天哈希不同、查询串与
-搜索词被丢掉、referrer 只留域名、读接口必须要令牌、面板/CSV 没凭据就 302 去登录页、
-定时任务按 `RETENTION_DAYS` 删旧行。
+搜索词被丢掉、referrer 只留域名、读接口必须要令牌、面板与 CSV 免凭据直出
+（`/login` 一律 302 回面板、不发任何 cookie）、定时任务按 `RETENTION_DAYS` 删旧行。

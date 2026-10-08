@@ -12,20 +12,14 @@
  *   GET  /api/stats    统计 JSON（Bearer 令牌）
  *   GET  /api/summary  公开计数（免鉴权：只回 pv / 今日 pv·uv，带 ?path= 时
  *                      多回该页的累计阅读数 —— 页脚计数与文章页阅读数用它）
- *   GET  /stats        统计面板（有会话 cookie 或带 Basic/?key= 凭据就直接出；
- *                      否则 302 到 /login —— 不再发 401+WWW-Authenticate，
- *                      那会触发浏览器原生密码框、体验差且每次重新问）
- *   GET  /stats.csv    明细导出 CSV（与面板同一套凭据；含 IP 与地址推断字段）
- *   GET  /login        密码表单（已有有效会话就直接 302 回面板）
- *   POST /login        校验密码 → Set-Cookie(stats_sess) → 302 面板
+ *   GET  /stats        统计面板（公开，直接渲染 —— 站长要看就看，不再设密码；
+ *                      旧链接 /login 一律 302 回这里）
+ *   GET  /stats.csv    明细导出 CSV（公开，含 IP 与地址推断字段）
+ *   GET  /login        旧地址兼容：一律 302 到 /stats（密码流程已下线）
  *   GET  /healthz      健康检查
  *
- * 会话 cookie：`<过期时间戳>.<HMAC-SHA256(STATS_TOKEN, 时间戳)>` —— 无状态、
- * 可离线校验、带 30 天有效期，服务端不存任何东西；HttpOnly + Secure +
- * SameSite=Strict，只有站长的浏览器拿着它，不参与打点、也不给访客下发。
- *
  * 变量（`npx wrangler secret put`）：
- *   STATS_TOKEN   统计接口与面板的密码，**必填**（没配就只留打点、不给读）
+ *   STATS_TOKEN   /api/stats JSON 口的令牌（面板与 CSV 已公开，不再用它）
  *   ALLOWED_ORIGIN  允许打点的页面来源，默认 https://newnju.github.io
  *   IP_SALT        IP 哈希的盐；换掉它等于让所有历史去重失效
  *   RETENTION_DAYS  明细保留天数，默认 180
@@ -33,16 +27,15 @@
  * ---------------------------------------------------------------------------
  * 隐私与数据口径：这是站长自用的访问日志（等价于自建服务器的 access log）
  * ---------------------------------------------------------------------------
- * · 访客侧不写 cookie、不用 localStorage、不做跨站跟踪、没有第三方脚本
- *   （唯一例外：站长登录面板的 stats_sess 会话 cookie —— HttpOnly、SameSite
- *     =Strict、只在 /login 成功时下发，与打点链路完全无关，访客拿不到）；
+ * · 访客侧不写 cookie、不用 localStorage、不做跨站跟踪、没有第三方脚本；
  * · **存明文 IP**（`visits.ip`），用于事后回查；同时存
  *   ip_hash = SHA-256(IP + 当天日期 + IP_SALT) 的前 16 位，UV 去重靠它；
  * · 地址是 Cloudflare GeoIP 按 IP **推断**的（continent/country/region/
  *   city/postal/tz/lat/lon/asn/colo），不引入任何第三方 SDK，不是精确位置；
- * · 这些明细只有面板能看（/stats 要密码，/api/summary 对外只回计数）、
- *   超过 RETENTION_DAYS 由定时任务连行删除（删前按路径 rollup 进累计表），
- *   对外页面与公开接口永远不出现 IP 与维度；
+ * · 明细在公开的 /stats 面板与 /stats.csv 里可见（**面板不设密码**，这是
+ *   站长的选择：口径等同把 access log 摆在自己域名下）；/api/summary 对外
+ *   只回合计数，/api/stats 的 JSON 口仍要 STATS_TOKEN；
+ *   超过 RETENTION_DAYS 由定时任务连行删除（删前按路径 rollup 进累计表）；
  * · referrer 只留域名（完整 URL 里常有搜索词），UA 只粗分成设备/浏览器；
  * · 前端尊重 Do Not Track 与 Global Privacy Control：命中就直接不上报。
  */
@@ -320,8 +313,8 @@ async function summary(env, url) {
   return out;
 }
 
-/** 读接口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（curl -u / 旧收藏夹）或 URL 上的 ?key=（给链接）。
- *  面板的「无凭据 → 302 /login」在路由里另判，这里只管凭据本身对不对 */
+/** /api/stats JSON 口的钥匙：Bearer 头（给脚本）、HTTP Basic 的密码那半（curl -u）或 URL 上的 ?key=。
+ *  面板与 CSV 已公开，不再走这里 */
 function authorised(request, env, url) {
   if (!env.STATS_TOKEN) return false;
   const header = request.headers.get('authorization') || '';
@@ -342,108 +335,11 @@ function authorised(request, env, url) {
 }
 
 // ---------------------------------------------------------------------------
-// 面板会话：无状态签名 cookie（进 /stats 不再弹浏览器原生密码框）
+// 旧的 /login 密码流程已下线：面板与 CSV 公开，/login 一律 302 回 /stats
 // ---------------------------------------------------------------------------
-
-const SESSION_COOKIE = 'stats_sess';
-const SESSION_TTL = 30 * 24 * 3600; // 30 天：够久了，过期重新输一次密码
-
-async function hmacHex(key, msg) {
-  const k = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(key),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** cookie 值 = "<exp>.<HMAC(STATS_TOKEN, exp)>"：换密码（STATS_TOKEN）即全站会话作废 */
-async function sessionCookieValue(env) {
-  const exp = Math.floor(Date.now() / 1000) + SESSION_TTL;
-  return `${exp}.${await hmacHex(env.STATS_TOKEN, String(exp))}`;
-}
-
-async function sessionValid(request, env) {
-  if (!env.STATS_TOKEN) return false;
-  const m = /(?:^|;\s*)stats_sess=([^;\s]+)/.exec(request.headers.get('cookie') || '');
-  if (!m) return false;
-  const [exp, sig] = m[1].split('.');
-  if (!/^\d{10,}$/.test(exp || '') || !/^[0-9a-f]{64}$/.test(sig || '')) return false;
-  if (Number(exp) < Math.floor(Date.now() / 1000)) return false;
-  // 定长十六进制直接全等；这里是拿公开 cookie 验自己的签名，不存在可利用的时序面
-  return sig === (await hmacHex(env.STATS_TOKEN, exp));
-}
-
-const SESSION_COOKIE_ATTRS = `Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_TTL}`;
-
-/** 登录页：自绘表单替代 401 弹框。无脚本、无外链，CSP 收到只剩内联样式与本域提交 */
-function loginPage(error = '') {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow, noarchive">
-<title>访客统计 · 登录</title>
-<style>
- body{font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;padding:24px;background:#fbf8f1;color:#1d2321}
- h1{font-size:20px;margin:0 0 4px} .note{color:#6b6558;font-size:12px;max-width:640px}
- .err{color:#a4262c;font-size:13px}
- form{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
- input{font:14px system-ui;padding:8px 12px;border:1px solid #e6e0d4;border-radius:8px;background:#fff;min-width:220px}
- button{font:14px system-ui;padding:8px 18px;border:0;border-radius:8px;background:#5c2e83;color:#fff;cursor:pointer}
-</style></head><body>
-<h1>访客统计</h1>
-${error ? `<p class="err">${esc(error)}</p>` : `<p class="note">输入密码进入统计面板，30 天内免登录。</p>`}
-<form method="post" action="/login">
- <input type="password" name="key" placeholder="密码" autocomplete="current-password" autofocus required>
- <button type="submit">进入</button>
-</form>
-</body></html>`;
-}
-
-const LOGIN_HEADERS = {
-  'cache-control': 'no-store',
-  'x-content-type-options': 'nosniff',
-  'referrer-policy': 'no-referrer',
-  'x-frame-options': 'DENY',
-  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
-};
-
-const html = (body, status = 200, headers = {}) =>
-  new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', ...LOGIN_HEADERS, ...headers } });
 
 const redirect = (location) =>
   new Response(null, { status: 302, headers: { location, 'cache-control': 'no-store' } });
-
-async function handleLogin(request, env) {
-  if (request.method === 'GET' || request.method === 'HEAD') {
-    if (await sessionValid(request, env)) return redirect('/stats');
-    return html(loginPage(), 200);
-  }
-  if (request.method !== 'POST') {
-    return json({ error: 'method not allowed' }, 405, LOGIN_HEADERS);
-  }
-
-  let key = '';
-  try {
-    key = String(((await request.formData()).get('key')) ?? '');
-  } catch {
-    return html(loginPage('请求格式不对，请用页面上的表单。'), 400);
-  }
-  // 没配 STATS_TOKEN 等于读接口整体关闭，登录自然也过不去（绝不放空密码）
-  if (env.STATS_TOKEN && key === env.STATS_TOKEN) {
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: '/stats',
-        'cache-control': 'no-store',
-        'set-cookie': `${SESSION_COOKIE}=${await sessionCookieValue(env)}; ${SESSION_COOKIE_ATTRS}`,
-      },
-    });
-  }
-  return html(loginPage('密码不对，再试一次。'), 200);
-}
 
 const esc = (s) =>
   String(s ?? '—').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -468,8 +364,8 @@ const COUNTRY_CN = {
 };
 const countryName = (c) => COUNTRY_CN[c] || c || '—';
 const DEVICE_CN = { desktop: '桌面', mobile: '手机', tablet: '平板', bot: '机器人', other: '其他' };
-const DEV_COLORS = { desktop: '#1f4d46', mobile: '#c98a2b', tablet: '#5b7fa6', bot: '#9a6b9b', other: '#8a8f96' };
-const PALETTE = ['#1f4d46', '#c98a2b', '#5b7fa6', '#9a6b9b', '#8a8f96', '#4f8f7d'];
+const DEV_COLORS = { desktop: '#5c2e83', mobile: '#c8a45c', tablet: '#2f6b5a', bot: '#9b6fb8', other: '#7d7566' };
+const PALETTE = ['#5c2e83', '#c8a45c', '#2f6b5a', '#9b6fb8', '#7d7566', '#9e2b25'];
 
 const fmtNum = (v) => {
   const n = Number(v) || 0;
@@ -514,8 +410,8 @@ function trendSvg(daily) {
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="220" role="img" aria-label="每日 PV 与 UV 趋势">
 ${grid}
 <path d="${line('pv')}L${X(daily.length - 1).toFixed(1)},${base}L${X(0).toFixed(1)},${base}Z" fill="rgba(31,77,70,.10)"/>
-<path d="${line('pv')}" fill="none" stroke="#1f4d46" stroke-width="2"/>
-<path d="${line('uv')}" fill="none" stroke="#c98a2b" stroke-width="1.6" stroke-dasharray="5 4"/>
+ <path d="${line('pv')}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+ <path d="${line('uv')}" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 4"/>
 ${dot}${xt}
 </svg>`;
 }
@@ -603,16 +499,17 @@ function dashboard(data, retention = 180) {
 <meta name="robots" content="noindex, nofollow, noarchive">
 <title>访客统计 · 仪表盘</title>
 <style>
-:root{--bg:#f5f5f3;--surface:#fffefc;--ink:#1b1d22;--muted:#6f7378;--line:#e3e2dd;--accent:#1f4d46;--accent-soft:#e7eeeb;--r-sm:6px;--r-md:8px;--sidebar-w:250px}
+:root{--bg:#fbf8f1;--surface:#fffdf7;--ink:#3f3a33;--muted:#857d6e;--line:#e8e1d3;--accent:#5c2e83;--accent-soft:rgba(92,46,131,.10);--gold:#c8a45c;--r-sm:2px;--r-md:2px;--sidebar-w:250px}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","Hiragino Sans GB","Segoe UI",Roboto,"Helvetica Neue","Lucida Grande",Arial,sans-serif}
+h1,h2,h3{font-family:"Source Han Serif SC","Noto Serif CJK SC","Songti SC","STSong","SimSun","Source Han Serif",Georgia,"Times New Roman",serif}
 a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
+a:hover{color:var(--gold);text-decoration:underline}
 figure{margin:0}
 .shell{display:flex;min-height:100vh}
 aside.sidebar{width:var(--sidebar-w);flex:0 0 auto;border-right:1px solid var(--line);background:var(--surface);padding:20px 16px;position:sticky;top:0;height:100vh;overflow:auto}
 .brand{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
-.brand .logo{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.brand .logo{width:26px;height:26px;border-radius:4px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center}
 .brand .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
 .sidebar-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 8px 6px}
 nav.side-nav a{display:block;padding:7px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px}
@@ -623,12 +520,12 @@ nav.side-nav a[aria-current="true"]{background:var(--accent-soft);color:var(--ac
 .topbar{display:flex;align-items:center;gap:14px;padding:12px 28px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:5;flex-wrap:wrap}
 .crumbs{font-size:13px;color:var(--muted);margin-right:auto}
 .crumbs b{color:var(--ink);font-weight:600}
-.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:11px;margin-left:6px;vertical-align:1px}
-.seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px}
-.seg a{padding:3px 12px;border-radius:999px;font-size:12px;color:var(--muted)}
-.seg a:hover{text-decoration:none}
-.seg a[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(27,29,34,.10);font-weight:600}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:13px;background:var(--accent);color:#fff}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:var(--r-sm);padding:2px 10px;font-size:11px;margin-left:6px;vertical-align:1px}
+.seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px}
+.seg a{padding:3px 12px;border-radius:var(--r-sm);font-size:12px;color:var(--muted)}
+.seg a:hover{text-decoration:none;color:var(--ink)}
+.seg a[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 1px rgba(43,39,35,.10);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);font-size:13px;background:var(--accent);color:#fff}
 .btn:hover{text-decoration:none;filter:brightness(1.08)}
 main{padding:24px 28px 48px;max-width:1180px;width:100%}
 .block{margin-bottom:28px}
@@ -637,19 +534,19 @@ main{padding:24px 28px 48px;max-width:1180px;width:100%}
 .block-sub{font-size:12px;color:var(--muted)}
 .greet h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
 .greet p{margin:0;color:var(--muted);font-size:13px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 1px 2px rgba(27,29,34,.04)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 1px 1px rgba(43,39,35,.10)}
 .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .metric{padding:14px 16px}
 .metric .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .metric .l{font-size:12px;color:var(--muted);margin-top:2px}
 .metric .s{font-size:11px;color:var(--muted);margin-top:6px}
-.metric.hi{background:var(--accent-soft);border-color:#d5e3dd}
+.metric.hi{background:var(--accent-soft);border-color:rgba(92,46,131,.22)}
 .chart-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:12px}
 .chart-card{padding:14px 16px 12px}
 .chart-card h3{font-size:13px;margin:0 0 8px}
 .legend{list-style:none;margin:8px 0 0;padding:0;font-size:12px}
 .legend li{display:flex;align-items:center;gap:8px;padding:3px 0;color:var(--ink)}
-.legend i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.legend i{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
 .legend b{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
 .legend em{font-style:normal;color:var(--muted);width:38px;text-align:right}
 .legend .dim{color:var(--muted)}
@@ -666,9 +563,9 @@ td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.nm{max-width:260px;word-break:break-all}
-.bar{height:6px;background:var(--accent-soft);border-radius:99px;overflow:hidden;min-width:48px}
-.bar>span{display:block;height:100%;background:var(--accent);border-radius:99px}
-.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 5px;word-break:break-all}
+.bar{height:6px;background:var(--accent-soft);border-radius:var(--r-sm);overflow:hidden;min-width:48px}
+.bar>span{display:block;height:100%;background:var(--accent);border-radius:var(--r-sm)}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:0 5px;word-break:break-all}
 .dim{color:var(--muted);font-size:11px}
 .empty{color:var(--muted);font-size:13px;padding:18px 0;text-align:center;margin:0}
 .page-foot{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:14px;max-width:900px;line-height:1.8}
@@ -687,7 +584,7 @@ td.nm{max-width:260px;word-break:break-all}
 </style></head><body>
 <div class="shell">
 <aside class="sidebar">
- <div class="brand"><span class="logo">◎</span><div>访客统计<div class="sub">newnju.github.io</div></div></div>
+ <div class="brand"><span class="logo"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="1.6" y="8.5" width="3.3" height="5.5"/><rect x="6.35" y="4.5" width="3.3" height="9.5"/><rect x="11.1" y="7" width="3.3" height="7"/><rect x="1" y="14.3" width="14" height="1.3" opacity=".55"/></svg></span><div>访客统计<div class="sub">newnju.github.io</div></div></div>
  <div class="sidebar-label">分析</div>
  <nav class="side-nav" aria-label="面板导航">
   <a href="#overview" aria-current="true">概览</a>
@@ -734,7 +631,7 @@ td.nm{max-width:260px;word-break:break-all}
     <figure class="card chart-card">
      <h3>PV / UV 趋势</h3>
      ${trendSvg(daily)}
-     <ul class="legend"><li><i style="background:#1f4d46"></i>浏览量 PV</li><li><i style="background:#c98a2b"></i>独立访客 UV（虚线）</li></ul>
+     <ul class="legend"><li><i style="background:var(--accent)"></i>浏览量 PV</li><li><i style="background:var(--gold)"></i>独立访客 UV（虚线）</li></ul>
     </figure>
     <figure class="card chart-card">
      <h3>设备构成</h3>
@@ -768,7 +665,7 @@ td.nm{max-width:260px;word-break:break-all}
   </section>
 
   <section class="block" id="detail">
-   <div class="block-head"><h2>访客明细</h2><span class="block-sub">最近 50 条 · 含明文 IP，仅本面板可见</span></div>
+   <div class="block-head"><h2>访客明细</h2><span class="block-sub">最近 50 条 · 含明文 IP 与推断位置</span></div>
    <div class="card mini">
    ${
      recent.length
@@ -779,7 +676,7 @@ td.nm{max-width:260px;word-break:break-all}
   </section>
 
   <footer class="page-foot">
-   口径：PV 为请求数；UV 按「当天 IP + 日期 + 盐」的哈希去重，跨天不合并、无法串起来追踪个人。位置、邮编、时区、ASN、接入机房均来自 Cloudflare GeoIP 按 IP <b>推断</b>，不是精确定位。明细超过保留期由定时任务连行删除（删除前按路径计入累计口径），对外页面与免鉴权接口只暴露合计数，永不出现 IP 与维度。导出 CSV 同样需要面板凭据。
+   口径：PV 为请求数；UV 按「当天 IP + 日期 + 盐」的哈希去重，跨天不合并、无法串起来追踪个人。位置、邮编、时区、ASN、接入机房均来自 Cloudflare GeoIP 按 IP <b>推断</b>，不是精确定位。本页与 CSV 导出<b>公开可访问</b>（含明文 IP 与推断位置，不设密码）；明细超过保留期由定时任务连行删除（删除前按路径计入累计口径），站内免鉴权的 /api/summary 只回合计数，/api/stats 的 JSON 口仍需令牌。
   </footer>
  </main>
 </div>
@@ -820,17 +717,14 @@ export default {
     }
 
     if (url.pathname === '/login') {
-      return await handleLogin(request, env);
+      // 密码流程已下线：旧地址一律回面板
+      return redirect('/stats');
     }
 
     if (url.pathname === '/stats.csv') {
-      // 明细导出：与面板完全同一套凭据门（会话 cookie / Basic / ?key=），
-      // 全都没有就 302 去登录页；GET/HEAD 之外一律 405。
+      // 明细导出：与面板一样公开（含 IP 与推断字段）；GET/HEAD 之外一律 405。
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return json({ error: 'method not allowed' }, 405);
-      }
-      if (!(await authorised(request, env, url)) && !(await sessionValid(request, env))) {
-        return redirect('/login');
       }
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
       try {
@@ -852,12 +746,9 @@ export default {
 
     if (url.pathname === '/api/stats' || url.pathname === '/stats') {
       const isPanel = url.pathname === '/stats';
-      // 面板认三种凭据：会话 cookie（/login 发的）/ HTTP Basic / ?key=。
-      // 全都没有时**不再**回 401+WWW-Authenticate（浏览器会弹原生密码框、
-      // 每次都问），改 302 去自绘登录页；curl 带 Basic 或 ?key= 的照旧直通。
-      if (!(await authorised(request, env, url)) && !(isPanel && (await sessionValid(request, env)))) {
-        if (!isPanel) return json({ error: 'unauthorized' }, 401); // JSON 口永远只认 Bearer
-        return redirect('/login');
+      // 面板公开、直接渲染；JSON 口仍只认令牌（Basic/?key= 是给 curl 的旧兼容）
+      if (!isPanel && !(await authorised(request, env, url))) {
+        return json({ error: 'unauthorized' }, 401);
       }
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
       const data = await stats(env, days);

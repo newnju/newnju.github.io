@@ -28,9 +28,9 @@ database_id = "ddb24480-577f-415b-b5b0-b51465958b74"
 crons = ["17 3 * * *"]
 
 # 变量走 secret，不写在这个文件里：
-#   npx wrangler secret put STATS_TOKEN       统计面板 / 接口的密码
+#   npx wrangler secret put STATS_TOKEN       /api/stats JSON 口的令牌（面板已公开，用不到）
 #   npx wrangler secret put ALLOWED_ORIGIN    可选，默认 https://newnju.github.io
 #   npx wrangler secret put IP_SALT           可选，换掉等于让历史去重失效
 #   npx wrangler secret put RETENTION_DAYS    可选，默认 180
-# 明细含明文 IP 与 GeoIP 推断字段，但只在带密码的 /stats 面板与 /stats.csv 里可见，
-# 公开接口只有合计数；口径见 README「隐私与数据口径」。
+# 明细含明文 IP 与 GeoIP 推断字段：/stats 面板与 /stats.csv **公开可访问**（不设密码），
+# 公开接口 /api/summary 只有合计数，JSON 口 /api/stats 要令牌；口径见 README「隐私与数据口径」。
