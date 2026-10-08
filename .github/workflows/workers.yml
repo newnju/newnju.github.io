@@ -149,8 +149,16 @@ jobs:
           npx wrangler@4 d1 execute site-stats --remote --file=./schema.sql
           # 老库迁移：CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，按
           # PRAGMA table_info 逐列探测、缺了才 ALTER（幂等，可重复跑）。
+          # wrangler --json 输出是带空格的 pretty JSON，先去掉全部空白再 grep；
+          # 读不到结构就立刻红（否则 cols 为空会让后面逐列 ALTER 盲试，
+          # 撞上已存在的列直接 duplicate column 挂掉）。
           # 跑完再验一遍，缺列就让部署红在这里 —— 绝不带着残缺结构发代码。
-          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          if [ -z "$cols" ]; then
+            echo "::error::读不到 visits 表结构（PRAGMA 输出解析为空），拒绝继续迁移"
+            exit 1
+          fi
+          echo "  visits 现有列：$(printf '%s ' $cols)"
           add_col() {
             printf '%s\n' "$cols" | grep -qx "$1" && return 0
             npx wrangler@4 d1 execute site-stats --remote --command "ALTER TABLE visits ADD COLUMN $1 $2"
@@ -173,7 +181,7 @@ jobs:
           add_col browser TEXT
           add_col ref_host TEXT
           add_col lang TEXT
-          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
           for c in ip continent country region region_code city postal tz lat lon asn colo; do
             printf '%s\n' "$cols" | grep -qx "$c" || { echo "::error::visits.$c 迁移没生效，拒绝部署"; exit 1; }
           done
