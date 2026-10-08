@@ -32,4 +32,5 @@ crons = ["17 3 * * *"]
 #   npx wrangler secret put ALLOWED_ORIGIN    可选，默认 https://newnju.github.io
 #   npx wrangler secret put IP_SALT           可选，换掉等于让历史去重失效
 #   npx wrangler secret put RETENTION_DAYS    可选，默认 180
-#   npx wrangler secret put STORE_RAW_IP      可选，设成 1 才存明文 IP（默认不存）
+# 明细含明文 IP 与 GeoIP 推断字段，但只在带密码的 /stats 面板与 /stats.csv 里可见，
+# 公开接口只有合计数；口径见 README「隐私与数据口径」。

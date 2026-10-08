@@ -1,7 +1,8 @@
 # 访客统计（Cloudflare Worker + D1，零依赖）
 
-自己搭一套最小可用的访客统计：每次打开页面记一行 —— **时间、IP（哈希）、国家、城市、
-页面路径、来源站点、设备与浏览器**，然后能按天/页面/国家/城市查人数。
+自己搭一套最小可用的访客统计：每次打开页面记一行 —— **时间、明文 IP、Cloudflare GeoIP
+按 IP 推断的国家/省/市/邮编/时区/ASN/机房、页面路径、来源站点、设备与浏览器**，
+然后能按天/页面/国家/城市查人数，也能在面板里按 IP 回查明细。
 
 ## 为什么不用现成的
 
@@ -12,25 +13,29 @@
 | Google Analytics | 本站一直没接（`_config.yml` 的 `analytics.provider` 是 `false`），而且它是第三方脚本、要 cookie，与本站「零追踪」的现状冲突 |
 | Umami / Plausible 等 | 仍是第三方脚本，要放行域名、要 cookie，隐私口径上没比这套好 |
 
-**这套的特点**：代码在你自己账号下、零第三方脚本、零 cookie、不存明文 IP。代价是
-GitHub Pages 没有服务端，所以访问数据必须由页面里的第一方脚本主动送过来
-（`assets/js/visit.js`）。
+**这套的特点**：代码在你自己账号下、零第三方脚本、零 cookie；明细里有 IP，但**只有
+带密码的面板和同凭据的 CSV 导出能看**，公开页脚与免鉴权接口永远只有合计数，过期行
+自动删。代价是 GitHub Pages 没有服务端，所以访问数据必须由页面里的第一方脚本主动送
+过来（`assets/js/visit.js`）。
 
-## 隐私设计（先看这段）
+## 隐私与数据口径（先看这段）
 
-访客数据是个人信息，境内还要过《个人信息保护法》。所以默认按「能不存就不存」设计：
+访客数据是个人信息，境内还要过《个人信息保护法》。这套东西的定位等价于**你自己服务器
+的 access log**：你既是控制者，明细只进你自己的面板，且不无限保留。具体口径：
 
 | 存 | 不存 |
 | --- | --- |
-| 路径（只有 `pathname + hash`，**查询串在前端就丢掉了**） | 明文 IP（只存 `ip_hash`，见下） |
-| 国家 / 省 / 城市 / 经纬度 / ASN（Cloudflare 自带 GeoIP） | 完整 referrer URL（只留域名，完整 URL 里常有搜索词） |
-| 设备大类与浏览器家族（chrome / safari …） | User-Agent 原文（比 IP 更能识别设备） |
-| 界面语言 | 任何 cookie / localStorage / 广告标识 |
+| 路径（只有 `pathname + hash`，**查询串在前端就丢掉了**） | 完整 referrer URL（只留域名，完整 URL 里常有搜索词） |
+| 明文 IP（`visits.ip`，只在 `/stats` 面板与 `/stats.csv` 导出里出现） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器） |
+| 国家 / 省 / 城市 / 邮编 / 时区 / 经纬度 / ASN / 接入机房（Cloudflare 自带 GeoIP 按 IP **推断**，不是精确定位，零第三方 SDK） | 任何 cookie / localStorage / 广告标识（访客侧） |
+| `ip_hash`（UV 去重口径）与界面语言 | 公开页面与免鉴权接口里的 IP、维度、明细路径 |
 
 `ip_hash = SHA-256(IP + 当天日期 + IP_SALT)` 取前 16 位。**掺当天日期**是刻意的：
 同一个人的哈希逐日不同，所以既能在当天算独立访客数（UV），又无法把他在不同天的
-两次访问串成一个人。想「按 IP 查原始日志」时才把 `STORE_RAW_IP` 设成 `1` —— 那就等于
-自建了一个个人数据处理者，要另行告知并提供访问/删除通道。
+两次访问串成一个人 —— 去重从来不靠明文 IP。明文 IP 留着只是给你回查「这行是谁刷的」；
+它和维度一起只在密码后面出现，`RETENTION_DAYS`（默认 180 天）到期由定时任务**连行删除**
+（删除前先按路径累计进 `lifetime_path`，页脚的累计口径不会往回掉）。给面板设强密码、
+别把带 `?key=` 的链接贴出去，就是这套口径下你能做的关键控制。
 
 另外：`assets/js/visit.js` 会读 `navigator.doNotTrack` 与 `navigator.globalPrivacyControl`，
 命中就**一个请求都不发**；服务端另外认一道 `DNT: 1` 的请求头，挡住手工绕过前端的调用。
@@ -101,12 +106,19 @@ https://stats.oaking.kdns.fr/stats
 # JSON，给脚本用
 curl -H "Authorization: Bearer <STATS_TOKEN>" "https://stats.oaking.kdns.fr/api/stats?days=30"
 
+# 明细 CSV 导出（与面板同一套凭据；含 IP 与全部地址推断字段）
+curl -u "任意用户名:<STATS_TOKEN>" "https://stats.oaking.kdns.fr/stats.csv?days=30" -o visits.csv
+
 # 健康检查：只说绑定有没有配，不泄露密钥
 curl https://stats.oaking.kdns.fr/healthz
 ```
 
-面板上有：PV / UV 总量、按天曲线（PV + UV）、页面 Top 25、国家、城市、来源、设备、语言。
-`?days=N` 可以改范围（1–365）。
+面板是分析工作台版式：左侧栏分区锚点，顶栏有时间范围切换（7 / 30 / 90 / 365 天，
+`?days=N`）与 CSV 导出按钮；主体是关键指标卡（PV / UV / 今日 / 覆盖面）、PV-UV 趋势
+SVG、设备构成环形图、地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片、页面
+排行 Top 25，最后是**访客明细表**（最近 50 条：时间、页面、明文 IP、推断位置、
+ASN·机房、设备·浏览器、来源、语言 —— 全部只在密码后面）。整页服务端渲染、零 JS，
+CSP 依旧 `default-src 'none'`。`?days=N` 可以改范围（1–365）。
 
 「人数」的口径是 **按天去重的 UV**：同一天同一个 IP 算一个人；跨天不合并 ——
 因为哈希里掺了日期，跨天本来就无法关联（见上面隐私设计）。
@@ -151,7 +163,8 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>` | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | 会话 cookie（`/login` 下发）或 HTTP Basic（密码 = `STATS_TOKEN`）或 `?key=`；都没有 → 302 `/login` | 统计面板 |
+| `/stats` | GET | 会话 cookie（`/login` 下发）或 HTTP Basic（密码 = `STATS_TOKEN`）或 `?key=`；都没有 → 302 `/login` | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细） |
+| `/stats.csv?days=30` | GET | 与 `/stats` 同一套凭据；都没有 → 302 `/login` | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、来源、语言） |
 | `/login` | GET | 无（已有有效 cookie 则 302 回 `/stats`） | 密码表单（`noindex`、无脚本、CSP 只允许本域提交） |
 | `/login` | POST | 表单字段 `key` 等于 `STATS_TOKEN` | 校验通过 → `Set-Cookie: stats_sess=<exp>.<HMAC>`（HttpOnly/Secure/SameSite=Strict，30 天）→ 302 `/stats`；失败重新渲染表单、不下发 cookie |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
@@ -174,6 +187,7 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 node --test tests/analytics.test.mjs
 ```
 
-用假的 D1 binding 跑，断言「到底往库里写了什么」：不落明文 IP、同一天同 IP 同哈希、
-跨天哈希不同、查询串与搜索词被丢掉、referrer 只留域名、读接口必须要令牌、
+用假的 D1 binding 跑，断言「到底往库里写了什么」：明文 IP 与 GeoIP 扩展字段
+（continent/postal/tz/colo…）都落库、同一天同 IP 同哈希、跨天哈希不同、查询串与
+搜索词被丢掉、referrer 只留域名、读接口必须要令牌、面板/CSV 没凭据就 302 去登录页、
 定时任务按 `RETENTION_DAYS` 删旧行。

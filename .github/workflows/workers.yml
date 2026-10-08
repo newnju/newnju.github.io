@@ -147,6 +147,37 @@ jobs:
           # --remote 必须有：wrangler v4 的 d1 execute 默认只写本地 state，
           # 少了它建表语句根本不进线上库（worker 一写就 no such table）。
           npx wrangler@4 d1 execute site-stats --remote --file=./schema.sql
+          # 老库迁移：CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，按
+          # PRAGMA table_info 逐列探测、缺了才 ALTER（幂等，可重复跑）。
+          # 跑完再验一遍，缺列就让部署红在这里 —— 绝不带着残缺结构发代码。
+          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          add_col() {
+            printf '%s\n' "$cols" | grep -qx "$1" && return 0
+            npx wrangler@4 d1 execute site-stats --remote --command "ALTER TABLE visits ADD COLUMN $1 $2"
+            echo "  + visits.$1 $2"
+          }
+          add_col ip TEXT
+          add_col ip_hash TEXT
+          add_col continent TEXT
+          add_col country TEXT
+          add_col region TEXT
+          add_col region_code TEXT
+          add_col city TEXT
+          add_col postal TEXT
+          add_col tz TEXT
+          add_col lat REAL
+          add_col lon REAL
+          add_col asn INTEGER
+          add_col colo TEXT
+          add_col device TEXT
+          add_col browser TEXT
+          add_col ref_host TEXT
+          add_col lang TEXT
+          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          for c in ip continent country region region_code city postal tz lat lon asn colo; do
+            printf '%s\n' "$cols" | grep -qx "$c" || { echo "::error::visits.$c 迁移没生效，拒绝部署"; exit 1; }
+          done
+          echo "  visits 表结构校验通过（$(printf '%s\n' "$cols" | grep -c .) 列）"
           npx wrangler@4 deploy
           put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
           put STATS_TOKEN "$STATS_TOKEN"

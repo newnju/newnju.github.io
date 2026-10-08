@@ -59,7 +59,7 @@ after(() => {
   console.log = realLog;
 });
 
-test('打点写入一行：时间、路径、GeoIP、国家、城市都在，IP 只留哈希', async () => {
+test('打点写入一行：时间、路径、GeoIP 扩展字段与明文 IP 都在', async () => {
   const DB = fakeDb();
   const request = new Request(`${ORIGIN}/api/visit`, {
     method: 'POST',
@@ -73,7 +73,11 @@ test('打点写入一行：时间、路径、GeoIP、国家、城市都在，IP 
       origin: 'https://newnju.github.io',
     },
   });
-  request.cf = { country: 'CN', region: 'Jiangsu', city: 'Nanjing', asn: 4134, latitude: 32.06, longitude: 118.79 };
+  request.cf = {
+    continent: 'AS', country: 'CN', region: 'Jiangsu', regionCode: 'JS',
+    city: 'Nanjing', postalCode: '210008', timezone: 'Asia/Shanghai',
+    asn: 4134, latitude: 32.06, longitude: 118.79, colo: 'NRT',
+  };
 
   const res = await worker.fetch(request, { ...ENV, DB });
   assert.equal(res.status, 200);
@@ -99,10 +103,15 @@ test('打点写入一行：时间、路径、GeoIP、国家、城市都在，IP 
   assert.match(row.day, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(Math.abs(Date.now() / 1000 - row.ts) < 60, 'ts 应该是当前 unix 秒');
 
-  // 关键：没有明文 IP 那几列
-  assert.ok(!('raw_ip' in row), '默认不存明文 IP');
-  assert.match(row.ip_hash, /^[0-9a-f]{16}$/);
-  assert.ok(!JSON.stringify(row).includes('198.51.100.23'), '任何一列都不能出现明文 IP');
+  // 明文 IP + GeoIP 推断的扩展字段（面板明细用，对外接口永远不出）
+  assert.equal(row.ip, '198.51.100.23');
+  assert.equal(row.continent, 'AS');
+  assert.equal(row.region_code, 'JS');
+  assert.equal(row.postal, '210008');
+  assert.equal(row.tz, 'Asia/Shanghai');
+  assert.equal(row.colo, 'NRT');
+  assert.ok(!('raw_ip' in row), '旧的 STORE_RAW_IP 开关列已废弃');
+  assert.match(row.ip_hash, /^[0-9a-f]{16}$/, 'UV 去重仍走每日盐哈希');
 });
 
 test('同一个 IP、同一天 → 同一个哈希（所以能算去重人数）', async () => {
@@ -134,7 +143,7 @@ test('哈希里掺了当天日期：换一天就换哈希，跨天无法关联�
   assert.notEqual(a, b);
 });
 
-test('STORE_RAW_IP=1 时才额外存明文 IP（默认不存）', async () => {
+test('明文 IP 始终存进 ip 列（STORE_RAW_IP 开关已删除，带旧变量也无副作用）', async () => {
   const DB = fakeDb();
   const req = new Request(`${ORIGIN}/api/visit`, {
     method: 'POST',
@@ -142,8 +151,9 @@ test('STORE_RAW_IP=1 时才额外存明文 IP（默认不存）', async () => {
     headers: { 'cf-connecting-ip': '198.51.100.23' },
   });
   await worker.fetch(req, { ...ENV, DB, STORE_RAW_IP: '1' });
-  assert.match(DB.calls[0].sql, /raw_ip/);
-  assert.ok(DB.calls[0].args.includes('198.51.100.23'));
+  const { sql, args } = DB.calls[0];
+  assert.ok(!/raw_ip/.test(sql), '不再写 raw_ip 开关列');
+  assert.ok(args.includes('198.51.100.23'), 'ip 列直接存明文');
 });
 
 test('路径里的查询串被丢掉（搜索词不该落库）', async () => {
@@ -469,4 +479,116 @@ test('/login 只收 GET/HEAD/POST，其它方法 405 且不发 WWW-Authenticate'
   });
   assert.equal(res.status, 405);
   assert.equal(res.headers.get('www-authenticate'), null);
+});
+
+// ---------------------------------------------------------------------------
+// 仪表盘（Mercator 分析工作台版式，服务端渲染零 JS）与 CSV 明细导出
+// ---------------------------------------------------------------------------
+
+const K = (sql) => sql.trim().slice(0, 24);
+
+test('仪表盘：工作台结构、时间范围切换、导出入口、空态渲染，且全程零脚本', async () => {
+  const DB = fakeDb({
+    [K('SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv FROM visits WHERE ts >= ? GROUP BY day ORDER BY day')]: [
+      { day: '2026-10-07', pv: 2, uv: 1 },
+      { day: '2026-10-08', pv: 5, uv: 3 },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats?key=let-me-in`), { ...ENV, DB });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+
+  const body = await res.text();
+  assert.match(body, /class="shell"/, '侧栏 + 内容区的工作台骨架');
+  assert.match(body, /访客统计 · 仪表盘/);
+  assert.match(body, /id="overview"/);
+  assert.match(body, /metric-grid/, '关键指标卡片');
+  assert.match(body, /id="trend"/);
+  assert.match(body, /<svg viewBox="0 0 720 220"/, '趋势图是服务端 SVG');
+  assert.match(body, /id="detail"/);
+  assert.match(body, /访客明细/);
+  assert.match(body, /href="\/stats\.csv\?days=30"/, '默认近 30 天的导出入口');
+  assert.match(body, /<a href="\?days=30" aria-current="true">近 30 天<\/a>/, '当前范围高亮');
+  assert.match(body, /\?days=7/, '可切近 7 天');
+  assert.match(body, /暂无数据|这个区间还没有记录/, '空态');
+  assert.ok(!body.includes('<script'), 'CSP default-src none：面板不带任何脚本');
+});
+
+test('仪表盘：明细渲染明文 IP、GeoIP 推断位置、中文国家名与网络信息', async () => {
+  const DB = fakeDb({
+    [K('SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,')]: [
+      {
+        ts: 1759900000, day: '2026-10-08', path: '/cv/', ip: '203.0.113.9',
+        continent: 'AS', country: 'JP', region: 'Tokyo', city: 'Tokyo',
+        postal: '100-0001', tz: 'Asia/Tokyo', lat: 35.68, lon: 139.76,
+        asn: 2516, colo: 'NRT', device: 'mobile', browser: 'safari',
+        ref_host: 't.co', lang: 'ja',
+      },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats?key=let-me-in`), { ...ENV, DB });
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  assert.match(body, /203\.0\.113\.9/, '明细含明文 IP（密码后面，对外接口不出现）');
+  assert.match(body, /日本 \/ Tokyo \/ Tokyo/, '国家码翻成中文，位置为推断值');
+  assert.match(body, /AS2516 · NRT/);
+  assert.match(body, /手机 · safari/);
+  assert.match(body, /t\.co/);
+  assert.ok(!body.includes('let-me-in'), '页面里不能出现令牌');
+});
+
+test('/stats.csv：无凭据 302 去登录页；带凭据出 text/csv，含全部列且转义正确；只收 GET', async () => {
+  const anon = await worker.fetch(new Request(`${ORIGIN}/stats.csv`), { ...ENV, DB: fakeDb() });
+  assert.equal(anon.status, 302);
+  assert.equal(anon.headers.get('location'), '/login');
+  assert.equal(anon.headers.get('www-authenticate'), null);
+
+  const DB = fakeDb({
+    [K('SELECT ts, day, path, ip, ip_hash, continent, country, region, region_code, city, postal, tz,')]: [
+      {
+        ts: 1759900000, day: '2026-10-08', path: '/a,"b"', ip: '203.0.113.9',
+        ip_hash: 'deadbeefdeadbeef', continent: 'AS', country: 'CN', region: 'Jiangsu',
+        region_code: 'JS', city: 'Nanjing', postal: '210008', tz: 'Asia/Shanghai',
+        lat: 32.06, lon: 118.79, asn: 4134, colo: 'NRT', device: 'desktop',
+        browser: 'chrome', ref_host: null, lang: 'zh-CN',
+      },
+    ],
+  });
+  const csv = await worker.fetch(new Request(`${ORIGIN}/stats.csv?days=7&key=let-me-in`), { ...ENV, DB });
+  assert.equal(csv.status, 200);
+  assert.match(csv.headers.get('content-type') || '', /^text\/csv/);
+  assert.match(csv.headers.get('content-disposition') || '', /visits-7d\.csv/);
+  const text = await csv.text();
+  assert.match(text, /^ts,iso_time,day,path,ip,ip_hash,continent,country/);
+  assert.ok(text.includes('203.0.113.9'));
+  assert.ok(text.includes('"/a,""b"""'), '逗号/引号字段按 CSV 规则转义');
+  assert.ok(text.includes('2025-10-08T05:06:40'), '带 ISO 时间列');
+
+  const post = await worker.fetch(new Request(`${ORIGIN}/stats.csv`, { method: 'POST' }), { ...ENV, DB: fakeDb() });
+  assert.equal(post.status, 405);
+});
+
+test('/api/stats：JSON 口拿到扩展维度（recent 含 ip 与推断字段），与面板同一次统计', async () => {
+  const DB = fakeDb({
+    [K('SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,')]: [
+      {
+        ts: 1759900000, day: '2026-10-08', path: '/', ip: '198.51.100.23',
+        continent: 'AS', country: 'CN', region: 'Jiangsu', city: 'Nanjing',
+        postal: null, tz: 'Asia/Shanghai', lat: null, lon: null,
+        asn: null, colo: null, device: 'desktop', browser: 'chrome',
+        ref_host: null, lang: 'zh-CN',
+      },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/api/stats?key=let-me-in`), { ...ENV, DB });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.recent) && body.recent.length === 1);
+  assert.equal(body.recent[0].ip, '198.51.100.23');
+  assert.ok(body.recent[0].continent === 'AS');
+  assert.deepEqual(Object.keys(body).sort(), [
+    'browsers', 'cities', 'countries', 'daily', 'days', 'devices', 'generated_at',
+    'languages', 'paths', 'reach', 'recent', 'referrers', 'regions', 'totals',
+  ]);
 });
