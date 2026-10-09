@@ -13,7 +13,8 @@
  *   GET  /api/summary  公开计数（免鉴权：只回 pv / 今日 pv·uv，带 ?path= 时
  *                      多回该页的累计阅读数 —— 页脚计数与文章页阅读数用它）
  *   GET  /stats        统计面板（公开，直接渲染 —— 站长要看就看，不再设密码；
- *                      旧链接 /login 一律 302 回这里）
+ *                      旧链接 /login 一律 302 回这里；?lang=zh|en 与 ?theme=light|dark
+ *                      会写 st_lang / st_theme 偏好 cookie 再 302 回干净地址）
  *   GET  /stats.csv    明细导出 CSV（公开，含 IP 与地址推断字段）
  *   GET  /login        旧地址兼容：一律 302 到 /stats（密码流程已下线）
  *   GET  /healthz      健康检查
@@ -27,7 +28,9 @@
  * ---------------------------------------------------------------------------
  * 隐私与数据口径：这是站长自用的访问日志（等价于自建服务器的 access log）
  * ---------------------------------------------------------------------------
- * · 访客侧不写 cookie、不用 localStorage、不做跨站跟踪、没有第三方脚本；
+ * · 打点侧不写 cookie、不用 localStorage、不做跨站跟踪、没有第三方脚本；
+ *   面板只在用户点 ?lang= / ?theme= 时下发 st_lang、st_theme 两个偏好 cookie
+ *   （存的是显示口味，不含身份、不进统计口径）；
  * · **存明文 IP**（`visits.ip`），用于事后回查；同时存
  *   ip_hash = SHA-256(IP + 当天日期 + IP_SALT) 的前 16 位，UV 去重靠它；
  * · 地址是 Cloudflare GeoIP 按 IP **推断**的（continent/country/region/
@@ -362,10 +365,206 @@ const COUNTRY_CN = {
   UY: '乌拉圭', PE: '秘鲁', EC: '厄瓜多尔', VE: '委内瑞拉', BO: '玻利维亚', PY: '巴拉圭',
   CR: '哥斯达黎加', PA: '巴拿马', DO: '多米尼加', CU: '古巴', '—': '—',
 };
-const countryName = (c) => COUNTRY_CN[c] || c || '—';
-const DEVICE_CN = { desktop: '桌面', mobile: '手机', tablet: '平板', bot: '机器人', other: '其他' };
-const DEV_COLORS = { desktop: '#5c2e83', mobile: '#c8a45c', tablet: '#2f6b5a', bot: '#9b6fb8', other: '#7d7566' };
-const PALETTE = ['#5c2e83', '#c8a45c', '#2f6b5a', '#9b6fb8', '#7d7566', '#9e2b25'];
+const COUNTRY_EN = {
+  CN: 'China', TW: 'Taiwan, China', HK: 'Hong Kong, China', MO: 'Macau, China',
+  US: 'United States', JP: 'Japan', KR: 'South Korea', SG: 'Singapore', DE: 'Germany',
+  GB: 'United Kingdom', FR: 'France', CA: 'Canada', AU: 'Australia', NL: 'Netherlands',
+  RU: 'Russia', IN: 'India', BR: 'Brazil', SE: 'Sweden', CH: 'Switzerland', IE: 'Ireland',
+  IT: 'Italy', ES: 'Spain', PL: 'Poland', UA: 'Ukraine', VN: 'Vietnam', TH: 'Thailand',
+  MY: 'Malaysia', ID: 'Indonesia', PH: 'Philippines', NZ: 'New Zealand', AT: 'Austria',
+  BE: 'Belgium', CZ: 'Czechia', DK: 'Denmark', FI: 'Finland', IL: 'Israel', MX: 'Mexico',
+  NO: 'Norway', PT: 'Portugal', TR: 'Turkey', ZA: 'South Africa', AR: 'Argentina',
+  CL: 'Chile', CO: 'Colombia', EG: 'Egypt', GH: 'Ghana', GR: 'Greece', HU: 'Hungary',
+  IS: 'Iceland', LT: 'Lithuania', RO: 'Romania', SA: 'Saudi Arabia', RS: 'Serbia',
+  KW: 'Kuwait', LK: 'Sri Lanka', PK: 'Pakistan', BD: 'Bangladesh', NG: 'Nigeria',
+  KE: 'Kenya', EE: 'Estonia', LV: 'Latvia', SK: 'Slovakia', SI: 'Slovenia', HR: 'Croatia',
+  BG: 'Bulgaria', BY: 'Belarus', KZ: 'Kazakhstan', MN: 'Mongolia', LA: 'Laos',
+  KH: 'Cambodia', MM: 'Myanmar', NP: 'Nepal', IR: 'Iran', IQ: 'Iraq', JO: 'Jordan',
+  LB: 'Lebanon', AE: 'United Arab Emirates', QA: 'Qatar', OM: 'Oman', BH: 'Bahrain',
+  UY: 'Uruguay', PE: 'Peru', EC: 'Ecuador', VE: 'Venezuela', BO: 'Bolivia', PY: 'Paraguay',
+  CR: 'Costa Rica', PA: 'Panama', DO: 'Dominican Republic', CU: 'Cuba', '—': '—',
+};
+
+/* 语言 / 明暗偏好（面板自己的小状态机，零 JS，CSP 不允许脚本）：
+   ?lang= / ?theme= 合法值 → Set-Cookie 后 302 回干净地址（PRG，刷新不重放参数），
+   之后每次渲染只认 cookie —— 所以时间范围这类链接保持原样，偏好不会被冲掉。
+   没点过切换的浏览器不收任何 cookie（/stats 裸开依然零 Set-Cookie）。 */
+const PREF_VALUES = { st_lang: ['zh', 'en'], st_theme: ['dark', 'light'] };
+const prefCookie = (name, value) => `${name}=${value}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`;
+
+function prefsFromCookies(request) {
+  const out = {};
+  for (const part of (request.headers.get('cookie') || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    const key = part.slice(0, i).trim();
+    if (key in PREF_VALUES) {
+      const v = part.slice(i + 1).trim();
+      if (PREF_VALUES[key].includes(v)) out[key] = v;
+    }
+  }
+  return out;
+}
+
+/* 面板文案：中英各一份。站内文案归 _data/ui-text.yml 管（Jekyll 数据，Worker 拿不到），
+   这里独立维护一份同口径的键；切换链接显示「目标语言」的名字，与主站顶栏一致。 */
+const I18N = {
+  zh: {
+    htmlLang: 'zh-CN',
+    title: '访客统计 · 仪表盘',
+    brand: '访客统计',
+    sidebarLabel: '分析',
+    navAria: '面板导航',
+    nav: ['概览', '关键指标', '趋势与构成', '地域分布', '来源与设备', '页面排行', '访客明细'],
+    note: (ret) =>
+      `地址来自 Cloudflare GeoIP 按 IP 推断，不是精确定位；独立访客按「当天 IP 哈希」去重，跨天不合并。明细保留 ${ret} 天，之后连行删除。`,
+    crumbs: '统计',
+    rangeAria: '时间范围',
+    lastDays: (n) => `近 ${n} 天`,
+    noRecords: (n) => `近 ${n} 天（无记录）`,
+    badge: 'GeoIP 推断',
+    exportCsv: '↓ 导出 CSV',
+    greet: '你好，访客统计',
+    greetLine: (range, at) => `${range} · 生成于 ${at} · 时区 UTC`,
+    daysSum: (n) => `近 ${n} 天累计`,
+    h: { metrics: '关键指标', trend: '趋势与构成', geo: '地域分布', traffic: '来源与设备', pages: '页面排行', detail: '访客明细' },
+    trendSub: '按天聚合 · UTC',
+    geoSub: '国家 / 省 / 城市（GeoIP 推断）',
+    chartTrend: 'PV / UV 趋势',
+    trendAria: '每日 PV 与 UV 趋势',
+    legendPv: '浏览量 PV',
+    legendUv: '独立访客 UV（虚线）',
+    chartDonut: '设备构成',
+    donutAria: '设备构成环形图',
+    donutUnit: '浏览量',
+    hCountry: '国家 / 地区',
+    hRegion: '省 / 州',
+    hCity: '城市',
+    hRef: '来源域名',
+    hBrowser: '浏览器',
+    hLang: '界面语言',
+    pagesSub: 'PV 前 25',
+    detailSub: '最近 50 条 · 含明文 IP 与推断位置',
+    detailHead: ['时间 (UTC)', '页面', 'IP', '位置（推断）', '网络', '设备 · 浏览器', '来源', '语言'],
+    name: '名称',
+    count: '次数',
+    pvCol: 'PV',
+    empty: '暂无数据',
+    emptyDev: '暂无设备数据',
+    emptyRange: '这个区间还没有记录',
+    direct: '直接访问',
+    device: { desktop: '桌面', mobile: '手机', tablet: '平板', bot: '机器人', other: '其他' },
+    country: (c) => COUNTRY_CN[c] || c || '—',
+    pvL: '浏览量 PV',
+    pvS: (v) => `日均 ${v}`,
+    uvL: '独立访客 UV',
+    uvS: '按当天 IP 哈希去重',
+    todayPvL: '今日 PV',
+    todayPvS: (uv) => `今日 UV ${uv}`,
+    todayUvL: '今日 UV',
+    todayUvS: '今天到目前为止',
+    daysL: '有记录的天数',
+    countriesL: '国家 / 地区',
+    countriesS: (n) => `省 / 州 ${n}`,
+    citiesL: '城市',
+    citiesS: 'GeoIP 推断值',
+    pathsL: '覆盖页面',
+    pathsS: '有记录的站内路径',
+    switchLang: 'English',
+    switchLangTitle: 'Switch to English',
+    themeToggle: '切换明暗主题',
+    foot:
+      '口径：PV 为请求数；UV 按「当天 IP + 日期 + 盐」的哈希去重，跨天不合并、无法串起来追踪个人。位置、邮编、时区、ASN、接入机房均来自 Cloudflare GeoIP 按 IP <b>推断</b>，不是精确定位。本页与 CSV 导出<b>公开可访问</b>（含明文 IP 与推断位置，不设密码）；明细超过保留期由定时任务连行删除（删除前按路径计入累计口径），站内免鉴权的 /api/summary 只回合计数，/api/stats 的 JSON 口仍需令牌。',
+  },
+  en: {
+    htmlLang: 'en',
+    title: 'Visitor stats · Dashboard',
+    brand: 'Visitor stats',
+    sidebarLabel: 'Analysis',
+    navAria: 'Dashboard navigation',
+    nav: ['Overview', 'Key metrics', 'Trend & mix', 'Geography', 'Traffic sources', 'Top pages', 'Recent visits'],
+    note: (ret) =>
+      `Addresses are Cloudflare GeoIP inference by IP, not exact location; unique visitors are deduplicated by "same-day IP hash" and never merged across days. Details are kept for ${ret} days, then deleted row by row.`,
+    crumbs: 'Stats',
+    rangeAria: 'Time range',
+    lastDays: (n) => `Last ${n} days`,
+    noRecords: (n) => `Last ${n} days (no records)`,
+    badge: 'GeoIP inferred',
+    exportCsv: '↓ Export CSV',
+    greet: 'Hello, visitor stats',
+    greetLine: (range, at) => `${range} · generated at ${at} · timezone UTC`,
+    daysSum: (n) => `Last ${n} days total`,
+    h: { metrics: 'Key metrics', trend: 'Trend & mix', geo: 'Geography', traffic: 'Traffic sources', pages: 'Top pages', detail: 'Recent visits' },
+    trendSub: 'Aggregated by day · UTC',
+    geoSub: 'Country / region / city (GeoIP inferred)',
+    chartTrend: 'PV / UV trend',
+    trendAria: 'Daily PV and UV trend',
+    legendPv: 'Page views PV',
+    legendUv: 'Unique visitors UV (dashed)',
+    chartDonut: 'Devices',
+    donutAria: 'Device mix donut chart',
+    donutUnit: 'Page views',
+    hCountry: 'Country / region',
+    hRegion: 'State / region',
+    hCity: 'City',
+    hRef: 'Referrer host',
+    hBrowser: 'Browser',
+    hLang: 'Interface language',
+    pagesSub: 'Top 25 by PV',
+    detailSub: 'Latest 50 rows · plain IP and inferred location',
+    detailHead: ['Time (UTC)', 'Page', 'IP', 'Location (inferred)', 'Network', 'Device · Browser', 'Referrer', 'Language'],
+    name: 'Name',
+    count: 'Count',
+    pvCol: 'PV',
+    empty: 'No data yet',
+    emptyDev: 'No device data',
+    emptyRange: 'No records in this range',
+    direct: 'Direct',
+    device: { desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet', bot: 'Bot', other: 'Other' },
+    country: (c) => COUNTRY_EN[c] || c || '—',
+    pvL: 'Page views PV',
+    pvS: (v) => `${v} / day`,
+    uvL: 'Unique visitors UV',
+    uvS: 'deduplicated by same-day IP hash',
+    todayPvL: 'Today PV',
+    todayPvS: (uv) => `Today UV ${uv}`,
+    todayUvL: 'Today UV',
+    todayUvS: 'so far today',
+    daysL: 'Days with records',
+    countriesL: 'Countries',
+    countriesS: (n) => `Regions ${n}`,
+    citiesL: 'Cities',
+    citiesS: 'GeoIP inferred',
+    pathsL: 'Pages covered',
+    pathsS: 'tracked in-site paths',
+    switchLang: '中文',
+    switchLangTitle: '切换为中文',
+    themeToggle: 'Switch between light and dark',
+    foot:
+      'Method: PV counts requests; UV is deduplicated by hashing "IP + date + salt" for that day only — never merged across days, and impossible to chain back to a person. Location, postal code, timezone, ASN and colo all come from Cloudflare GeoIP <b>inference</b> by IP, not exact positioning. This page and the CSV export are <b>publicly accessible</b> (plain IPs and inferred locations included, no password); rows past the retention period are deleted by a scheduled job (counted toward lifetime totals by path before deletion), the token-free /api/summary only returns aggregate counts, and the /api/stats JSON endpoint still requires a token.',
+  },
+};
+
+const ICON = {
+  globe:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><path d="M1.7 8h12.6M8 1.7c-4.6 4-4.6 8.6 0 12.6M8 1.7c4.6 4 4.6 8.6 0 12.6"/></svg>',
+  sun:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.6v1.5M8 12.9v1.5M1.6 8h1.5M12.9 8h1.5M3.5 3.5l1.1 1.1M11.4 11.4l1.1 1.1M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1"/></svg>',
+  moon:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M13.9 9.8A5.95 5.95 0 0 1 6.2 2.1a5.95 5.95 0 1 0 7.7 7.7z"/></svg>',
+};
+
+/* 暗色配色与主站 nju-dark 同源（_sass/_han.scss §8）：深绿灰底 + 南大紫强调。
+   渲染分两步：显式 data-theme 走第一行；没设过偏好的浏览器走 @media 兜底
+   （html:not([data-theme]) 跟随系统）—— 与主站「首访跟系统、点过就固定」一致。 */
+const DARK_VARS =
+  '--bg:#1d2321;--surface:#262e2b;--ink:#e8e3d7;--muted:#b8b1a2;--line:#353d39;--accent:#b794d4;' +
+  '--accent-soft:rgba(183,148,212,.14);--gold:#e0c074;--c1:#b794d4;--c2:#e0c074;--c3:#7cbfa2;' +
+  '--c4:#c9a9e0;--c5:#b0a897;--c6:#d9705f;--shadow:rgba(0,0,0,.35);--accent-border:rgba(183,148,212,.35);' +
+  '--btn-ink:#161319;color-scheme:dark';
+
+const DEV_COLORS = { desktop: 'var(--c1)', mobile: 'var(--c2)', tablet: 'var(--c3)', bot: 'var(--c4)', other: 'var(--c5)' };
+const PALETTE = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
 
 const fmtNum = (v) => {
   const n = Number(v) || 0;
@@ -382,9 +581,9 @@ function niceMax(v) {
   return 10 * mag;
 }
 
-function trendSvg(daily) {
+function trendSvg(daily, L) {
   const W = 720, H = 220, PL = 40, PR = 12, PT = 14, PB = 26;
-  if (!daily.length) return '<p class="empty">这个区间还没有记录</p>';
+  if (!daily.length) return `<p class="empty">${esc(L.emptyRange)}</p>`;
   const maxY = niceMax(Math.max(...daily.map((d) => Math.max(d.pv, d.uv)), 1));
   const iw = W - PL - PR, ih = H - PT - PB;
   const X = (i) => (daily.length === 1 ? PL + iw / 2 : PL + (i * iw) / (daily.length - 1));
@@ -407,17 +606,17 @@ function trendSvg(daily) {
   const dot = daily.length === 1
     ? `<circle cx="${X(0).toFixed(1)}" cy="${Y(daily[0].pv).toFixed(1)}" r="3" fill="var(--accent)"/>`
     : '';
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="220" role="img" aria-label="每日 PV 与 UV 趋势">
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="220" role="img" aria-label="${esc(L.trendAria)}">
 ${grid}
-<path d="${line('pv')}L${X(daily.length - 1).toFixed(1)},${base}L${X(0).toFixed(1)},${base}Z" fill="rgba(31,77,70,.10)"/>
+<path d="${line('pv')}L${X(daily.length - 1).toFixed(1)},${base}L${X(0).toFixed(1)},${base}Z" fill="var(--accent-soft)"/>
  <path d="${line('pv')}" fill="none" stroke="var(--accent)" stroke-width="2"/>
  <path d="${line('uv')}" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 4"/>
 ${dot}${xt}
 </svg>`;
 }
 
-function donutSvg(items, total) {
-  if (!total) return '<p class="empty">暂无设备数据</p>';
+function donutSvg(items, total, L) {
+  if (!total) return `<p class="empty">${esc(L.emptyDev)}</p>`;
   const R = 48, C = 2 * Math.PI * R;
   let off = 0;
   const segs = items
@@ -428,19 +627,21 @@ function donutSvg(items, total) {
       return s;
     })
     .join('');
-  return `<svg viewBox="0 0 150 150" width="150" height="150" role="img" aria-label="设备构成环形图">
+  return `<svg viewBox="0 0 150 150" width="150" height="150" role="img" aria-label="${esc(L.donutAria)}">
 <g transform="rotate(-90 75 75)">${segs}</g>
 <text x="75" y="72" text-anchor="middle" class="donut-v">${fmtNum(total)}</text>
-<text x="75" y="88" text-anchor="middle" class="donut-l">浏览量</text>
+<text x="75" y="88" text-anchor="middle" class="donut-l">${esc(L.donutUnit)}</text>
 </svg>`;
 }
 
-function dashboard(data, retention = 180) {
+function dashboard(data, opts = {}) {
+  const { retention = 180, lang = 'zh', theme = null, iconTheme = 'light', toggleTheme = 'dark' } = opts;
+  const L = I18N[lang] || I18N.zh;
   const t = data.totals ?? {};
   const reach = data.reach ?? {};
   const daily = data.daily ?? [];
   const days = data.days ?? 30;
-  const range = daily.length ? `${daily[0].day} ~ ${daily[daily.length - 1].day}` : `近 ${days} 天（无记录）`;
+  const range = daily.length ? `${daily[0].day} ~ ${daily[daily.length - 1].day}` : L.noRecords(days);
 
   const metric = (label, value, sub, hi = false) => `
     <div class="card metric${hi ? ' hi' : ''}">
@@ -449,10 +650,10 @@ function dashboard(data, retention = 180) {
       ${sub ? `<div class="s">${esc(sub)}</div>` : ''}
     </div>`;
 
-  const listTable = (rows, fmt, countHead = '次数') => {
-    if (!rows?.length) return '<p class="empty">暂无数据</p>';
+  const listTable = (rows, fmt, countHead = L.count) => {
+    if (!rows?.length) return `<p class="empty">${L.empty}</p>`;
     const max = Math.max(...rows.map((r) => r.n ?? 0), 1);
-    return `<table><thead><tr><th>名称</th><th aria-hidden="true"></th><th class="num">${esc(countHead)}</th></tr></thead><tbody>${rows
+    return `<table><thead><tr><th>${esc(L.name)}</th><th aria-hidden="true"></th><th class="num">${esc(countHead)}</th></tr></thead><tbody>${rows
       .map(
         (r) => `<tr><td class="nm">${fmt(r)}</td><td style="width:38%"><div class="bar"><span style="width:${Math.max(3, Math.round(((r.n ?? 0) / max) * 100))}%"></span></div></td><td class="num">${fmtNum(r.n)}</td></tr>`,
       )
@@ -468,12 +669,12 @@ function dashboard(data, retention = 180) {
   const devLegend = devItems.length
     ? devItems
         .map(
-          (it) => `<li><i style="background:${it.color}"></i>${esc(DEVICE_CN[it.k] || it.k)}<b>${fmtNum(it.n)}</b><em>${devTotal ? Math.round((it.n / devTotal) * 100) : 0}%</em></li>`,
+          (it) => `<li><i style="background:${it.color}"></i>${esc(L.device[it.k] || it.k)}<b>${fmtNum(it.n)}</b><em>${devTotal ? Math.round((it.n / devTotal) * 100) : 0}%</em></li>`,
         )
         .join('')
-    : '<li class="dim">暂无数据</li>';
+    : `<li class="dim">${L.empty}</li>`;
 
-  const geoCell = (r) => [countryName(r.country), r.region, r.city].filter(Boolean).join(' / ');
+  const geoCell = (r) => [L.country(r.country), r.region, r.city].filter(Boolean).join(' / ');
   const recent = data.recent ?? [];
   const detailRows = recent
     .map(
@@ -483,23 +684,39 @@ function dashboard(data, retention = 180) {
 <td><span class="code">${esc(r.ip || '—')}</span></td>
 <td>${esc(geoCell(r))}</td>
 <td class="num">${r.asn ? `AS${r.asn}` : '—'}${r.colo ? ` · ${esc(r.colo)}` : ''}</td>
-<td>${esc(DEVICE_CN[r.device] || r.device || '—')} · ${esc(r.browser || '—')}</td>
-<td>${esc(r.ref_host || '直接访问')}</td>
+<td>${esc(L.device[r.device] || r.device || '—')} · ${esc(r.browser || '—')}</td>
+<td>${esc(r.ref_host || L.direct)}</td>
 <td>${esc(r.lang || '—')}</td>
 </tr>`,
     )
     .join('');
+  const detailHead = L.detailHead.map((h, i) => `<th${i === 4 ? ' class="num"' : ''}>${esc(h)}</th>`).join('');
 
   const seg = [7, 30, 90, 365]
-    .map((n) => `<a href="?days=${n}"${n === days ? ' aria-current="true"' : ''}>近 ${n} 天</a>`)
+    .map((n) => `<a href="?days=${n}"${n === days ? ' aria-current="true"' : ''}>${L.lastDays(n)}</a>`)
     .join('');
 
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+  // 切换项只认 cookie，链接把当前 days 带上；en 页面上的 ?lang=en 是给
+  // 站内链接（页脚「统计详情」）直达用的，落到这台 Worker 后写 cookie 再 302。
+  const langSwitch =
+    `<a class="tool tool-lang" href="/stats?days=${days}&amp;lang=${lang === 'zh' ? 'en' : 'zh'}"` +
+    ` title="${esc(L.switchLangTitle)}" aria-label="${esc(L.switchLangTitle)}">${ICON.globe}<span>${esc(L.switchLang)}</span></a>`;
+  const themeSwitch =
+    `<a class="tool tool-theme" href="/stats?days=${days}&amp;theme=${toggleTheme}"` +
+    ` title="${esc(L.themeToggle)}" aria-label="${esc(L.themeToggle)}">${iconTheme === 'dark' ? ICON.moon : ICON.sun}</a>`;
+
+  const sideNav = ['overview', 'metrics', 'trend', 'geo', 'traffic', 'pages', 'detail']
+    .map((id, i) => `<a href="#${id}"${i === 0 ? ' aria-current="true"' : ''}>${esc(L.nav[i])}</a>`)
+    .join('');
+
+  return `<!doctype html><html lang="${L.htmlLang}"${theme ? ` data-theme="${theme}"` : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<title>访客统计 · 仪表盘</title>
+<title>${esc(L.title)}</title>
 <style>
-:root{--bg:#fbf8f1;--surface:#fffdf7;--ink:#3f3a33;--muted:#857d6e;--line:#e8e1d3;--accent:#5c2e83;--accent-soft:rgba(92,46,131,.10);--gold:#c8a45c;--r-sm:2px;--r-md:2px;--sidebar-w:250px}
+:root{--bg:#fbf8f1;--surface:#fffdf7;--ink:#3f3a33;--muted:#857d6e;--line:#e8e1d3;--accent:#5c2e83;--accent-soft:rgba(92,46,131,.10);--gold:#c8a45c;--c1:#5c2e83;--c2:#c8a45c;--c3:#2f6b5a;--c4:#9b6fb8;--c5:#7d7566;--c6:#9e2b25;--shadow:rgba(43,39,35,.10);--accent-border:rgba(92,46,131,.22);--btn-ink:#fff;--r-sm:2px;--r-md:2px;--sidebar-w:250px;color-scheme:light}
+html[data-theme="dark"]{${DARK_VARS}}
+@media (prefers-color-scheme: dark){html:not([data-theme]){${DARK_VARS}}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","Hiragino Sans GB","Segoe UI",Roboto,"Helvetica Neue","Lucida Grande",Arial,sans-serif}
 h1,h2,h3{font-family:"Source Han Serif SC","Noto Serif CJK SC","Songti SC","STSong","SimSun","Source Han Serif",Georgia,"Times New Roman",serif}
@@ -509,7 +726,7 @@ figure{margin:0}
 .shell{display:flex;min-height:100vh}
 aside.sidebar{width:var(--sidebar-w);flex:0 0 auto;border-right:1px solid var(--line);background:var(--surface);padding:20px 16px;position:sticky;top:0;height:100vh;overflow:auto}
 .brand{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
-.brand .logo{width:26px;height:26px;border-radius:4px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.brand .logo{width:26px;height:26px;border-radius:4px;background:var(--accent);color:var(--btn-ink);display:inline-flex;align-items:center;justify-content:center}
 .brand .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
 .sidebar-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 8px 6px}
 nav.side-nav a{display:block;padding:7px 10px;border-radius:var(--r-sm);color:var(--muted);font-size:13px}
@@ -524,8 +741,12 @@ nav.side-nav a[aria-current="true"]{background:var(--accent-soft);color:var(--ac
 .seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px}
 .seg a{padding:3px 12px;border-radius:var(--r-sm);font-size:12px;color:var(--muted)}
 .seg a:hover{text-decoration:none;color:var(--ink)}
-.seg a[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 1px rgba(43,39,35,.10);font-weight:600}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);font-size:13px;background:var(--accent);color:#fff}
+.seg a[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 1px var(--shadow);font-weight:600}
+.tools{display:flex;align-items:center;gap:6px}
+.tool{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);color:var(--muted);font-size:12px}
+.tool:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
+.tool svg{display:block;flex:0 0 auto}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);font-size:13px;background:var(--accent);color:var(--btn-ink)}
 .btn:hover{text-decoration:none;filter:brightness(1.08)}
 main{padding:24px 28px 48px;max-width:1180px;width:100%}
 .block{margin-bottom:28px}
@@ -534,13 +755,13 @@ main{padding:24px 28px 48px;max-width:1180px;width:100%}
 .block-sub{font-size:12px;color:var(--muted)}
 .greet h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
 .greet p{margin:0;color:var(--muted);font-size:13px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 1px 1px rgba(43,39,35,.10)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 1px 1px var(--shadow)}
 .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .metric{padding:14px 16px}
 .metric .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .metric .l{font-size:12px;color:var(--muted);margin-top:2px}
 .metric .s{font-size:11px;color:var(--muted);margin-top:6px}
-.metric.hi{background:var(--accent-soft);border-color:rgba(92,46,131,.22)}
+.metric.hi{background:var(--accent-soft);border-color:var(--accent-border)}
 .chart-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:12px}
 .chart-card{padding:14px 16px 12px}
 .chart-card h3{font-size:13px;margin:0 0 8px}
@@ -580,103 +801,98 @@ td.nm{max-width:260px;word-break:break-all}
  .topbar{padding:10px 16px}
  main{padding:16px}
 }
-@media print{aside.sidebar,.seg,.btn{display:none}.topbar{position:static}body{background:#fff}}
+@media print{aside.sidebar,.seg,.tools,.btn{display:none}.topbar{position:static}body{background:#fff}}
 </style></head><body>
 <div class="shell">
 <aside class="sidebar">
- <div class="brand"><span class="logo"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="1.6" y="8.5" width="3.3" height="5.5"/><rect x="6.35" y="4.5" width="3.3" height="9.5"/><rect x="11.1" y="7" width="3.3" height="7"/><rect x="1" y="14.3" width="14" height="1.3" opacity=".55"/></svg></span><div>访客统计<div class="sub">newnju.github.io</div></div></div>
- <div class="sidebar-label">分析</div>
- <nav class="side-nav" aria-label="面板导航">
-  <a href="#overview" aria-current="true">概览</a>
-  <a href="#metrics">关键指标</a>
-  <a href="#trend">趋势与构成</a>
-  <a href="#geo">地域分布</a>
-  <a href="#traffic">来源与设备</a>
-  <a href="#pages">页面排行</a>
-  <a href="#detail">访客明细</a>
+ <div class="brand"><span class="logo"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><rect x="1.6" y="8.5" width="3.3" height="5.5"/><rect x="6.35" y="4.5" width="3.3" height="9.5"/><rect x="11.1" y="7" width="3.3" height="7"/><rect x="1" y="14.3" width="14" height="1.3" opacity=".55"/></svg></span><div>${esc(L.brand)}<div class="sub">newnju.github.io</div></div></div>
+ <div class="sidebar-label">${esc(L.sidebarLabel)}</div>
+ <nav class="side-nav" aria-label="${esc(L.navAria)}">
+  ${sideNav}
  </nav>
- <div class="sidebar-note">地址来自 Cloudflare GeoIP 按 IP 推断，不是精确定位；独立访客按「当天 IP 哈希」去重，跨天不合并。明细保留 ${retention} 天，之后连行删除。</div>
+ <div class="sidebar-note">${esc(L.note(retention))}</div>
 </aside>
 <div class="flow">
  <header class="topbar">
-  <div class="crumbs">统计 / <b>近 ${days} 天</b><span class="badge">GeoIP 推断</span></div>
-  <nav class="seg" aria-label="时间范围">${seg}</nav>
-  <a class="btn" href="/stats.csv?days=${days}">↓ 导出 CSV</a>
+  <div class="crumbs">${esc(L.crumbs)} / <b>${esc(L.lastDays(days))}</b><span class="badge">${esc(L.badge)}</span></div>
+  <nav class="seg" aria-label="${esc(L.rangeAria)}">${seg}</nav>
+  <div class="tools">${langSwitch}${themeSwitch}</div>
+  <a class="btn" href="/stats.csv?days=${days}">${esc(L.exportCsv)}</a>
  </header>
  <main>
   <section class="block" id="overview">
    <div class="greet">
-    <h1>你好，访客统计</h1>
-    <p>${esc(range)} · 生成于 ${esc(data.generated_at)} · 时区 UTC</p>
+    <h1>${esc(L.greet)}</h1>
+    <p>${esc(L.greetLine(range, data.generated_at))}</p>
    </div>
   </section>
 
   <section class="block" id="metrics">
-   <div class="block-head"><h2>关键指标</h2><span class="block-sub">近 ${days} 天累计</span></div>
+   <div class="block-head"><h2>${esc(L.h.metrics)}</h2><span class="block-sub">${esc(L.daysSum(days))}</span></div>
    <div class="metric-grid">
-    ${metric('浏览量 PV', fmtNum(t.pv), `日均 ${fmtNum(days ? (t.pv ?? 0) / days : 0)}`, true)}
-    ${metric('独立访客 UV', fmtNum(t.uv), '按当天 IP 哈希去重', true)}
-    ${metric('今日 PV', fmtNum(t.today_pv), `今日 UV ${fmtNum(t.today_uv)}`)}
-    ${metric('今日 UV', fmtNum(t.today_uv), '今天到目前为止')}
-    ${metric('有记录的天数', fmtNum(t.days), range)}
-    ${metric('国家 / 地区', fmtNum(reach.countries), `省 / 州 ${fmtNum(reach.regions)}`)}
-    ${metric('城市', fmtNum(reach.cities), 'GeoIP 推断值')}
-    ${metric('覆盖页面', fmtNum(reach.paths), '有记录的站内路径')}
+    ${metric(L.pvL, fmtNum(t.pv), L.pvS(fmtNum(days ? (t.pv ?? 0) / days : 0)), true)}
+    ${metric(L.uvL, fmtNum(t.uv), L.uvS, true)}
+    ${metric(L.todayPvL, fmtNum(t.today_pv), L.todayPvS(fmtNum(t.today_uv)))}
+    ${metric(L.todayUvL, fmtNum(t.today_uv), L.todayUvS)}
+    ${metric(L.daysL, fmtNum(t.days), range)}
+    ${metric(L.countriesL, fmtNum(reach.countries), L.countriesS(fmtNum(reach.regions)))}
+    ${metric(L.citiesL, fmtNum(reach.cities), L.citiesS)}
+    ${metric(L.pathsL, fmtNum(reach.paths), L.pathsS)}
    </div>
   </section>
 
   <section class="block" id="trend">
-   <div class="block-head"><h2>趋势与构成</h2><span class="block-sub">按天聚合 · UTC</span></div>
+   <div class="block-head"><h2>${esc(L.h.trend)}</h2><span class="block-sub">${esc(L.trendSub)}</span></div>
    <div class="chart-grid">
     <figure class="card chart-card">
-     <h3>PV / UV 趋势</h3>
-     ${trendSvg(daily)}
-     <ul class="legend"><li><i style="background:var(--accent)"></i>浏览量 PV</li><li><i style="background:var(--gold)"></i>独立访客 UV（虚线）</li></ul>
+     <h3>${esc(L.chartTrend)}</h3>
+     ${trendSvg(daily, L)}
+     <ul class="legend"><li><i style="background:var(--accent)"></i>${esc(L.legendPv)}</li><li><i style="background:var(--gold)"></i>${esc(L.legendUv)}</li></ul>
     </figure>
     <figure class="card chart-card">
-     <h3>设备构成</h3>
-     <div class="mix">${donutSvg(devItems, devTotal)}</div>
+     <h3>${esc(L.chartDonut)}</h3>
+     <div class="mix">${donutSvg(devItems, devTotal, L)}</div>
      <ul class="legend">${devLegend}</ul>
     </figure>
    </div>
   </section>
 
   <section class="block" id="geo">
-   <div class="block-head"><h2>地域分布</h2><span class="block-sub">国家 / 省 / 城市（GeoIP 推断）</span></div>
+   <div class="block-head"><h2>${esc(L.h.geo)}</h2><span class="block-sub">${esc(L.geoSub)}</span></div>
    <div class="lower-grid">
-    <div class="card mini"><h3>国家 / 地区</h3>${listTable((data.countries ?? []).slice(0, 12), (r) => `${esc(countryName(r.k))} <span class="dim">${esc(r.k)}</span>`)}</div>
-    <div class="card mini"><h3>省 / 州</h3>${listTable((data.regions ?? []).slice(0, 12), (r) => esc(r.k))}</div>
-    <div class="card mini"><h3>城市</h3>${listTable((data.cities ?? []).slice(0, 12), (r) => esc(r.k))}</div>
+    <div class="card mini"><h3>${esc(L.hCountry)}</h3>${listTable((data.countries ?? []).slice(0, 12), (r) => `${esc(L.country(r.k))} <span class="dim">${esc(r.k)}</span>`)}</div>
+    <div class="card mini"><h3>${esc(L.hRegion)}</h3>${listTable((data.regions ?? []).slice(0, 12), (r) => esc(r.k))}</div>
+    <div class="card mini"><h3>${esc(L.hCity)}</h3>${listTable((data.cities ?? []).slice(0, 12), (r) => esc(r.k))}</div>
    </div>
   </section>
 
   <section class="block" id="traffic">
-   <div class="block-head"><h2>来源与设备</h2></div>
+   <div class="block-head"><h2>${esc(L.h.traffic)}</h2></div>
    <div class="lower-grid">
-    <div class="card mini"><h3>来源域名</h3>${listTable((data.referrers ?? []).slice(0, 12), (r) => esc(r.k))}</div>
-    <div class="card mini"><h3>浏览器</h3>${listTable(data.browsers ?? [], (r) => esc(r.k))}</div>
-    <div class="card mini"><h3>界面语言</h3>${listTable(data.languages ?? [], (r) => esc(r.k))}</div>
+    <div class="card mini"><h3>${esc(L.hRef)}</h3>${listTable((data.referrers ?? []).slice(0, 12), (r) => esc(r.k))}</div>
+    <div class="card mini"><h3>${esc(L.hBrowser)}</h3>${listTable(data.browsers ?? [], (r) => esc(r.k))}</div>
+    <div class="card mini"><h3>${esc(L.hLang)}</h3>${listTable(data.languages ?? [], (r) => esc(r.k))}</div>
    </div>
   </section>
 
   <section class="block" id="pages">
-   <div class="block-head"><h2>页面排行</h2><span class="block-sub">PV 前 25</span></div>
-   <div class="card mini">${listTable(data.paths ?? [], (r) => `<span class="code">${esc(r.path)}</span>`, 'PV')}</div>
+   <div class="block-head"><h2>${esc(L.h.pages)}</h2><span class="block-sub">${esc(L.pagesSub)}</span></div>
+   <div class="card mini">${listTable(data.paths ?? [], (r) => `<span class="code">${esc(r.path)}</span>`, L.pvCol)}</div>
   </section>
 
   <section class="block" id="detail">
-   <div class="block-head"><h2>访客明细</h2><span class="block-sub">最近 50 条 · 含明文 IP 与推断位置</span></div>
+   <div class="block-head"><h2>${esc(L.h.detail)}</h2><span class="block-sub">${esc(L.detailSub)}</span></div>
    <div class="card mini">
    ${
      recent.length
-       ? `<table><thead><tr><th>时间 (UTC)</th><th>页面</th><th>IP</th><th>位置（推断）</th><th class="num">网络</th><th>设备 · 浏览器</th><th>来源</th><th>语言</th></tr></thead><tbody>${detailRows}</tbody></table>`
-       : '<p class="empty">这个区间还没有记录</p>'
+       ? `<table><thead><tr>${detailHead}</tr></thead><tbody>${detailRows}</tbody></table>`
+       : `<p class="empty">${L.emptyRange}</p>`
    }
    </div>
   </section>
 
   <footer class="page-foot">
-   口径：PV 为请求数；UV 按「当天 IP + 日期 + 盐」的哈希去重，跨天不合并、无法串起来追踪个人。位置、邮编、时区、ASN、接入机房均来自 Cloudflare GeoIP 按 IP <b>推断</b>，不是精确定位。本页与 CSV 导出<b>公开可访问</b>（含明文 IP 与推断位置，不设密码）；明细超过保留期由定时任务连行删除（删除前按路径计入累计口径），站内免鉴权的 /api/summary 只回合计数，/api/stats 的 JSON 口仍需令牌。
+   ${L.foot}
   </footer>
  </main>
 </div>
@@ -750,17 +966,55 @@ export default {
       if (!isPanel && !(await authorised(request, env, url))) {
         return json({ error: 'unauthorized' }, 401);
       }
+
+      // 语言 / 明暗偏好：?lang= / ?theme= 合法值 → 写 cookie 后 302 回干净地址。
+      // 用 PRG 而不是原地渲染，是想让地址栏保持干净、刷新不重放参数；
+      // 裸 /stats（没人带参数）不下发任何 Set-Cookie，与「零 cookie」口径一致。
+      if (isPanel) {
+        const setCookies = [];
+        const wantLang = url.searchParams.get('lang');
+        const wantTheme = url.searchParams.get('theme');
+        if (PREF_VALUES.st_lang.includes(wantLang)) setCookies.push(prefCookie('st_lang', wantLang));
+        if (PREF_VALUES.st_theme.includes(wantTheme)) setCookies.push(prefCookie('st_theme', wantTheme));
+        if (setCookies.length) {
+          const u = new URL(url.href);
+          u.searchParams.delete('lang');
+          u.searchParams.delete('theme');
+          const headers = new Headers({ location: u.pathname + u.search, 'cache-control': 'no-store' });
+          for (const c of setCookies) headers.append('set-cookie', c);
+          return new Response(null, { status: 302, headers });
+        }
+      }
+
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
       const data = await stats(env, days);
-      if (url.pathname === '/api/stats') return json(data);
-      return new Response(dashboard(data, Number(env.RETENTION_DAYS) || 180), {
-        headers: {
-          'content-type': 'text/html; charset=utf-8',
-          'cache-control': 'no-store',
-          'x-frame-options': 'DENY',
-          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+      if (!isPanel) return json(data);
+
+      const prefs = prefsFromCookies(request);
+      const lang = prefs.st_lang || 'zh';
+      const theme = prefs.st_theme || null; // 没设过就不写 data-theme，交给 @media 跟随系统
+      // 图标该显示什么：显式偏好 > 客户端提示（面板发过 Accept-CH）> 按亮色假设。
+      // 都不知道时假设亮色，系统暗色的浏览器第一次点可能看不到变化（再点一次就好）。
+      const hint = request.headers.get('sec-ch-prefers-color-scheme');
+      const iconTheme = theme || (hint === 'dark' ? 'dark' : hint === 'light' ? 'light' : 'light');
+      return new Response(
+        dashboard(data, {
+          retention: Number(env.RETENTION_DAYS) || 180,
+          lang,
+          theme,
+          iconTheme,
+          toggleTheme: iconTheme === 'dark' ? 'light' : 'dark',
+        }),
+        {
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-frame-options': 'DENY',
+            'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+            'accept-ch': 'sec-ch-prefers-color-scheme',
+          },
         },
-      });
+      );
     }
 
     return json({ error: 'not found' }, 404);

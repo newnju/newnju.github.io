@@ -501,3 +501,89 @@ test('/api/stats：JSON 口拿到扩展维度（recent 含 ip 与推断字段）
     'languages', 'paths', 'reach', 'recent', 'referrers', 'regions', 'totals',
   ]);
 });
+
+// ---------------------------------------------------------------------------
+// 面板语言 / 明暗偏好：?lang= ?theme= 合法值 → 写 cookie 后 302 回干净地址，
+// 之后渲染只认 cookie（零 JS，切换靠 <a href>；裸 /stats 依然一个 cookie 都不发）
+// ---------------------------------------------------------------------------
+
+test('?lang=en：302 写 st_lang 回干净地址；带 cookie 的面板整页英文', async () => {
+  const DB = fakeDb({
+    [K('SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,')]: [
+      {
+        ts: 1759900000, day: '2026-10-08', path: '/cv/', ip: '203.0.113.9',
+        continent: 'AS', country: 'JP', region: 'Tokyo', city: 'Tokyo',
+        postal: null, tz: 'Asia/Tokyo', lat: null, lon: null,
+        asn: 2516, colo: 'NRT', device: 'mobile', browser: 'safari',
+        ref_host: 't.co', lang: 'ja',
+      },
+    ],
+  });
+
+  const redir = await worker.fetch(new Request(`${ORIGIN}/stats?days=7&lang=en`), { ...ENV, DB });
+  assert.equal(redir.status, 302, 'PRG：偏好写进 cookie 后重定向');
+  assert.equal(redir.headers.get('location'), '/stats?days=7', '剥掉 lang、保留 days');
+  const sc = redir.headers.get('set-cookie') || '';
+  assert.match(sc, /st_lang=en/);
+  assert.match(sc, /Path=\//);
+  assert.match(sc, /Max-Age=31536000/);
+  assert.match(sc, /SameSite=Lax/);
+
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`, { headers: { cookie: 'st_lang=en' } }), { ...ENV, DB });
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  assert.match(body, /<html lang="en"/);
+  assert.match(body, /Visitor stats · Dashboard/);
+  assert.match(body, /Hello, visitor stats/);
+  assert.match(body, />Last 30 days<\/a>/, '范围切换也是英文');
+  assert.match(body, /Recent visits/);
+  assert.match(body, /Japan \/ Tokyo \/ Tokyo/, '国家名走英文表');
+  assert.match(body, /Mobile · safari/);
+  assert.match(body, />中文<\/span>/, '切换链接显示目标语言');
+  assert.ok(!body.includes('访客明细'), '英文页不应再出现中文分区标题');
+  assert.ok(!body.includes('<script'), '语言切换同样零脚本');
+});
+
+test('?theme=dark：302 写 st_theme；带 cookie 的面板挂 data-theme 与暗色变量', async () => {
+  const DB = fakeDb();
+  const redir = await worker.fetch(new Request(`${ORIGIN}/stats?theme=dark`), { ...ENV, DB });
+  assert.equal(redir.status, 302);
+  assert.equal(redir.headers.get('location'), '/stats');
+  assert.match(redir.headers.get('set-cookie') || '', /st_theme=dark/);
+
+  const dark = await worker.fetch(new Request(`${ORIGIN}/stats`, { headers: { cookie: 'st_theme=dark' } }), { ...ENV, DB });
+  const html = await dark.text();
+  assert.match(html, /<html lang="zh-CN" data-theme="dark">/);
+  assert.match(html, /html\[data-theme="dark"\]/, '显式暗色选择器');
+  assert.match(html, /--accent:#b794d4/, '暗色强调用主站 nju-dark 的提亮南大紫');
+  assert.match(html, /--c1:#b794d4/, '图表色也换成主题变量');
+
+  const light = await worker.fetch(new Request(`${ORIGIN}/stats`, { headers: { cookie: 'st_theme=light' } }), { ...ENV, DB });
+  assert.match(await light.text(), /<html lang="zh-CN" data-theme="light">/);
+});
+
+test('偏好参数可与天数同带、非法值忽略；没设偏好不挂 data-theme（跟随系统）', async () => {
+  const DB = fakeDb();
+  const both = await worker.fetch(new Request(`${ORIGIN}/stats?days=7&lang=en&theme=dark`), { ...ENV, DB });
+  assert.equal(both.status, 302, '两个偏好一次写完只重定向一次');
+  assert.equal(both.headers.get('location'), '/stats?days=7');
+  const sc = both.headers.get('set-cookie') || '';
+  assert.match(sc, /st_lang=en/);
+  assert.match(sc, /st_theme=dark/);
+
+  const bad = await worker.fetch(new Request(`${ORIGIN}/stats?lang=fr&theme=blue`), { ...ENV, DB });
+  assert.equal(bad.status, 200, '非法值不重定向，直接渲染');
+  assert.equal(bad.headers.get('set-cookie'), null);
+  assert.match(await bad.text(), /访客统计 · 仪表盘/, '非法值等于没设，仍是默认中文');
+
+  const bare = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const bareBody = await bare.text();
+  assert.match(bareBody, /<html lang="zh-CN">/, '没点过切换：不写 data-theme，交给 @media 跟随系统');
+  assert.match(bare.headers.get('accept-ch') || '', /sec-ch-prefers-color-scheme/);
+  assert.match(bareBody, /tool-lang/, '顶栏带语言切换');
+  assert.match(bareBody, /tool-theme/, '顶栏带明暗切换');
+  assert.match(bareBody, /\/stats\?days=30&amp;lang=en/, '中文页的切换指向英文');
+  assert.match(bareBody, /\/stats\?days=30&amp;theme=dark/, '没提示时按亮色假设，切换指向暗色');
+  // 时间范围链接保持原样：偏好存在 cookie 里，点 ?days=7 不会把语言/主题冲掉
+  assert.match(bareBody, /<a href="\?days=7"/);
+});

@@ -13,7 +13,8 @@
 | Google Analytics | 本站一直没接（`_config.yml` 的 `analytics.provider` 是 `false`），而且它是第三方脚本、要 cookie，与本站「零追踪」的现状冲突 |
 | Umami / Plausible 等 | 仍是第三方脚本，要放行域名、要 cookie，隐私口径上没比这套好 |
 
-**这套的特点**：代码在你自己账号下、零第三方脚本、零 cookie；明细里有 IP，**面板
+**这套的特点**：代码在你自己账号下、零第三方脚本、打点侧零 cookie（面板只在你点了
+语言 / 明暗切换时下发 `st_lang`、`st_theme` 两个偏好 cookie，存显示口味、不进统计）；明细里有 IP，**面板
 （`/stats`）与同源的 CSV 导出不设密码、点开就看**（站长的口径选择，等于把 access log
 摆在这自己的域名下），公开页脚走的 `/api/summary` 与免鉴权接口永远只有合计数，过期行
 自动删。代价是 GitHub Pages 没有服务端，所以访问数据必须由页面里的第一方脚本主动送
@@ -28,7 +29,7 @@
 | --- | --- |
 | 路径（只有 `pathname + hash`，**查询串在前端就丢掉了**） | 完整 referrer URL（只留域名，完整 URL 里常有搜索词） |
 | 明文 IP（`visits.ip`，出现在 `/stats` 面板与 `/stats.csv` 导出 —— **两者都是公开的**） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器） |
-| 国家 / 省 / 城市 / 邮编 / 时区 / 经纬度 / ASN / 接入机房（Cloudflare 自带 GeoIP 按 IP **推断**，不是精确定位，零第三方 SDK） | 任何 cookie / localStorage / 广告标识（访客侧） |
+| 国家 / 省 / 城市 / 邮编 / 时区 / 经纬度 / ASN / 接入机房（Cloudflare 自带 GeoIP 按 IP **推断**，不是精确定位，零第三方 SDK） | 任何 localStorage / 广告标识（打点侧零 cookie；面板只在点了 `?lang=` / `?theme=` 时写 `st_lang` / `st_theme` 两个显示偏好，存口味不存身份、不进统计） |
 | `ip_hash`（UV 去重口径）与界面语言 | 公开页脚与免鉴权接口 `/api/summary` 里的 IP、维度、明细路径 |
 
 `ip_hash = SHA-256(IP + 当天日期 + IP_SALT)` 取前 16 位。**掺当天日期**是刻意的：
@@ -104,6 +105,11 @@ npx wrangler deploy
 # 旧地址 /login 一律 302 回这里
 https://stats.oaking.kdns.fr/stats
 
+# 语言 / 明暗偏好：合法参数会写 cookie 再 302 回干净地址（英文页脚的「统计详情」
+# 就是带 ?lang=en 进来的）
+https://stats.oaking.kdns.fr/stats?lang=en
+https://stats.oaking.kdns.fr/stats?theme=dark
+
 # JSON，给脚本用（这个口仍要令牌）
 curl -H "Authorization: Bearer <STATS_TOKEN>" "https://stats.oaking.kdns.fr/api/stats?days=30"
 
@@ -164,7 +170,7 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>`（也认 Basic 密码半段与 `?key=`，给 curl） | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细） |
+| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细）。`?lang=zh\|en` 与 `?theme=light\|dark` 会写 `st_lang` / `st_theme` 偏好 cookie（Path=/、一年、SameSite=Lax）后 302 回去掉参数的地址，之后只认 cookie；裸 `/stats` 不发任何 cookie |
 | `/stats.csv?days=30` | GET | 无（**公开**，与面板一致） | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、来源、语言）；GET/HEAD 之外 405 |
 | `/login` | 任何方法 | 无 | 旧地址兼容：一律 302 `/stats`（密码流程已下线，不再有表单与会话 cookie） |
 | `/healthz` | GET | 无 | `{ok, db, token}` |

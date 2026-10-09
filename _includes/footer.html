@@ -54,13 +54,17 @@
   详情链接指向 Worker 的 /stats 面板，**公开直开、不设密码**（密码流程已下线：
   旧地址 /login 会 302 回面板，不再有表单与 stats_sess 会话 cookie）。公开页脚
   只放裸地址即可；/api/summary 仍只回合计数，带令牌的 /api/stats 才有维度。
+  英文页（_locale 含 en）的链接带 ?lang=en：面板收到后写 st_lang cookie 再 302
+  回干净地址，于是英文访客点进统计页也是英文，顶栏还能再切明暗主题。
 {%- endcomment -%}
 {%- assign _visit_endpoint = site.analytics.visit_endpoint | default: site.visit_endpoint -%}
 {%- if _visit_endpoint and _visit_endpoint != '' -%}
+{%- assign _stats_path = _visit_endpoint | replace: '/api/visit', '/stats' -%}
+{%- if _locale contains 'en' -%}{%- assign _stats_path = _stats_path | append: '?lang=en' -%}{%- endif -%}
 <div class="page__footer-visits" data-summary="{{ _visit_endpoint | replace: '/api/visit', '/api/summary' }}" hidden>
   {{ _ui.site_pv_label | default: "本站访问量" }} <b data-fill="pv">—</b>
   {%- if _ui.site_today_label %} · {{ _ui.site_today_label }} <b data-fill="today_pv">—</b>{% endif -%}
   {%- if _ui.site_today_uv_label %} · {{ _ui.site_today_uv_label }} <b data-fill="today_uv">—</b>{% endif -%}
-  {%- if _ui.stats_detail_label %} · <a href="{{ _visit_endpoint | replace: '/api/visit', '/stats' }}" target="_blank" rel="noopener">{{ _ui.stats_detail_label }}</a>{% endif -%}
+  {%- if _ui.stats_detail_label %} · <a href="{{ _stats_path }}" target="_blank" rel="noopener">{{ _ui.stats_detail_label }}</a>{% endif -%}
 </div>
 {%- endif -%}

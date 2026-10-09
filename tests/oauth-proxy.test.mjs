@@ -179,8 +179,11 @@ test('交 token 的页面：postMessage 锁死 targetOrigin，不用 *', async (
     const body = await res.text();
     assert.ok(!/postMessage\([^)]*,\s*'\*'\)/.test(body), "不能出现 postMessage(..., '*')");
     assert.match(body, /var target = "https:\/\/newnju\.github\.io"/);
-    // opener 不是本站就根本不发
-    assert.match(body, /origin !== target\) return/);
+    // 绝不读 opener.location：relay 页与 opener 跨源，.origin 一读就抛 SecurityError，
+    // success 消息发不出去，Decap 永远停在「正在完成登录……」
+    assert.ok(!body.includes('window.opener.location'), '不能读 window.opener.location（跨源抛异常）');
+    // 安全边界只靠 postMessage 的 targetOrigin（send() 里直接投给 target）
+    assert.match(body, /window\.opener\.postMessage\('authorization:github:' \+ status/);
   } finally {
     restore();
   }

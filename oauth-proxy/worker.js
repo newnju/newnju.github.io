@@ -177,8 +177,12 @@ function relayPage(status, payload, siteOrigin) {
   var target = ${JSON.stringify(siteOrigin)};
   function send() {
     if (!window.opener) return;
-    /* 只发给本站来源；opener 不是本站（钓鱼页自己开的窗口）就干脆不发。 */
-    if (window.opener.location && window.opener.location.origin !== target) return;
+    /* 千万不要去读 opener 的 location / origin：opener 在站点来源、本页在
+       Worker 来源，跨源读一下就抛 SecurityError，函数在这里就断了 ——
+       Decap 侧一直等不到 authorization:github:success，登录毫无反应
+       （早期版本正是这样，弹窗只显示上面那行字、最后页面毫无变化）。
+       安全性不靠这段判断：postMessage 的 targetOrigin 就是白名单，
+       浏览器只在 opener 的来源 === target 时才投递，不是本站直接丢弃。 */
     window.opener.postMessage('authorization:github:' + status + ':' + JSON.stringify(payload), target);
   }
   window.opener && window.opener.postMessage('authorizing:github', target);
