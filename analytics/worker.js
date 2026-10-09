@@ -40,6 +40,9 @@
  *   只回合计数，/api/stats 的 JSON 口仍要 STATS_TOKEN；
  *   超过 RETENTION_DAYS 由定时任务连行删除（删前按路径 rollup 进累计表）；
  * · referrer 只留域名（完整 URL 里常有搜索词），UA 只粗分成设备/浏览器；
+ *   机器人（bot）再按公开特征串认一个家族名（Googlebot/Bingbot/…，存
+ *   visits.bot_name），认不出的留空。页面/地域/来源等排行口径只算真人，
+ *   PV/UV 指标与设备构成算全部、另给真人/机器人拆分；
  * · 前端尊重 Do Not Track 与 Global Privacy Control：命中就直接不上报。
  */
 
@@ -73,7 +76,35 @@ function dayKey(ts) {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
-/** UA 粗分：只留「桌面/移动/平板/机器人」与浏览器家族，不存原文 */
+/* 爬虫按 UA 家族认名：只认公开特征串，认不出的机器人 bot_name 留空（面板显示
+   「其他」）。名字只用于展示与分组，不改变「bot 就是 bot」的判定口径。 */
+const BOT_NAMES = [
+  ['Googlebot', /googlebot|storebot-google|google-inspectiontool|adsbot-google|mediapartners-google/],
+  ['Bingbot', /bingbot|adidxbot/],
+  ['BingPreview', /bingpreview/],
+  ['Baiduspider', /baiduspider/],
+  ['YandexBot', /yandex(?:bot|images|mobilebot|accessibilitybot)/],
+  ['Sogou', /sogou\s*(?:web\s*spider|news|pic)/],
+  ['Bytespider', /bytespider/],
+  ['DuckDuckBot', /duckduckbot/],
+  ['PetalBot', /petalbot/],
+  ['Applebot', /applebot/],
+  ['SemrushBot', /semrushbot/],
+  ['AhrefsBot', /ahrefssitebot|ahrefsbot/],
+  ['MJ12bot', /mj12bot/],
+  ['DotBot', /dotbot/],
+  ['Facebook', /facebookexternalhit|facebot/],
+  ['Twitterbot', /twitterbot/],
+  ['Slackbot', /slackbot/],
+  ['Discordbot', /discordbot/],
+  ['TelegramBot', /telegrambot/],
+  ['WhatsApp', /whatsapp/],
+  ['Pingdom', /pingdom/],
+  ['UptimeRobot', /uptimerobot/],
+];
+
+/** UA 粗分：只留「桌面/移动/平板/机器人」与浏览器家族，不存原文。
+ *  机器人再记一个家族名（Googlebot/Bingbot/…），认不出就留空。 */
 function classify(ua) {
   const s = ua.toLowerCase();
   const bot = /bot|crawler|spider|crawling|slurp|bingpreview|semrush|ahrefs|headlesschrome|lighthouse|curl\/|wget\/|python-requests|axios/.test(
@@ -94,7 +125,8 @@ function classify(ua) {
   if (bot) device = 'bot';
   else if (/ipad|tablet|playbook|silk/.test(s)) device = 'tablet';
   else if (/mobi|iphone|android.*mobile|windows phone/.test(s)) device = 'mobile';
-  return { browser, device, bot: device === 'bot' ? 1 : 0 };
+  const botName = bot ? (BOT_NAMES.find(([, re]) => re.test(s))?.[0] ?? null) : null;
+  return { browser, device, bot: device === 'bot' ? 1 : 0, botName };
 }
 
 /** referrer 只留域名 */
@@ -132,7 +164,7 @@ async function handleVisit(request, env) {
   const ts = Math.floor(Date.now() / 1000);
   const day = dayKey(ts);
   const ua = request.headers.get('user-agent') || '';
-  const { browser, device, bot } = classify(ua);
+  const { browser, device, bot, botName } = classify(ua);
   const host = request.headers.get('host') || '';
 
   // 路径：只留路径部分，查询串（可能有搜索词）直接丢
@@ -152,7 +184,7 @@ async function handleVisit(request, env) {
     'ts', 'day', 'path', 'host', 'ip', 'ip_hash',
     'continent', 'country', 'region', 'region_code', 'city', 'postal', 'tz',
     'lat', 'lon', 'asn', 'colo',
-    'device', 'browser', 'ref_host', 'lang',
+    'device', 'browser', 'bot_name', 'ref_host', 'lang',
   ];
   const values = [
     ts, day, path, host, ip, ipHash,
@@ -160,7 +192,7 @@ async function handleVisit(request, env) {
     cf.regionCode ?? cf.region_code ?? null, cf.city ?? null,
     cf.postalCode ?? cf.postal_code ?? null, cf.timezone ?? null,
     num(cf.latitude), num(cf.longitude), num(cf.asn), cf.colo ?? null,
-    device, browser, host_, String(body.l ?? '').slice(0, 16) || null,
+    device, browser, botName, host_, String(body.l ?? '').slice(0, 16) || null,
   ];
 
   await env.DB.prepare(
@@ -178,6 +210,7 @@ async function handleVisit(request, env) {
       city: cf.city ?? null,
       device,
       bot,
+      bot_name: botName,
       ip_hash: ipHash,
     }),
   );
@@ -188,10 +221,17 @@ async function handleVisit(request, env) {
 async function stats(env, days) {
   const q = (sql, ...args) => env.DB.prepare(sql).bind(...args).all();
   const since = Date.now() / 1000 - days * 86400;
-  const [totals, today, reach, daily, paths, countries, regions, cities, refs, devices, browsers, langs, recent] =
+  // 口径分工：指标与趋势给「全部 + 真人/机器人拆分」两套数；维度列表（页面
+  // 排行、地域、来源、浏览器、语言、覆盖面）只算真人 —— 那些表回答的是
+  // 「谁在看站」，爬虫不是访客；设备构成仍算全部（机器人是构成的一部分），
+  // 另给一张按 bot_name 分组的爬虫表；明细保留全部行、带 bot_name 可审计。
+  const HUMAN = `device <> 'bot'`;
+  const [totals, today, reach, daily, paths, countries, regions, cities, refs, devices, browsers, langs, bots, recent] =
     await Promise.all([
       q(
-        `SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv, COUNT(DISTINCT day) AS days
+        `SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv, COUNT(DISTINCT day) AS days,
+                SUM(device = 'bot') AS bot_pv, SUM(${HUMAN}) AS human_pv,
+                COUNT(DISTINCT CASE WHEN ${HUMAN} THEN ip_hash END) AS human_uv
            FROM visits WHERE ts >= ?`,
         since,
       ),
@@ -200,30 +240,34 @@ async function stats(env, days) {
            FROM visits WHERE day = ?`,
         dayKey(Math.floor(Date.now() / 1000)),
       ),
-      // 覆盖面：多少个国家 / 省 / 城市 / 页面
+      // 覆盖面：多少个国家 / 省 / 城市 / 页面（真人）
       q(
         `SELECT COUNT(DISTINCT country) AS countries, COUNT(DISTINCT region) AS regions,
                 COUNT(DISTINCT city) AS cities, COUNT(DISTINCT path) AS paths
-           FROM visits WHERE ts >= ?`,
+           FROM visits WHERE ts >= ? AND ${HUMAN}`,
         since,
       ),
       q(
-        `SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv
+        `SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv,
+                SUM(device = 'bot') AS bpv, SUM(${HUMAN}) AS hpv,
+                COUNT(DISTINCT CASE WHEN ${HUMAN} THEN ip_hash END) AS huv
            FROM visits WHERE ts >= ? GROUP BY day ORDER BY day`,
         since,
       ),
-      q(`SELECT path, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY path ORDER BY n DESC LIMIT 25`, since),
-      q(`SELECT COALESCE(country,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
-      q(`SELECT COALESCE(region,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
-      q(`SELECT COALESCE(city,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 20`, since),
-      q(`SELECT COALESCE(ref_host,'直接访问') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 15`, since),
+      q(`SELECT path, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY path ORDER BY n DESC LIMIT 25`, since),
+      q(`SELECT COALESCE(country,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 20`, since),
+      q(`SELECT COALESCE(region,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 20`, since),
+      q(`SELECT COALESCE(city,'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 20`, since),
+      q(`SELECT COALESCE(ref_host,'直接访问') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 15`, since),
       q(`SELECT device AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC`, since),
-      q(`SELECT browser AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC`, since),
-      q(`SELECT COALESCE(NULLIF(lang,''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC LIMIT 10`, since),
+      q(`SELECT browser AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC`, since),
+      q(`SELECT COALESCE(NULLIF(lang,''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 10`, since),
+      // 机器人按家族分组；bot_name 为空（历史行或认不出）归到 '—'，面板显示「其他」
+      q(`SELECT COALESCE(NULLIF(bot_name,''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND device = 'bot' GROUP BY k ORDER BY n DESC LIMIT 10`, since),
       // 访客明细：IP 与地址推断字段都在这里（面板密码后面，不对外）
       q(
         `SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,
-                device, browser, ref_host, lang
+                device, browser, bot_name, ref_host, lang
            FROM visits WHERE ts >= ? ORDER BY ts DESC LIMIT 50`,
         since,
       ),
@@ -236,7 +280,14 @@ async function stats(env, days) {
   return {
     days,
     generated_at: new Date().toISOString(),
-    totals: { ...t, today_pv: td.pv ?? 0, today_uv: td.uv ?? 0 },
+    totals: {
+      ...t,
+      bot_pv: t.bot_pv ?? 0,
+      human_pv: t.human_pv ?? 0,
+      human_uv: t.human_uv ?? 0,
+      today_pv: td.pv ?? 0,
+      today_uv: td.uv ?? 0,
+    },
     reach: {
       countries: reachRow.countries ?? 0,
       regions: reachRow.regions ?? 0,
@@ -252,6 +303,7 @@ async function stats(env, days) {
     devices: rows(devices),
     browsers: rows(browsers),
     languages: rows(langs),
+    bots: rows(bots),
     recent: rows(recent),
   };
 }
@@ -261,12 +313,12 @@ async function visitsCsv(env, days) {
   const since = Date.now() / 1000 - days * 86400;
   const res = await env.DB.prepare(
     `SELECT ts, day, path, ip, ip_hash, continent, country, region, region_code, city, postal, tz,
-            lat, lon, asn, colo, device, browser, ref_host, lang
+            lat, lon, asn, colo, device, browser, bot_name, ref_host, lang
        FROM visits WHERE ts >= ? ORDER BY ts DESC LIMIT 10000`,
   ).bind(since).all();
   const cols = [
     'ts', 'iso_time', 'day', 'path', 'ip', 'ip_hash', 'continent', 'country', 'region', 'region_code',
-    'city', 'postal', 'tz', 'lat', 'lon', 'asn', 'colo', 'device', 'browser', 'ref_host', 'lang',
+    'city', 'postal', 'tz', 'lat', 'lon', 'asn', 'colo', 'device', 'browser', 'bot_name', 'ref_host', 'lang',
   ];
   const cell = (v) => {
     if (v === null || v === undefined) return '';
@@ -417,7 +469,7 @@ const I18N = {
     navAria: '面板导航',
     nav: ['概览', '关键指标', '趋势与构成', '地域分布', '来源与设备', '页面排行', '访客明细'],
     note: (ret) =>
-      `地址来自 Cloudflare GeoIP 按 IP 推断，不是精确定位；独立访客按「当天 IP 哈希」去重，跨天不合并。明细保留 ${ret} 天，之后连行删除。`,
+      `地址来自 Cloudflare GeoIP 按 IP 推断，不是精确定位；独立访客按「当天 IP 哈希」去重，跨天不合并。机器人已计入 PV，并单列「爬虫构成」；页面、地域、来源等排行只统计真人访问。明细保留 ${ret} 天，之后连行删除。`,
     crumbs: '统计',
     rangeAria: '时间范围',
     lastDays: (n) => `近 ${n} 天`,
@@ -431,12 +483,15 @@ const I18N = {
     trendSub: '按天聚合 · UTC',
     geoSub: '国家 / 省 / 城市（GeoIP 推断）',
     chartTrend: 'PV / UV 趋势',
-    trendAria: '每日 PV 与 UV 趋势',
-    legendPv: '浏览量 PV',
+    trendAria: '每日 PV、真人 PV 与 UV 趋势',
+    legendPv: '浏览量 PV（全部）',
+    legendHuman: '真人 PV',
     legendUv: '独立访客 UV（虚线）',
     chartDonut: '设备构成',
     donutAria: '设备构成环形图',
     donutUnit: '浏览量',
+    botsTitle: '爬虫构成',
+    otherBot: '其他',
     hCountry: '国家 / 地区',
     hRegion: '省 / 州',
     hCity: '城市',
@@ -456,9 +511,9 @@ const I18N = {
     device: { desktop: '桌面', mobile: '手机', tablet: '平板', bot: '机器人', other: '其他' },
     country: (c) => COUNTRY_CN[c] || c || '—',
     pvL: '浏览量 PV',
-    pvS: (v) => `日均 ${v}`,
+    pvS: (avg, human) => `日均 ${avg} · 真人 ${human}`,
     uvL: '独立访客 UV',
-    uvS: '按当天 IP 哈希去重',
+    uvS: (human, bot) => `真人 UV ${human} · 机器人 PV ${bot}`,
     todayPvL: '今日 PV',
     todayPvS: (uv) => `今日 UV ${uv}`,
     todayUvL: '今日 UV',
@@ -484,7 +539,7 @@ const I18N = {
     navAria: 'Dashboard navigation',
     nav: ['Overview', 'Key metrics', 'Trend & mix', 'Geography', 'Traffic sources', 'Top pages', 'Recent visits'],
     note: (ret) =>
-      `Addresses are Cloudflare GeoIP inference by IP, not exact location; unique visitors are deduplicated by "same-day IP hash" and never merged across days. Details are kept for ${ret} days, then deleted row by row.`,
+      `Addresses are Cloudflare GeoIP inference by IP, not exact location; unique visitors are deduplicated by "same-day IP hash" and never merged across days. Bots are counted in PV and listed separately under "Crawlers"; page, geography and referrer rankings count human visits only. Details are kept for ${ret} days, then deleted row by row.`,
     crumbs: 'Stats',
     rangeAria: 'Time range',
     lastDays: (n) => `Last ${n} days`,
@@ -498,12 +553,15 @@ const I18N = {
     trendSub: 'Aggregated by day · UTC',
     geoSub: 'Country / region / city (GeoIP inferred)',
     chartTrend: 'PV / UV trend',
-    trendAria: 'Daily PV and UV trend',
-    legendPv: 'Page views PV',
+    trendAria: 'Daily PV, human PV and UV trend',
+    legendPv: 'Page views PV (all)',
+    legendHuman: 'Human PV',
     legendUv: 'Unique visitors UV (dashed)',
     chartDonut: 'Devices',
     donutAria: 'Device mix donut chart',
     donutUnit: 'Page views',
+    botsTitle: 'Crawlers',
+    otherBot: 'Other',
     hCountry: 'Country / region',
     hRegion: 'State / region',
     hCity: 'City',
@@ -523,9 +581,9 @@ const I18N = {
     device: { desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet', bot: 'Bot', other: 'Other' },
     country: (c) => COUNTRY_EN[c] || c || '—',
     pvL: 'Page views PV',
-    pvS: (v) => `${v} / day`,
+    pvS: (avg, human) => `${avg} / day · human ${human}`,
     uvL: 'Unique visitors UV',
-    uvS: 'deduplicated by same-day IP hash',
+    uvS: (human, bot) => `Human UV ${human} · bot PV ${bot}`,
     todayPvL: 'Today PV',
     todayPvS: (uv) => `Today UV ${uv}`,
     todayUvL: 'Today UV',
@@ -584,7 +642,7 @@ function niceMax(v) {
 function trendSvg(daily, L) {
   const W = 720, H = 220, PL = 40, PR = 12, PT = 14, PB = 26;
   if (!daily.length) return `<p class="empty">${esc(L.emptyRange)}</p>`;
-  const maxY = niceMax(Math.max(...daily.map((d) => Math.max(d.pv, d.uv)), 1));
+  const maxY = niceMax(Math.max(...daily.map((d) => Math.max(d.pv, d.uv, d.hpv ?? 0)), 1));
   const iw = W - PL - PR, ih = H - PT - PB;
   const X = (i) => (daily.length === 1 ? PL + iw / 2 : PL + (i * iw) / (daily.length - 1));
   const Y = (v) => PT + ih - (v / maxY) * ih;
@@ -607,9 +665,10 @@ function trendSvg(daily, L) {
     ? `<circle cx="${X(0).toFixed(1)}" cy="${Y(daily[0].pv).toFixed(1)}" r="3" fill="var(--accent)"/>`
     : '';
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="220" role="img" aria-label="${esc(L.trendAria)}">
-${grid}
+ ${grid}
 <path d="${line('pv')}L${X(daily.length - 1).toFixed(1)},${base}L${X(0).toFixed(1)},${base}Z" fill="var(--accent-soft)"/>
  <path d="${line('pv')}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+ <path d="${line('hpv')}" fill="none" stroke="var(--c3)" stroke-width="1.6"/>
  <path d="${line('uv')}" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 4"/>
 ${dot}${xt}
 </svg>`;
@@ -675,6 +734,12 @@ function dashboard(data, opts = {}) {
     : `<li class="dim">${L.empty}</li>`;
 
   const geoCell = (r) => [L.country(r.country), r.region, r.city].filter(Boolean).join(' / ');
+  // 明细的设备格：认出家族的机器人显示「机器人 · Googlebot」；
+  // 认不出/历史行保持「机器人 · 浏览器」的旧样子
+  const devCell = (r) =>
+    r.device === 'bot' && r.bot_name
+      ? `${L.device.bot} · ${r.bot_name}`
+      : `${L.device[r.device] || r.device || '—'} · ${r.browser || '—'}`;
   const recent = data.recent ?? [];
   const detailRows = recent
     .map(
@@ -684,7 +749,7 @@ function dashboard(data, opts = {}) {
 <td><span class="code">${esc(r.ip || '—')}</span></td>
 <td>${esc(geoCell(r))}</td>
 <td class="num">${r.asn ? `AS${r.asn}` : '—'}${r.colo ? ` · ${esc(r.colo)}` : ''}</td>
-<td>${esc(L.device[r.device] || r.device || '—')} · ${esc(r.browser || '—')}</td>
+<td>${esc(devCell(r))}</td>
 <td>${esc(r.ref_host || L.direct)}</td>
 <td>${esc(r.lang || '—')}</td>
 </tr>`,
@@ -830,8 +895,8 @@ td.nm{max-width:260px;word-break:break-all}
   <section class="block" id="metrics">
    <div class="block-head"><h2>${esc(L.h.metrics)}</h2><span class="block-sub">${esc(L.daysSum(days))}</span></div>
    <div class="metric-grid">
-    ${metric(L.pvL, fmtNum(t.pv), L.pvS(fmtNum(days ? (t.pv ?? 0) / days : 0)), true)}
-    ${metric(L.uvL, fmtNum(t.uv), L.uvS, true)}
+    ${metric(L.pvL, fmtNum(t.pv), L.pvS(fmtNum(days ? (t.pv ?? 0) / days : 0), fmtNum(t.human_pv ?? 0)), true)}
+    ${metric(L.uvL, fmtNum(t.uv), L.uvS(fmtNum(t.human_uv ?? 0), fmtNum(t.bot_pv ?? 0)), true)}
     ${metric(L.todayPvL, fmtNum(t.today_pv), L.todayPvS(fmtNum(t.today_uv)))}
     ${metric(L.todayUvL, fmtNum(t.today_uv), L.todayUvS)}
     ${metric(L.daysL, fmtNum(t.days), range)}
@@ -846,14 +911,22 @@ td.nm{max-width:260px;word-break:break-all}
    <div class="chart-grid">
     <figure class="card chart-card">
      <h3>${esc(L.chartTrend)}</h3>
-     ${trendSvg(daily, L)}
-     <ul class="legend"><li><i style="background:var(--accent)"></i>${esc(L.legendPv)}</li><li><i style="background:var(--gold)"></i>${esc(L.legendUv)}</li></ul>
+      ${trendSvg(daily, L)}
+      <ul class="legend"><li><i style="background:var(--accent)"></i>${esc(L.legendPv)}</li><li><i style="background:var(--c3)"></i>${esc(L.legendHuman)}</li><li><i style="background:var(--gold)"></i>${esc(L.legendUv)}</li></ul>
     </figure>
     <figure class="card chart-card">
      <h3>${esc(L.chartDonut)}</h3>
      <div class="mix">${donutSvg(devItems, devTotal, L)}</div>
      <ul class="legend">${devLegend}</ul>
     </figure>
+    ${
+      (data.bots ?? []).length
+        ? `<figure class="card chart-card">
+     <h3>${esc(L.botsTitle)}</h3>
+     ${listTable(data.bots, (r) => esc(r.k === '—' ? L.otherBot : r.k), L.pvCol)}
+    </figure>`
+        : ''
+    }
    </div>
   </section>
 

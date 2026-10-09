@@ -99,6 +99,7 @@ test('打点写入一行：时间、路径、GeoIP 扩展字段与明文 IP 都�
   assert.equal(row.lon, 118.79);
   assert.equal(row.device, 'desktop');
   assert.equal(row.browser, 'chrome');
+  assert.equal(row.bot_name, null, '真人行不写机器人名');
   assert.equal(row.lang, 'zh-CN');
   assert.match(row.day, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(Math.abs(Date.now() / 1000 - row.ts) < 60, 'ts 应该是当前 unix 秒');
@@ -112,6 +113,41 @@ test('打点写入一行：时间、路径、GeoIP 扩展字段与明文 IP 都�
   assert.equal(row.colo, 'NRT');
   assert.ok(!('raw_ip' in row), '旧的 STORE_RAW_IP 开关列已废弃');
   assert.match(row.ip_hash, /^[0-9a-f]{16}$/, 'UV 去重仍走每日盐哈希');
+});
+
+test('机器人按 UA 认家族名写进 bot_name；认不出的机器人留空', async () => {
+  const post = async (ua) => {
+    const DB = fakeDb();
+    const req = new Request(`${ORIGIN}/api/visit`, {
+      method: 'POST',
+      body: JSON.stringify({ p: '/' }),
+      headers: {
+        'content-type': 'application/json',
+        'cf-connecting-ip': '198.51.100.7',
+        host: 'stats.example.test',
+        'user-agent': ua,
+        origin: 'https://newnju.github.io',
+      },
+    });
+    req.cf = { country: 'US' };
+    const res = await worker.fetch(req, { ...ENV, DB });
+    assert.equal(res.status, 200);
+    const { sql, args } = DB.calls[0];
+    const cols = sql.slice(sql.indexOf('(') + 1, sql.indexOf(')')).split(',').map((s) => s.trim());
+    return Object.fromEntries(cols.map((c, i) => [c, args[i]]));
+  };
+
+  const google = await post('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)');
+  assert.equal(google.device, 'bot');
+  assert.equal(google.bot_name, 'Googlebot');
+
+  const baidu = await post('Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)');
+  assert.equal(baidu.device, 'bot');
+  assert.equal(baidu.bot_name, 'Baiduspider');
+
+  const weird = await post('SomeRandomCrawler/1.0');
+  assert.equal(weird.device, 'bot', '判定 bot 的老口径不变（UA 含 bot）');
+  assert.equal(weird.bot_name, null, '认不出家族就留空，面板显示「其他」');
 });
 
 test('同一个 IP、同一天 → 同一个哈希（所以能算去重人数）', async () => {
@@ -399,9 +435,9 @@ const K = (sql) => sql.trim().slice(0, 24);
 
 test('仪表盘：工作台结构、时间范围切换、导出入口、空态渲染，且全程零脚本', async () => {
   const DB = fakeDb({
-    [K('SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv FROM visits WHERE ts >= ? GROUP BY day ORDER BY day')]: [
-      { day: '2026-10-07', pv: 2, uv: 1 },
-      { day: '2026-10-08', pv: 5, uv: 3 },
+    [K('SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv')]: [
+      { day: '2026-10-07', pv: 2, uv: 1, hpv: 1, huv: 1, bpv: 1 },
+      { day: '2026-10-08', pv: 5, uv: 3, hpv: 2, huv: 2, bpv: 3 },
     ],
   });
   const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
@@ -416,6 +452,11 @@ test('仪表盘：工作台结构、时间范围切换、导出入口、空态�
   assert.match(body, /metric-grid/, '关键指标卡片');
   assert.match(body, /id="trend"/);
   assert.match(body, /<svg viewBox="0 0 720 220"/, '趋势图是服务端 SVG');
+  assert.match(body, /stroke="var\(--c3\)"/, '趋势图有真人 PV 线');
+  assert.match(body, /浏览量 PV（全部）/, '图例区分全部与真人');
+  assert.match(body, /真人 PV/);
+  assert.match(body, /日均 .* · 真人 /, 'PV 卡副标给真人口径');
+  assert.match(body, /真人 UV .* · 机器人 PV /, 'UV 卡副标给真人/机器人拆分');
   assert.match(body, /id="detail"/);
   assert.match(body, /访客明细/);
   assert.match(body, /href="\/stats\.csv\?days=30"/, '默认近 30 天的导出入口');
@@ -423,6 +464,43 @@ test('仪表盘：工作台结构、时间范围切换、导出入口、空态�
   assert.match(body, /\?days=7/, '可切近 7 天');
   assert.match(body, /暂无数据|这个区间还没有记录/, '空态');
   assert.ok(!body.includes('<script'), 'CSP default-src none：面板不带任何脚本');
+  assert.ok(!/<h3>爬虫构成<\/h3>/.test(body), '没有机器人数据就不渲染爬虫卡（侧栏口径说明不算）');
+
+  // 排行类维度只统计真人：各条查询都带 device <> 'bot' 过滤
+  for (const needle of [
+    'COUNT(DISTINCT path) AS paths',
+    'AS paths\n           FROM visits WHERE ts >= ? AND device',
+    'GROUP BY path',
+    "COALESCE(country,'—')",
+    "COALESCE(ref_host,'直接访问')",
+    'AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND device',
+  ]) {
+    const hit = DB.calls.find((c) => c.sql.includes(needle));
+    assert.ok(hit, `应存在带真人过滤的查询：${needle}`);
+    if (needle.startsWith('COUNT(DISTINCT path)') || needle.startsWith('AS k')) {
+      assert.match(hit.sql, /device <> 'bot'/, `该查询只算真人：${needle}`);
+    }
+  }
+  const devQ = DB.calls.find((c) => c.sql.includes('SELECT device AS k'));
+  assert.ok(devQ && !/device <> 'bot'/.test(devQ.sql), '设备构成仍算全部（含机器人）');
+  const botQ = DB.calls.find((c) => c.sql.includes("NULLIF(bot_name,'')"));
+  assert.ok(botQ && /device = 'bot'/.test(botQ.sql), '另有按 bot_name 分组的爬虫查询');
+});
+
+test('仪表盘：有机器人数据时出「爬虫构成」，认不出的家族显示「其他」', async () => {
+  const DB = fakeDb({
+    [K("SELECT COALESCE(NULLIF(bot_name,'')")]: [
+      { k: 'Googlebot', n: 40 },
+      { k: 'Bingbot', n: 8 },
+      { k: '—', n: 4 },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const body = await res.text();
+  assert.match(body, /<h3>爬虫构成<\/h3>/);
+  assert.match(body, />Googlebot<\/td>/);
+  assert.match(body, />其他<\/td>/, "bot_name 为空（历史行）归到「其他」");
+  assert.ok(!/>—<\/td>/.test(body), 'SQL 占位符不该直接漏到界面上');
 });
 
 test('仪表盘：明细渲染明文 IP、GeoIP 推断位置、中文国家名与网络信息', async () => {
@@ -433,7 +511,21 @@ test('仪表盘：明细渲染明文 IP、GeoIP 推断位置、中文国家名�
         continent: 'AS', country: 'JP', region: 'Tokyo', city: 'Tokyo',
         postal: '100-0001', tz: 'Asia/Tokyo', lat: 35.68, lon: 139.76,
         asn: 2516, colo: 'NRT', device: 'mobile', browser: 'safari',
-        ref_host: 't.co', lang: 'ja',
+        bot_name: null, ref_host: 't.co', lang: 'ja',
+      },
+      {
+        ts: 1759900001, day: '2026-10-08', path: '/', ip: '66.249.66.1',
+        continent: 'NA', country: 'US', region: null, city: null,
+        postal: null, tz: null, lat: null, lon: null,
+        asn: 15169, colo: 'SJC', device: 'bot', browser: 'other',
+        bot_name: 'Googlebot', ref_host: null, lang: null,
+      },
+      {
+        ts: 1759900002, day: '2026-10-08', path: '/', ip: '203.0.113.50',
+        continent: null, country: null, region: null, city: null,
+        postal: null, tz: null, lat: null, lon: null,
+        asn: null, colo: null, device: 'bot', browser: 'other',
+        bot_name: null, ref_host: null, lang: null,
       },
     ],
   });
@@ -445,6 +537,8 @@ test('仪表盘：明细渲染明文 IP、GeoIP 推断位置、中文国家名�
   assert.match(body, /AS2516 · NRT/);
   assert.match(body, /手机 · safari/);
   assert.match(body, /t\.co/);
+  assert.match(body, /机器人 · Googlebot/, '认出家族的机器人直接显示名字');
+  assert.match(body, /机器人 · other/, '认不出的机器人保持旧样式（设备 · 浏览器）');
   assert.ok(!body.includes('let-me-in'), '页面里不能出现令牌');
 });
 
@@ -460,7 +554,7 @@ test('/stats.csv：无凭据直接出 text/csv，含全部列且转义正确；�
         ip_hash: 'deadbeefdeadbeef', continent: 'AS', country: 'CN', region: 'Jiangsu',
         region_code: 'JS', city: 'Nanjing', postal: '210008', tz: 'Asia/Shanghai',
         lat: 32.06, lon: 118.79, asn: 4134, colo: 'NRT', device: 'desktop',
-        browser: 'chrome', ref_host: null, lang: 'zh-CN',
+        browser: 'chrome', bot_name: null, ref_host: null, lang: 'zh-CN',
       },
     ],
   });
@@ -469,10 +563,11 @@ test('/stats.csv：无凭据直接出 text/csv，含全部列且转义正确；�
   assert.match(csv.headers.get('content-type') || '', /^text\/csv/);
   assert.match(csv.headers.get('content-disposition') || '', /visits-7d\.csv/);
   const text = await csv.text();
-  assert.match(text, /^ts,iso_time,day,path,ip,ip_hash,continent,country/);
+  assert.match(text, /^ts,iso_time,day,path,ip,ip_hash,continent,country,region,region_code,city,postal,tz,lat,lon,asn,colo,device,browser,bot_name,ref_host,lang/);
   assert.ok(text.includes('203.0.113.9'));
   assert.ok(text.includes('"/a,""b"""'), '逗号/引号字段按 CSV 规则转义');
   assert.ok(text.includes('2025-10-08T05:06:40'), '带 ISO 时间列');
+  assert.ok(/,desktop,chrome,,/.test(text), '真人行的 bot_name 为空列');
 
   const post = await worker.fetch(new Request(`${ORIGIN}/stats.csv`, { method: 'POST' }), { ...ENV, DB: fakeDb() });
   assert.equal(post.status, 405);
@@ -486,7 +581,7 @@ test('/api/stats：JSON 口拿到扩展维度（recent 含 ip 与推断字段）
         continent: 'AS', country: 'CN', region: 'Jiangsu', city: 'Nanjing',
         postal: null, tz: 'Asia/Shanghai', lat: null, lon: null,
         asn: null, colo: null, device: 'desktop', browser: 'chrome',
-        ref_host: null, lang: 'zh-CN',
+        bot_name: null, ref_host: null, lang: 'zh-CN',
       },
     ],
   });
@@ -496,8 +591,9 @@ test('/api/stats：JSON 口拿到扩展维度（recent 含 ip 与推断字段）
   assert.ok(Array.isArray(body.recent) && body.recent.length === 1);
   assert.equal(body.recent[0].ip, '198.51.100.23');
   assert.ok(body.recent[0].continent === 'AS');
+  assert.ok('bot_name' in body.recent[0], 'recent 行带 bot_name，可审计机器人身份');
   assert.deepEqual(Object.keys(body).sort(), [
-    'browsers', 'cities', 'countries', 'daily', 'days', 'devices', 'generated_at',
+    'bots', 'browsers', 'cities', 'countries', 'daily', 'days', 'devices', 'generated_at',
     'languages', 'paths', 'reach', 'recent', 'referrers', 'regions', 'totals',
   ]);
 });

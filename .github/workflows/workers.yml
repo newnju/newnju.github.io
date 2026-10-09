@@ -179,10 +179,11 @@ jobs:
           add_col colo TEXT
           add_col device TEXT
           add_col browser TEXT
+          add_col bot_name TEXT
           add_col ref_host TEXT
           add_col lang TEXT
           cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
-          for c in ip continent country region region_code city postal tz lat lon asn colo; do
+          for c in ip continent country region region_code city postal tz lat lon asn colo bot_name; do
             printf '%s\n' "$cols" | grep -qx "$c" || { echo "::error::visits.$c 迁移没生效，拒绝部署"; exit 1; }
           done
           echo "  visits 表结构校验通过（$(printf '%s\n' "$cols" | grep -c .) 列）"

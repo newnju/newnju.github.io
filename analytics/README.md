@@ -1,8 +1,9 @@
 # 访客统计（Cloudflare Worker + D1，零依赖）
 
 自己搭一套最小可用的访客统计：每次打开页面记一行 —— **时间、明文 IP、Cloudflare GeoIP
-按 IP 推断的国家/省/市/邮编/时区/ASN/机房、页面路径、来源站点、设备与浏览器**，
-然后能按天/页面/国家/城市查人数，也能在面板里按 IP 回查明细。
+按 IP 推断的国家/省/市/邮编/时区/ASN/机房、页面路径、来源站点、设备与浏览器（机器人
+再记一个家族名，如 Googlebot）**，然后能按天/页面/国家/城市查人数，也能在面板里按 IP
+回查明细。
 
 ## 为什么不用现成的
 
@@ -28,9 +29,15 @@
 | 存 | 不存 |
 | --- | --- |
 | 路径（只有 `pathname + hash`，**查询串在前端就丢掉了**） | 完整 referrer URL（只留域名，完整 URL 里常有搜索词） |
-| 明文 IP（`visits.ip`，出现在 `/stats` 面板与 `/stats.csv` 导出 —— **两者都是公开的**） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器） |
+| 明文 IP（`visits.ip`，出现在 `/stats` 面板与 `/stats.csv` 导出 —— **两者都是公开的**） | User-Agent 原文（比 IP 更能识别设备，只粗分成设备/浏览器/机器人家族名） |
 | 国家 / 省 / 城市 / 邮编 / 时区 / 经纬度 / ASN / 接入机房（Cloudflare 自带 GeoIP 按 IP **推断**，不是精确定位，零第三方 SDK） | 任何 localStorage / 广告标识（打点侧零 cookie；面板只在点了 `?lang=` / `?theme=` 时写 `st_lang` / `st_theme` 两个显示偏好，存口味不存身份、不进统计） |
-| `ip_hash`（UV 去重口径）与界面语言 | 公开页脚与免鉴权接口 `/api/summary` 里的 IP、维度、明细路径 |
+| `ip_hash`（UV 去重口径）与界面语言；机器人的家族名（`bot_name`：Googlebot / Bingbot / Baiduspider…，按公开特征串认，认不出留空） | 公开页脚与免鉴权接口 `/api/summary` 里的 IP、维度、明细路径 |
+
+**机器人口径**：机器人判定仍是 UA 粗分（`device = 'bot'`），`bot_name` 只用于展示与
+分组 —— PV / UV 指标卡与趋势图给「全部 + 真人/机器人拆分」两套数；页面、地域、来源、
+浏览器、语言这些**排行类维度只统计真人**（`device <> 'bot'`）；设备构成算全部，另有一张
+按 `bot_name` 分组的「爬虫构成」（认不出或历史行归「其他」）；明细与 CSV 保留全部行、
+带 `bot_name` 可审计。
 
 `ip_hash = SHA-256(IP + 当天日期 + IP_SALT)` 取前 16 位。**掺当天日期**是刻意的：
 同一个人的哈希逐日不同，所以既能在当天算独立访客数（UV），又无法把他在不同天的
@@ -121,15 +128,18 @@ curl https://stats.oaking.kdns.fr/healthz
 ```
 
 面板是分析工作台版式：左侧栏分区锚点，顶栏有时间范围切换（7 / 30 / 90 / 365 天，
-`?days=N`）与 CSV 导出按钮；主体是关键指标卡（PV / UV / 今日 / 覆盖面）、PV-UV 趋势
-SVG、设备构成环形图、地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片、页面
-排行 Top 25，最后是**访客明细表**（最近 50 条：时间、页面、明文 IP、推断位置、
-ASN·机房、设备·浏览器、来源、语言）。整页服务端渲染、零 JS，CSP 依旧
+`?days=N`）与 CSV 导出按钮；主体是关键指标卡（PV / UV / 今日 / 覆盖面，PV·UV 卡
+带真人与机器人拆分副标）、PV-真人PV-UV 三线趋势 SVG、设备构成环形图与「爬虫构成」
+排行、地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片（这五类排行只算真人）、
+页面排行 Top 25，最后是**访客明细表**（最近 50 条：时间、页面、明文 IP、推断位置、
+ASN·机房、设备·浏览器（认出家族的机器人显示「机器人 · Googlebot」）、来源、语言）。
+整页服务端渲染、零 JS，CSP 依旧
 `default-src 'none'`。`?days=N` 可以改范围（1–365）。配色沿用主站「汉 · 南大紫」
 （宣纸底 `#fbf8f1` + 南大紫 `#5C2E83` + 鎏金 `#c8a45c`，标题衬线）。
 
 「人数」的口径是 **按天去重的 UV**：同一天同一个 IP 算一个人；跨天不合并 ——
-因为哈希里掺了日期，跨天本来就无法关联（见上面隐私设计）。
+因为哈希里掺了日期，跨天本来就无法关联（见上面隐私设计）。PV 与设备构成**含机器人**，
+但指标卡副标、趋势图与爬虫构成都给真人/机器人拆分（口径细节见上面「机器人口径」）。
 
 ### 站内显示（页脚计数与文章阅读数）
 
@@ -157,7 +167,7 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 - **定时任务**：每天 UTC 03:17 删掉超过 `RETENTION_DAYS` 的明细，别让库无限长。
   想看某天的原始行：
   ```bash
-  npx wrangler d1 execute site-stats --command "SELECT ts, path, country, city, device FROM visits ORDER BY id DESC LIMIT 20"
+  npx wrangler d1 execute site-stats --command "SELECT ts, path, country, city, device, bot_name FROM visits ORDER BY id DESC LIMIT 20"
   ```
 - **打点失败不影响访客**：端点是独立域名，脚本是 `async` 且全程 try/catch，
   端点挂了只是没有统计，页面照常（`tests/` 里有对应的浏览器行为测试）。
@@ -170,8 +180,8 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>`（也认 Basic 密码半段与 `?key=`，给 curl） | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、地域与来源、页面排行、含 IP 的访客明细）。`?lang=zh\|en` 与 `?theme=light\|dark` 会写 `st_lang` / `st_theme` 偏好 cookie（Path=/、一年、SameSite=Lax）后 302 回去掉参数的地址，之后只认 cookie；裸 `/stats` 不发任何 cookie |
-| `/stats.csv?days=30` | GET | 无（**公开**，与面板一致） | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、来源、语言）；GET/HEAD 之外 405 |
+| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、爬虫构成、地域与来源、页面排行、含 IP 的访客明细）。`?lang=zh\|en` 与 `?theme=light\|dark` 会写 `st_lang` / `st_theme` 偏好 cookie（Path=/、一年、SameSite=Lax）后 302 回去掉参数的地址，之后只认 cookie；裸 `/stats` 不发任何 cookie |
+| `/stats.csv?days=30` | GET | 无（**公开**，与面板一致） | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、机器人名、来源、语言）；GET/HEAD 之外 405 |
 | `/login` | 任何方法 | 无 | 旧地址兼容：一律 302 `/stats`（密码流程已下线，不再有表单与会话 cookie） |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
 
@@ -195,5 +205,7 @@ node --test tests/analytics.test.mjs
 
 用假的 D1 binding 跑，断言「到底往库里写了什么」：明文 IP 与 GeoIP 扩展字段
 （continent/postal/tz/colo…）都落库、同一天同 IP 同哈希、跨天哈希不同、查询串与
-搜索词被丢掉、referrer 只留域名、读接口必须要令牌、面板与 CSV 免凭据直出
-（`/login` 一律 302 回面板、不发任何 cookie）、定时任务按 `RETENTION_DAYS` 删旧行。
+搜索词被丢掉、referrer 只留域名、机器人认家族名写 `bot_name`（认不出留空）、
+读接口必须要令牌、面板与 CSV 免凭据直出
+（`/login` 一律 302 回面板、不发任何 cookie）、排行类维度只统计真人、
+定时任务按 `RETENTION_DAYS` 删旧行。

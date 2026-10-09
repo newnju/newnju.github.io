@@ -10,6 +10,8 @@
 --              免费、不需要任何第三方 SDK。地址是**推断值**，不是精确位置。
 --   ref_host 只留来源**域名**，不留完整 URL —— 完整 referrer 里常有搜索词。
 --   device / browser 由 UA 粗分，不存 UA 原文。
+--   bot_name 机器人的家族名（Googlebot/Bingbot/Baiduspider/…），按公开特征
+--              串认，认不出或历史行为空（面板显示「其他」）。
 --
 -- 注意：给已存在的表加列不能靠这份文件（CREATE TABLE IF NOT EXISTS 不改老表），
 -- 迁移在 .github/workflows/workers.yml 部署步骤里按 PRAGMA table_info 探测后 ALTER。
@@ -34,6 +36,7 @@ CREATE TABLE IF NOT EXISTS visits (
   colo        TEXT,                       -- Cloudflare 接入机房，如 NRT
   device      TEXT,                       -- desktop / mobile / tablet / bot / other
   browser     TEXT,                       -- chrome / safari / firefox / edge / other
+  bot_name    TEXT,                       -- 机器人的家族名（Googlebot/…），非 bot 行为空
   ref_host    TEXT,
   lang        TEXT
 );
