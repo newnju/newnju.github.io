@@ -743,7 +743,7 @@ nav.side-nav a[aria-current="true"]{background:var(--accent-soft);color:var(--ac
 .seg a:hover{text-decoration:none;color:var(--ink)}
 .seg a[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 1px var(--shadow);font-weight:600}
 .tools{display:flex;align-items:center;gap:6px}
-.tool{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);color:var(--muted);font-size:12px}
+.tool{display:inline-flex;align-items:center;gap:6px;height:33px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);color:var(--muted);font-size:12px}
 .tool:hover{color:var(--ink);text-decoration:none;border-color:var(--accent)}
 .tool svg{display:block;flex:0 0 auto}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);font-size:13px;background:var(--accent);color:var(--btn-ink)}
