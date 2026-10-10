@@ -247,8 +247,10 @@ async function stats(env, days) {
   // 「谁在看站」，爬虫不是访客；设备构成仍算全部（机器人是构成的一部分），
   // 另给一张按 bot_name 分组的爬虫表；明细保留全部行、带 bot_name 可审计。
   const HUMAN = `device <> 'bot'`;
-  const [totals, today, reach, daily, paths, countries, regions, cities, refs, devices, browsers, langs, bots, recent] =
-    await Promise.all([
+  const [
+    totals, today, reach, daily, paths, countries, regions, cities, refs,
+    devices, browsers, langs, bots, prev, hourly, botPaths, recent,
+  ] = await Promise.all([
       q(
         `SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv, COUNT(DISTINCT day) AS days,
                 SUM(device = 'bot') AS bot_pv, SUM(${HUMAN}) AS human_pv,
@@ -282,9 +284,29 @@ async function stats(env, days) {
       q(`SELECT COALESCE(ref_host,'直接访问') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 15`, since),
       q(`SELECT device AS k, COUNT(*) AS n FROM visits WHERE ts >= ? GROUP BY k ORDER BY n DESC`, since),
       q(`SELECT browser AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC`, since),
-      q(`SELECT COALESCE(NULLIF(lang,''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 10`, since),
+      // 语言大小写归一化：zh-CN / zh-cn 必须并成一行（浏览器上报口径不统一）
+      q(`SELECT COALESCE(NULLIF(LOWER(lang),''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY k ORDER BY n DESC LIMIT 10`, since),
       // 机器人按家族分组；bot_name 为空（历史行或认不出）归到 '—'，面板显示「其他」
       q(`SELECT COALESCE(NULLIF(bot_name,''),'—') AS k, COUNT(*) AS n FROM visits WHERE ts >= ? AND device = 'bot' GROUP BY k ORDER BY n DESC LIMIT 10`, since),
+      // 环比：紧邻的上一个等长窗口，与 totals 同口径、窗口平移一天数。
+      // 首列故意写成 SUM 在前，避开与 totals 查询相同前缀（测试夹具按前 24 字符取数）
+      q(
+        `SELECT SUM(device = 'bot') AS bot_pv, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv,
+                SUM(${HUMAN}) AS human_pv,
+                COUNT(DISTINCT CASE WHEN ${HUMAN} THEN ip_hash END) AS human_uv
+           FROM visits WHERE ts >= ? AND ts < ?`,
+        since - days * 86400,
+        since,
+      ),
+      // 时段分布：真人访问按 UTC 小时聚合（页面所有时间本来就标 UTC）
+      q(
+        `SELECT CAST((ts % 86400) / 3600 AS INTEGER) AS h, COUNT(*) AS n
+           FROM visits WHERE ts >= ? AND ${HUMAN} GROUP BY h`,
+        since,
+      ),
+      // 爬虫抓取榜：机器人最爱访问的路径。首列 COUNT 在前，与真人 pages 查询
+      // 的「path 在前」错开前缀，两张表在测试里互不串味
+      q(`SELECT COUNT(*) AS n, path FROM visits WHERE ts >= ? AND device = 'bot' GROUP BY path ORDER BY n DESC LIMIT 10`, since),
       // 访客明细：IP 与地址推断字段都在这里（面板密码后面，不对外）
       q(
         `SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,
@@ -298,6 +320,7 @@ async function stats(env, days) {
   const t = rows(totals)[0] ?? { pv: 0, uv: 0, days: 0 };
   const td = rows(today)[0] ?? { pv: 0, uv: 0 };
   const reachRow = rows(reach)[0] ?? {};
+  const prevRow = rows(prev)[0] ?? {};
   return {
     days,
     generated_at: new Date().toISOString(),
@@ -309,6 +332,14 @@ async function stats(env, days) {
       today_pv: td.pv ?? 0,
       today_uv: td.uv ?? 0,
     },
+    // 上一等长窗口（环比基准）；空库时全是 0，面板显示「—」
+    prev: {
+      pv: prevRow.pv ?? 0,
+      uv: prevRow.uv ?? 0,
+      bot_pv: prevRow.bot_pv ?? 0,
+      human_pv: prevRow.human_pv ?? 0,
+      human_uv: prevRow.human_uv ?? 0,
+    },
     reach: {
       countries: reachRow.countries ?? 0,
       regions: reachRow.regions ?? 0,
@@ -316,7 +347,9 @@ async function stats(env, days) {
       paths: reachRow.paths ?? 0,
     },
     daily: rows(daily),
+    hourly: rows(hourly),
     paths: rows(paths),
+    bot_paths: rows(botPaths),
     countries: rows(countries),
     regions: rows(regions),
     cities: rows(cities),
@@ -505,12 +538,16 @@ const I18N = {
     geoSub: '国家 / 省 / 城市（GeoIP 推断）',
     chartTrend: 'PV / UV 趋势',
     trendAria: '每日 PV、真人 PV 与 UV 趋势',
+    pointTip: (day, pv, hpv, uv) => `${day} · PV ${pv} · 真人 ${hpv} · UV ${uv}`,
     legendPv: '浏览量 PV（全部）',
     legendHuman: '真人 PV',
     legendUv: '独立访客 UV（虚线）',
     chartDonut: '设备构成',
     donutAria: '设备构成环形图',
     donutUnit: '浏览量',
+    chartHour: '访问时段（UTC）',
+    hourAria: '24 小时访问分布',
+    hourTip: (h, n) => `${String(h).padStart(2, '0')}:00 UTC · ${n}`,
     botsTitle: '爬虫构成',
     otherBot: '其他',
     hCountry: '国家 / 地区',
@@ -520,6 +557,8 @@ const I18N = {
     hBrowser: '浏览器',
     hLang: '界面语言',
     pagesSub: 'PV 前 25',
+    hHumanPages: '真人排行',
+    hBotPages: '爬虫抓取榜',
     detailSub: '最近 50 条 · 含明文 IP 与推断位置',
     detailHead: ['时间 (UTC)', '页面', 'IP', '位置（推断）', '网络', '设备 · 浏览器', '来源', '语言'],
     name: '名称',
@@ -541,11 +580,11 @@ const I18N = {
     todayUvS: '今天到目前为止',
     daysL: '有记录的天数',
     countriesL: '国家 / 地区',
-    countriesS: (n) => `省 / 州 ${n}`,
+    regionsL: '省 / 州',
     citiesL: '城市',
-    citiesS: 'GeoIP 推断值',
     pathsL: '覆盖页面',
-    pathsS: '有记录的站内路径',
+    reachL: '覆盖面',
+    deltaTip: (n) => `较上一个 ${n} 天`,
     switchLang: 'English',
     switchLangTitle: 'Switch to English',
     themeToggle: '切换明暗主题',
@@ -575,12 +614,16 @@ const I18N = {
     geoSub: 'Country / region / city (GeoIP inferred)',
     chartTrend: 'PV / UV trend',
     trendAria: 'Daily PV, human PV and UV trend',
+    pointTip: (day, pv, hpv, uv) => `${day} · PV ${pv} · human ${hpv} · UV ${uv}`,
     legendPv: 'Page views PV (all)',
     legendHuman: 'Human PV',
     legendUv: 'Unique visitors UV (dashed)',
     chartDonut: 'Devices',
     donutAria: 'Device mix donut chart',
     donutUnit: 'Page views',
+    chartHour: 'Hour of day (UTC)',
+    hourAria: 'Visits by hour of day',
+    hourTip: (h, n) => `${String(h).padStart(2, '0')}:00 UTC · ${n}`,
     botsTitle: 'Crawlers',
     otherBot: 'Other',
     hCountry: 'Country / region',
@@ -590,6 +633,8 @@ const I18N = {
     hBrowser: 'Browser',
     hLang: 'Interface language',
     pagesSub: 'Top 25 by PV',
+    hHumanPages: 'Humans',
+    hBotPages: 'Crawler hits',
     detailSub: 'Latest 50 rows · plain IP and inferred location',
     detailHead: ['Time (UTC)', 'Page', 'IP', 'Location (inferred)', 'Network', 'Device · Browser', 'Referrer', 'Language'],
     name: 'Name',
@@ -611,11 +656,11 @@ const I18N = {
     todayUvS: 'so far today',
     daysL: 'Days with records',
     countriesL: 'Countries',
-    countriesS: (n) => `Regions ${n}`,
+    regionsL: 'Regions',
     citiesL: 'Cities',
-    citiesS: 'GeoIP inferred',
     pathsL: 'Pages covered',
-    pathsS: 'tracked in-site paths',
+    reachL: 'Reach',
+    deltaTip: (n) => `vs previous ${n} days`,
     switchLang: '中文',
     switchLangTitle: '切换为中文',
     themeToggle: 'Switch between light and dark',
@@ -680,18 +725,63 @@ function trendSvg(daily, L) {
   for (let i = 0; i < daily.length; i += step) tickIdx.push(i);
   if (tickIdx[tickIdx.length - 1] !== daily.length - 1) tickIdx.push(daily.length - 1);
   const xt = tickIdx
-    .map((i) => `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="middle">${daily[i].day.slice(5)}</text>`)
+    .map((i) => {
+      // 首尾标签改用 start/end 锚点，不然 5 个字符的日期在 viewBox 边缘会被裁掉
+      const anchor = i === 0 ? 'start' : i === daily.length - 1 ? 'end' : 'middle';
+      return `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="${anchor}">${daily[i].day.slice(5)}</text>`;
+    })
     .join('');
-  const dot = daily.length === 1
-    ? `<circle cx="${X(0).toFixed(1)}" cy="${Y(daily[0].pv).toFixed(1)}" r="3" fill="var(--accent)"/>`
-    : '';
+  // 数据点带原生 tooltip（<title>，零 JS）；天数太多就不铺点，免得 DOM 膨胀
+  const dots =
+    daily.length <= 90
+      ? daily
+          .map(
+            (d, i) =>
+              `<circle cx="${X(i).toFixed(1)}" cy="${Y(d.pv).toFixed(1)}" r="3" fill="var(--accent)"><title>${esc(
+                L.pointTip(d.day, fmtNum(d.pv), fmtNum(d.hpv ?? 0), fmtNum(d.uv)),
+              )}</title></circle>`,
+          )
+          .join('')
+      : '';
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="220" role="img" aria-label="${esc(L.trendAria)}">
  ${grid}
 <path d="${line('pv')}L${X(daily.length - 1).toFixed(1)},${base}L${X(0).toFixed(1)},${base}Z" fill="var(--accent-soft)"/>
  <path d="${line('pv')}" fill="none" stroke="var(--accent)" stroke-width="2"/>
  <path d="${line('hpv')}" fill="none" stroke="var(--c3)" stroke-width="1.6"/>
  <path d="${line('uv')}" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 4"/>
-${dot}${xt}
+${dots}${xt}
+</svg>`;
+}
+
+/** 访问时段：真人访问按 UTC 小时的 24 格条形图（服务端 SVG、零 JS，悬停用 <title>） */
+function hourSvg(rows, L) {
+  const W = 360, H = 150, PL = 26, PR = 8, PT = 12, PB = 24;
+  const byH = new Map(rows.map((r) => [Number(r.h), Number(r.n) || 0]));
+  const vals = Array.from({ length: 24 }, (_, h) => byH.get(h) ?? 0);
+  const maxY = niceMax(Math.max(...vals, 1));
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const slot = iw / 24;
+  const bw = Math.max(3, slot - 4);
+  const yTop = PT;
+  const yBase = PT + ih;
+  let bars = '';
+  for (let h = 0; h < 24; h++) {
+    const v = vals[h];
+    const hgt = v > 0 ? Math.max(2, (v / maxY) * ih) : 0;
+    const x = PL + h * slot + (slot - bw) / 2;
+    bars +=
+      `<rect x="${x.toFixed(1)}" y="${(yBase - hgt).toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" fill="var(--accent)">` +
+      `<title>${esc(L.hourTip(h, fmtNum(v)))}</title></rect>`;
+  }
+  const xt = [0, 6, 12, 18]
+    .map((h) => `<text x="${(PL + h * slot + slot / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${String(h).padStart(2, '0')}</text>`)
+    .join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="150" role="img" aria-label="${esc(L.hourAria)}">
+ <line class="grid" x1="${PL}" y1="${yTop}" x2="${W - PR}" y2="${yTop}"/>
+ <text x="${PL - 6}" y="${yTop + 3}" text-anchor="end">${fmtNum(maxY)}</text>
+ <line class="grid" x1="${PL}" y1="${yBase}" x2="${W - PR}" y2="${yBase}"/>
+ <text x="${PL - 6}" y="${yBase + 3}" text-anchor="end">0</text>
+${bars}${xt}
 </svg>`;
 }
 
@@ -718,17 +808,37 @@ function dashboard(data, opts = {}) {
   const { retention = 180, lang = 'zh', theme = null, iconTheme = 'light', toggleTheme = 'dark' } = opts;
   const L = I18N[lang] || I18N.zh;
   const t = data.totals ?? {};
+  const prev = data.prev ?? {};
   const reach = data.reach ?? {};
   const daily = data.daily ?? [];
   const days = data.days ?? 30;
   const range = daily.length ? `${daily[0].day} ~ ${daily[daily.length - 1].day}` : L.noRecords(days);
+  // 生成时间：ISO 原文带毫秒太扎眼，展示层收成「2026-10-10 13:54 UTC」
+  const genAt = String(data.generated_at || '').replace(
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?Z$/,
+    '$1 $2 UTC',
+  );
 
-  const metric = (label, value, sub, hi = false) => `
+  const metric = (label, value, sub, hi = false, delta = '') => `
     <div class="card metric${hi ? ' hi' : ''}">
       <div class="v">${esc(value)}</div>
       <div class="l">${esc(label)}</div>
       ${sub ? `<div class="s">${esc(sub)}</div>` : ''}
+      ${delta}
     </div>`;
+
+  // 环比徽标：本期 vs 紧邻的上一个等长窗口。上期为 0（还没数据或全新周期）
+  // 不做除法，显示「—」
+  const delta = (cur, prev) => {
+    const title = esc(L.deltaTip(days));
+    if (!(prev > 0)) return `<div class="d none" title="${title}">—</div>`;
+    const pct = Math.round(((cur - prev) / prev) * 100);
+    const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+    const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '';
+    return `<div class="d ${cls}" title="${title}">${arrow} ${Math.abs(pct)}%</div>`;
+  };
+
+  const chip = (v, label) => `<span class="chip"><b>${fmtNum(v)}</b>${esc(label)}</span>`;
 
   const listTable = (rows, fmt, countHead = L.count) => {
     if (!rows?.length) return `<p class="empty">${L.empty}</p>`;
@@ -795,6 +905,16 @@ function dashboard(data, opts = {}) {
     .map((id, i) => `<a href="#${id}"${i === 0 ? ' aria-current="true"' : ''}>${esc(L.nav[i])}</a>`)
     .join('');
 
+  // 页面排行双列：真人榜（口径不变）+ 爬虫抓取榜（有机器人数据才出第二列）
+  const pageRow = (r) => `<span class="code">${esc(r.path)}</span>`;
+  const botPaths = data.bot_paths ?? [];
+  const pagesBlock = botPaths.length
+    ? `<div class="chart-grid">
+    <div class="card mini"><h3>${esc(L.hHumanPages)}</h3>${listTable(data.paths ?? [], pageRow, L.pvCol)}</div>
+    <div class="card mini"><h3>${esc(L.hBotPages)}</h3>${listTable(botPaths, pageRow, L.pvCol)}</div>
+   </div>`
+    : `<div class="card mini">${listTable(data.paths ?? [], pageRow, L.pvCol)}</div>`;
+
   return `<!doctype html><html lang="${L.htmlLang}"${theme ? ` data-theme="${theme}"` : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
@@ -848,6 +968,15 @@ main{padding:24px 28px 48px;max-width:1180px;width:100%}
 .metric .l{font-size:12px;color:var(--muted);margin-top:2px}
 .metric .s{font-size:11px;color:var(--muted);margin-top:6px}
 .metric.hi{background:var(--accent-soft);border-color:var(--accent-border)}
+.metric .d{font-size:11px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+.metric .d.up{color:var(--c3)}
+.metric .d.down{color:var(--c6)}
+.metric .d.flat,.metric .d.none{color:var(--muted)}
+.metric.chips{grid-column:1/-1}
+.metric.chips .l{margin-bottom:10px}
+.chips-row{display:flex;flex-wrap:wrap;gap:8px 24px}
+.chip{font-size:12px;color:var(--muted)}
+.chip b{color:var(--ink);font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;margin-right:5px}
 .chart-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:12px}
 .chart-card{padding:14px 16px 12px}
 .chart-card h3{font-size:13px;margin:0 0 8px}
@@ -868,6 +997,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--bg)}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.nm{max-width:260px;word-break:break-all}
 .bar{height:6px;background:var(--accent-soft);border-radius:var(--r-sm);overflow:hidden;min-width:48px}
@@ -909,21 +1039,26 @@ td.nm{max-width:260px;word-break:break-all}
   <section class="block" id="overview">
    <div class="greet">
     <h1>${esc(L.greet)}</h1>
-    <p>${esc(L.greetLine(range, data.generated_at))}</p>
+    <p>${esc(L.greetLine(range, genAt))}</p>
    </div>
   </section>
 
   <section class="block" id="metrics">
    <div class="block-head"><h2>${esc(L.h.metrics)}</h2><span class="block-sub">${esc(L.daysSum(days))}</span></div>
    <div class="metric-grid">
-    ${metric(L.pvL, fmtNum(t.pv), L.pvS(fmtNum(days ? (t.pv ?? 0) / days : 0), fmtNum(t.human_pv ?? 0)), true)}
-    ${metric(L.uvL, fmtNum(t.uv), L.uvS(fmtNum(t.human_uv ?? 0), fmtNum(t.bot_pv ?? 0)), true)}
+    ${metric(L.pvL, fmtNum(t.pv), L.pvS(fmtNum(days ? (t.pv ?? 0) / days : 0), fmtNum(t.human_pv ?? 0)), true, delta(t.pv ?? 0, prev.pv ?? 0))}
+    ${metric(L.uvL, fmtNum(t.uv), L.uvS(fmtNum(t.human_uv ?? 0), fmtNum(t.bot_pv ?? 0)), true, delta(t.uv ?? 0, prev.uv ?? 0))}
     ${metric(L.todayPvL, fmtNum(t.today_pv), L.todayPvS(fmtNum(t.today_uv)))}
     ${metric(L.todayUvL, fmtNum(t.today_uv), L.todayUvS)}
-    ${metric(L.daysL, fmtNum(t.days), range)}
-    ${metric(L.countriesL, fmtNum(reach.countries), L.countriesS(fmtNum(reach.regions)))}
-    ${metric(L.citiesL, fmtNum(reach.cities), L.citiesS)}
-    ${metric(L.pathsL, fmtNum(reach.paths), L.pathsS)}
+    <div class="card metric chips">
+     <div class="l">${esc(L.reachL)}</div>
+     <div class="chips-row">
+      ${chip(t.days, L.daysL)}${chip(reach.countries, L.countriesL)}${chip(reach.regions, L.regionsL)}${chip(
+        reach.cities,
+        L.citiesL,
+      )}${chip(reach.paths, L.pathsL)}
+     </div>
+    </div>
    </div>
   </section>
 
@@ -945,6 +1080,14 @@ td.nm{max-width:260px;word-break:break-all}
         ? `<figure class="card chart-card">
      <h3>${esc(L.botsTitle)}</h3>
      ${listTable(data.bots, (r) => esc(r.k === '—' ? L.otherBot : r.k), L.pvCol)}
+    </figure>`
+        : ''
+    }
+    ${
+      (data.hourly ?? []).length
+        ? `<figure class="card chart-card">
+     <h3>${esc(L.chartHour)}</h3>
+     ${hourSvg(data.hourly, L)}
     </figure>`
         : ''
     }
@@ -971,7 +1114,7 @@ td.nm{max-width:260px;word-break:break-all}
 
   <section class="block" id="pages">
    <div class="block-head"><h2>${esc(L.h.pages)}</h2><span class="block-sub">${esc(L.pagesSub)}</span></div>
-   <div class="card mini">${listTable(data.paths ?? [], (r) => `<span class="code">${esc(r.path)}</span>`, L.pvCol)}</div>
+   ${pagesBlock}
   </section>
 
   <section class="block" id="detail">

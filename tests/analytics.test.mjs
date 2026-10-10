@@ -568,6 +568,88 @@ test('仪表盘：有机器人数据时出「爬虫构成」，认不出的家�
   assert.ok(!/>—<\/td>/.test(body), 'SQL 占位符不该直接漏到界面上');
 });
 
+test('环比：指标卡挂 ↑↓ 徽标，基准是紧邻的上一个等长窗口；上期为 0 显「—」', async () => {
+  const totalsKey = K('SELECT COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv, COUNT(DISTINCT day)');
+  const prevKey = K("SELECT SUM(device = 'bot') AS bot_pv, COUNT(*) AS pv");
+  const DB = fakeDb({
+    [totalsKey]: [{ pv: 100, uv: 10, days: 12, bot_pv: 40, human_pv: 60, human_uv: 8 }],
+    [prevKey]: [{ pv: 50, uv: 5, bot_pv: 30, human_pv: 20, human_uv: 3 }],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const body = await res.text();
+  assert.match(body, /class="d up"[^>]*>↑ 100%/, 'PV 100 vs 上期 50 → ↑100%');
+  assert.match(body, /title="较上一个 30 天"/, '徽标 title 标明对比窗口');
+  const prevQ = DB.calls.find((c) => c.sql.includes('ts >= ? AND ts < ?'));
+  assert.ok(prevQ, '上期窗口查询存在');
+  assert.equal(prevQ.args.length, 2, '两个绑定：窗口下界与上界');
+  assert.equal(prevQ.args[1] - prevQ.args[0], 30 * 86400, '窗口长度正好等于 days');
+  assert.match(body, /class="chips-row"/, '低价值指标收进覆盖面 chips 条');
+  assert.match(body, /<div class="l">覆盖面<\/div>/);
+
+  // 上期没数据：不做除法，徽标显「—」而不是 NaN
+  const res2 = await worker.fetch(new Request(`${ORIGIN}/stats`), {
+    ...ENV,
+    DB: fakeDb({ [totalsKey]: [{ pv: 7, uv: 2 }] }),
+  });
+  assert.match(await res2.text(), /class="d none"[^>]*>—</);
+});
+
+test('时段分布：24 格条形卡按需渲染、只算真人，悬停是原生 <title>；没数据不出卡', async () => {
+  const hourKey = K('SELECT CAST((ts % 86400) / 3600 AS INTEGER) AS h');
+  const DB = fakeDb({ [hourKey]: [{ h: 3, n: 5 }, { h: 14, n: 2 }] });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const body = await res.text();
+  assert.match(body, /<h3>访问时段（UTC）<\/h3>/);
+  assert.match(body, /03:00 UTC · 5/, '悬停文案带小时与次数');
+  assert.match(body, /14:00 UTC · 2/);
+  const hourQ = DB.calls.find((c) => c.sql.includes('(ts % 86400) / 3600'));
+  assert.ok(hourQ && /device <> 'bot'/.test(hourQ.sql), '时段只统计真人');
+  assert.ok(!body.includes('<script'), '时段卡同样零脚本');
+
+  const res2 = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB: fakeDb() });
+  const body2 = await res2.text();
+  assert.ok(!body2.includes('访问时段'), '没数据不渲染时段卡');
+});
+
+test('语言排行按 LOWER 归一化；页面排行双列：真人榜口径不变 + 爬虫抓取榜', async () => {
+  const DB = fakeDb({
+    [K("SELECT COUNT(*) AS n, path FROM visits WHERE ts >= ? AND device = 'bot'")]: [
+      { path: '/robots.txt', n: 9 },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const body = await res.text();
+  const langQ = DB.calls.find((c) => c.sql.includes('LOWER(lang)'));
+  assert.ok(langQ, '语言分组用 LOWER 归一化（zh-CN / zh-cn 并成一行）');
+  assert.match(langQ.sql, /device <> 'bot'/, '语言排行仍只算真人');
+  const botQ = DB.calls.find((c) => c.sql.includes('COUNT(*) AS n, path'));
+  assert.ok(botQ && /device = 'bot'/.test(botQ.sql), '爬虫抓取榜只算机器人');
+  const humanQ = DB.calls.find((c) => c.sql.includes('SELECT path, COUNT(*) AS n'));
+  assert.ok(humanQ && /device <> 'bot'/.test(humanQ.sql), '真人排行口径不变');
+  assert.match(body, /<h3>爬虫抓取榜<\/h3>/);
+  assert.match(body, /\/robots\.txt/);
+  assert.match(body, /<h3>真人排行<\/h3>/, '双列时两张表各有标题');
+});
+
+test('趋势图铺数据点、悬停出原生 tooltip；生成时间收成「YYYY-MM-DD HH:MM UTC」', async () => {
+  const DB = fakeDb({
+    [K('SELECT day, COUNT(*) AS pv, COUNT(DISTINCT ip_hash) AS uv')]: [
+      { day: '2026-10-07', pv: 2, uv: 1, hpv: 1, huv: 1, bpv: 1 },
+      { day: '2026-10-08', pv: 5, uv: 3, hpv: 2, huv: 2, bpv: 3 },
+    ],
+  });
+  const res = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB });
+  const body = await res.text();
+  assert.match(
+    body,
+    /<circle[^>]*><title>2026-10-07 · PV 2 · 真人 1 · UV 1<\/title><\/circle>/,
+    '数据点带当日 PV/真人/UV 的原生 tooltip',
+  );
+  assert.match(body, /生成于 20\d\d-\d\d-\d\d \d\d:\d\d UTC/, '展示层收掉毫秒');
+  assert.ok(!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/.test(body), 'ISO 毫秒原文不漏到界面上');
+  assert.ok(!body.includes('<script'), 'tooltip 不引任何脚本');
+});
+
 test('仪表盘：明细渲染明文 IP、GeoIP 推断位置、中文国家名与网络信息', async () => {
   const DB = fakeDb({
     [K('SELECT ts, day, path, ip, continent, country, region, city, postal, tz, lat, lon, asn, colo,')]: [
@@ -658,8 +740,8 @@ test('/api/stats：JSON 口拿到扩展维度（recent 含 ip 与推断字段）
   assert.ok(body.recent[0].continent === 'AS');
   assert.ok('bot_name' in body.recent[0], 'recent 行带 bot_name，可审计机器人身份');
   assert.deepEqual(Object.keys(body).sort(), [
-    'bots', 'browsers', 'cities', 'countries', 'daily', 'days', 'devices', 'generated_at',
-    'languages', 'paths', 'reach', 'recent', 'referrers', 'regions', 'totals',
+    'bot_paths', 'bots', 'browsers', 'cities', 'countries', 'daily', 'days', 'devices', 'generated_at',
+    'hourly', 'languages', 'paths', 'prev', 'reach', 'recent', 'referrers', 'regions', 'totals',
   ]);
 });
 

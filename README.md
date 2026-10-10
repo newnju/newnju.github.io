@@ -799,7 +799,7 @@ bundle exec jekyll serve
 ├── analytics/           访客统计的 Cloudflare Worker + D1（不发布到站点；默认关闭，见其 README）
 ├── schemas/             内容校验规则（validate.mjs 读这里）
 ├── tools/               内容生成器、校验器、结构检查器、中英同步与自动翻译（npm run check 跑这些）
-├── tests/               回归测试（npm test，106 个：渲染产物、Decap 字段一致性、OAuth 门、访客统计）
+├── tests/               回归测试（npm test，110 个：渲染产物、Decap 字段一致性、OAuth 门、访客统计）
 ├── .github/workflows/   CI：pages.yml 先校验测试再 Jekyll 构建、检查产物、部署站点；workers.yml 部署两个 Cloudflare Worker
 ├── assets/              样式与脚本（han.js 为本站自定义脚本：BibTeX 复制、引用复制、缩略图导航；页面引的 *.min.js 由 npm run build:js 从同目录源码压缩）
 ├── robots.txt           允许全站抓取，并声明 Sitemap 位置

@@ -128,12 +128,16 @@ curl https://stats.oaking.kdns.fr/healthz
 ```
 
 面板是分析工作台版式：左侧栏分区锚点，顶栏有时间范围切换（7 / 30 / 90 / 365 天，
-`?days=N`）与 CSV 导出按钮；主体是关键指标卡（PV / UV / 今日 / 覆盖面，PV·UV 卡
-带真人与机器人拆分副标）、PV-真人PV-UV 三线趋势 SVG、设备构成环形图与「爬虫构成」
-排行、地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片（这五类排行只算真人）、
-页面排行 Top 25，最后是**访客明细表**（最近 50 条：时间、页面、明文 IP、推断位置、
-ASN·机房、设备·浏览器（认出家族的机器人显示「机器人 · Googlebot」）、来源、语言）。
-整页服务端渲染、零 JS，CSP 依旧
+`?days=N`）与 CSV 导出按钮；主体是**四张主指标卡**（PV / UV / 今日 PV / 今日 UV，
+PV·UV 卡带真人与机器人拆分副标和**环比徽标** —— 与紧邻的上一个等长窗口比 ↑↓%，
+上期为 0 显「—」）+ 一条覆盖面 chips（天数 · 国家 · 省 · 城市 · 页面），PV-真人PV-UV
+三线趋势 SVG（数据点悬停出原生 `<title>` tooltip，天数太多不铺点）、设备构成环形图、
+「爬虫构成」与**「访问时段」24 格条形图**（真人 · UTC 小时，同样 `<title>` 悬停）、
+地域（国家 / 省 / 城市）与来源 / 浏览器 / 语言三栏卡片（这五类排行只算真人，语言按
+`LOWER()` 归一化，`zh-CN`/`zh-cn` 不再分行）、页面排行**双列**（真人 Top 25 + 爬虫
+抓取榜，有机器人数据才出第二列），最后是**访客明细表**（最近 50 条：时间、页面、
+明文 IP、推断位置、ASN·机房、设备·浏览器（认出家族的机器人显示「机器人 ·
+Googlebot」）、来源、语言）。整页服务端渲染、零 JS，CSP 依旧
 `default-src 'none'`。`?days=N` 可以改范围（1–365）。配色沿用主站「汉 · 南大紫」
 （宣纸底 `#fbf8f1` + 南大紫 `#5C2E83` + 鎏金 `#c8a45c`，标题衬线）。
 
@@ -180,7 +184,7 @@ curl "https://stats.oaking.kdns.fr/api/summary?path=/cv/"          # 多回 {pat
 | `/api/visit` | POST | 仅限 `ALLOWED_ORIGIN` 来源 | 记一行访客数据 |
 | `/api/stats?days=30` | GET | `Authorization: Bearer <STATS_TOKEN>`（也认 Basic 密码半段与 `?key=`，给 curl） | 统计 JSON |
 | `/api/summary` | GET | 无（**公开**，只回计数） | 站内显示用：`pv`（累计）、`today_pv`、`today_uv`；带 `?path=` 时多回该页的 `page_pv`。**不含任何维度**（国家/城市/来源一概没有），60 秒缓存 |
-| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：指标卡、趋势/构成 SVG、爬虫构成、地域与来源、页面排行、含 IP 的访客明细）。`?lang=zh\|en` 与 `?theme=light\|dark` 会写 `st_lang` / `st_theme` 偏好 cookie（Path=/、一年、SameSite=Lax）后 302 回去掉参数的地址，之后只认 cookie；裸 `/stats` 不发任何 cookie |
+| `/stats` | GET | 无（**公开，点开就看**） | 统计面板（工作台仪表盘：主指标卡带环比徽标与覆盖面 chips、趋势/构成/时段 SVG、爬虫构成、地域与来源、页面排行（真人 + 爬虫双列）、含 IP 的访客明细）。`?lang=zh\|en` 与 `?theme=light\|dark` 会写 `st_lang` / `st_theme` 偏好 cookie（Path=/、一年、SameSite=Lax）后 302 回去掉参数的地址，之后只认 cookie；裸 `/stats` 不发任何 cookie |
 | `/stats.csv?days=30` | GET | 无（**公开**，与面板一致） | 明细 CSV 导出（10000 行内：时间、路径、IP、地址推断字段、设备、浏览器、机器人名、来源、语言）；GET/HEAD 之外 405 |
 | `/login` | 任何方法 | 无 | 旧地址兼容：一律 302 `/stats`（密码流程已下线，不再有表单与会话 cookie） |
 | `/healthz` | GET | 无 | `{ok, db, token}` |
