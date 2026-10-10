@@ -224,6 +224,13 @@ async function handleCallback(request, url, env) {
     return deny(400, 'state 校验失败（可能是链接过期），请回主窗口重新点登录。');
   }
 
+  // state 都对上了才检查配置：密钥中途被清掉时给一句人话，
+  // 而不是让 URLSearchParams 把 undefined 拼成字符串去问 GitHub
+  if (!env.GITHUB_OAUTH_ID || !env.GITHUB_OAUTH_SECRET) {
+    await audit(env, request, { name: 'login_config_missing', user: null });
+    return deny(500, '服务端还没配 GITHUB_OAUTH_ID / GITHUB_OAUTH_SECRET，见 oauth-proxy/README.md。');
+  }
+
   const body = new URLSearchParams({
     client_id: env.GITHUB_OAUTH_ID,
     client_secret: env.GITHUB_OAUTH_SECRET,
@@ -232,15 +239,23 @@ async function handleCallback(request, url, env) {
     grant_type: 'authorization_code',
   });
 
-  const res = await fetch(GITHUB_TOKEN, {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/x-www-form-urlencoded',
-      'user-agent': 'decap-oauth-proxy',
-    },
-    body: body.toString(),
-  });
+  // fetch 对 DNS/连接失败会抛 —— 没有这层 catch 就是 Worker 裸异常（1101
+  // 错误页），弹窗上一句解释都没有，审计日志里也查不到这次失败
+  let res;
+  try {
+    res = await fetch(GITHUB_TOKEN, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/x-www-form-urlencoded',
+        'user-agent': 'decap-oauth-proxy',
+      },
+      body: body.toString(),
+    });
+  } catch (err) {
+    await audit(env, request, { name: 'token_exchange_failed', user: null, detail: { reason: String(err) } });
+    return deny(502, '连不上 GitHub，请稍后回主窗口重试。');
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.access_token) {
@@ -250,9 +265,15 @@ async function handleCallback(request, url, env) {
   }
 
   // 拿到了 token，先确认这人是谁 —— 白名单校验必须在把 token 交出去之前。
-  const who = await githubJson(GITHUB_USER, {
-    headers: { authorization: `Bearer ${data.access_token}` },
-  });
+  let who;
+  try {
+    who = await githubJson(GITHUB_USER, {
+      headers: { authorization: `Bearer ${data.access_token}` },
+    });
+  } catch (err) {
+    await audit(env, request, { name: 'identity_failed', user: null, detail: { reason: String(err) } });
+    return deny(502, '没能确认你的 GitHub 身份（网络抖动），请回主窗口重新点登录。');
+  }
   const login = who.ok ? String(who.data.login ?? '') : '';
 
   if (!who.ok || !login) {

@@ -16,10 +16,21 @@ const MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.mi
 // Detect OS/browser preference
 const browserPref = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+// localStorage 在少数环境会直接抛（老 Safari 隐私模式、禁站内数据的浏览器、
+// 被 sandbox 的 iframe）—— 不包一层的话 determineComputedTheme / setTheme /
+// toggleTheme 任何一处抛掉，主题切换整组按钮就死了。读失败当「没存过」，
+// 写失败静默忽略：配色退回跟随系统，比整个脚本崩掉强。
+function themeStorageGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function themeStorageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* 存不下就下次再问 */ }
+}
+
 // Determine the computed theme, which can be "dark" or "light".
 function determineComputedTheme() {
   // Determine the expected state of the theme toggle, which can be "dark", "light", or default "system"
-  let themeSetting = localStorage.getItem("theme");
+  let themeSetting = themeStorageGet("theme");
   themeSetting = (themeSetting != "dark" && themeSetting != "light" && themeSetting != "system") ? "system" : themeSetting;
 
   // Return the setting if set, or use the browser preference
@@ -57,7 +68,7 @@ function swapThemeIcon(isDark) {
 // Set the theme on page load or when explicitly called
 function setTheme(theme) {
   const use_theme = theme ||
-    localStorage.getItem("theme") ||
+    themeStorageGet("theme") ||
     document.documentElement.getAttribute("data-theme") ||
     browserPref;
 
@@ -75,7 +86,7 @@ function setTheme(theme) {
 function toggleTheme() {
   const current_theme = document.documentElement.getAttribute("data-theme");
   const new_theme = current_theme === "dark" ? "light" : "dark";
-  localStorage.setItem("theme", new_theme);
+  themeStorageSet("theme", new_theme);
   setTheme(new_theme);
   redrawPlotly();
 }
@@ -83,7 +94,7 @@ function toggleTheme() {
 // Defer the loading of Mermaid to only if there is a field on the page to be rendered
 let mermaidElements = document.querySelectorAll("pre>code.language-mermaid");
 if (mermaidElements.length > 0) {
-  document.addEventListener("readystatechange", function() {
+  whenComplete(function () {
     // Append the Mermaid module to the DOM
     const moduleScript = document.createElement('script');
     moduleScript.type = 'module';
@@ -93,6 +104,23 @@ if (mermaidElements.length > 0) {
       await mermaid.run({querySelector:'code.language-mermaid'});
     `;
     document.body.appendChild(moduleScript);
+  });
+}
+
+// 原来两个加载器只挂 readystatechange 监听：模块脚本通常在 readyState
+// "interactive" 时执行，下一次事件就是 "complete"，所以平时没事 —— 但脚本
+// 若因任何原因在 "complete" 之后才跑（注入、恢复式加载），那个事件已经
+// 过去了，监听器永远不会触发，图就永远不渲染。这里补一条「已经 complete
+// 就立刻跑」的通路，两种时序都成立。
+function whenComplete(fn) {
+  if (document.readyState === "complete") {
+    fn();
+    return;
+  }
+  document.addEventListener("readystatechange", function on() {
+    if (document.readyState !== "complete") return;
+    document.removeEventListener("readystatechange", on);
+    fn();
   });
 }
 
@@ -107,12 +135,7 @@ if (mermaidElements.length > 0) {
 // NOTE that plotlyDarkLayout and plotlyLightLayout will be exposed in the minimized file
 let plotlyElements = document.querySelectorAll("pre>code.language-plotly");
 if (plotlyElements.length > 0) {
-  document.addEventListener("readystatechange", function() {
-    // Return if not ready
-    if (document.readyState !== "complete") {
-      return;
-    }
-
+  whenComplete(function () {
     // Prepare to load Plotly from the CDN
     const script = document.createElement('script');
     script.src = PLOTLY_URL;
@@ -146,6 +169,8 @@ if (plotlyElements.length > 0) {
 }
 
 function redrawPlotly() {
+  // 库还在下载 / CDN 挂了时主题按钮不该报错：没就绪就等下一次切换再画
+  if (typeof Plotly === "undefined") return;
   plotlyElements.forEach(function(elem) {
     // Parse the Plotly JSON data
     let jsonData = JSON.parse(elem.textContent);
@@ -190,7 +215,7 @@ whenReady(function () {
   // 一起带崩（切换按钮就成了死的）。
   const scheme = window.matchMedia('(prefers-color-scheme: dark)');
   const onScheme = (e) => {
-    if (!localStorage.getItem("theme")) {
+    if (!themeStorageGet("theme")) {
       setTheme(e.matches ? "dark" : "light");
     }
   };

@@ -230,7 +230,9 @@ node --test tests/oauth-proxy.test.mjs
 全程离线（GitHub 那两个端点用假 fetch 顶掉），断言的是「门」的行为：白名单没配时
 `/auth` 拒绝且不出网、鉴权在 token 之前、白名单外的响应里绝不出现 token、
 postMessage 不许出现 `'*'`、token 页面不缓存不可被套 iframe、state 用完即废、
-`/healthz` 不泄露白名单。改 `worker.js` 之后先跑这个 —— CI 的 Workers workflow
+`/healthz` 不泄露白名单；GitHub 连不上（换 token / 查身份两步各自）时回 502
+人话页面且照清 state cookie、密钥中途被清掉时不出网直接 500。
+改 `worker.js` 之后先跑这个 —— CI 的 Workers workflow
 也会先跑它，不过就不部署。
 
 > 这个 Worker 只服务于本站后台，改完 `worker.js` 推 main 即可，站点本身不受影响。

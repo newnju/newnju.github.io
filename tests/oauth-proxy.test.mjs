@@ -253,3 +253,65 @@ test('非 GitHub 的 provider 直接拒绝', async () => {
     restore();
   }
 });
+
+// ---------------------------------------------------------------------------
+// 网络故障与配置漂移：GitHub 那头连不上、密钥中途被清掉时，
+// 弹窗要拿到一句人话 + 干净的 set-cookie，而不是 Worker 裸异常（1101）
+// ---------------------------------------------------------------------------
+
+test('换 token 时 GitHub 连不上：回 502 人话页面，state cookie 照清', async () => {
+  globalThis.fetch = async () => {
+    throw new TypeError('fetch failed');
+  };
+  try {
+    const res = await worker.fetch(
+      req('/callback?code=abc&state=s1', { headers: { cookie: 'decap_oauth_state=s1' } }),
+      ENV,
+    );
+    assert.equal(res.status, 502);
+    assert.match(await res.text(), /连不上 GitHub/);
+    assert.match(res.headers.get('set-cookie'), /Max-Age=0/, '失败出口也要作废 state');
+  } finally {
+    restore();
+  }
+});
+
+test('查身份时 GitHub 连不上：回 502，且不把 token 交出去', async () => {
+  globalThis.fetch = async (url) => {
+    const href = typeof url === 'string' ? url : url.href;
+    if (href.startsWith('https://github.com/login/oauth/access_token')) {
+      return new Response(JSON.stringify({ access_token: 'gho_secret' }), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    throw new TypeError('fetch failed'); // /user 挂了
+  };
+  try {
+    const res = await worker.fetch(
+      req('/callback?code=abc&state=s1', { headers: { cookie: 'decap_oauth_state=s1' } }),
+      ENV,
+    );
+    assert.equal(res.status, 502);
+    const body = await res.text();
+    assert.match(body, /GitHub 身份/);
+    assert.ok(!body.includes('gho_secret'), '失败路径绝不泄漏刚换到的 token');
+    assert.match(res.headers.get('set-cookie'), /Max-Age=0/);
+  } finally {
+    restore();
+  }
+});
+
+test('state 对上但密钥被清掉：回 500 人话，一个出网请求都不发', async () => {
+  const calls = mockGitHub();
+  try {
+    const res = await worker.fetch(
+      req('/callback?code=abc&state=s1', { headers: { cookie: 'decap_oauth_state=s1' } }),
+      { ...ENV, GITHUB_OAUTH_SECRET: '' },
+    );
+    assert.equal(res.status, 500);
+    assert.match(await res.text(), /GITHUB_OAUTH_SECRET/);
+    assert.equal(calls.length, 0, '配置不全就不要拿 undefined 去问 GitHub');
+  } finally {
+    restore();
+  }
+});

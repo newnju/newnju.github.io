@@ -141,6 +141,25 @@ function refHost(referer) {
   }
 }
 
+/**
+ * D1 偶发 SQLITE_BUSY / 写锁冲突时等一拍再试一次（打点写入专用）。
+ * 失败的 run() 意味着这条语句没提交，重试不会双写；极少数「网络断在提交
+ * 之后」的模糊情形可能重出一行 —— 对个人站点统计，宁可偶尔多一个 PV，
+ * 也不因一次锁冲突丢掉整条打点。
+ */
+async function runWithRetry(stmt, attempts = 2) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await stmt.run();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 80 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 async function handleVisit(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(env, request) });
   if (request.method !== 'POST') return json({ error: 'method not allowed' }, 405, corsHeaders(env, request));
@@ -195,9 +214,11 @@ async function handleVisit(request, env) {
     device, browser, botName, host_, String(body.l ?? '').slice(0, 16) || null,
   ];
 
-  await env.DB.prepare(
-    `INSERT INTO visits (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
-  ).bind(...values).run();
+  await runWithRetry(
+    env.DB.prepare(
+      `INSERT INTO visits (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+    ).bind(...values),
+  );
 
   console.log(
     JSON.stringify({
@@ -1060,7 +1081,15 @@ export default {
       }
 
       const days = Math.min(365, Math.max(1, Number(url.searchParams.get('days')) || 30));
-      const data = await stats(env, days);
+      // D1 挂了 / 超时时优雅降级成 503，而不是让 Worker 抛出、
+      // 由 Cloudflare 兜一个 1101 的 HTML 错误页（与 summary/csv 口径一致）
+      let data;
+      try {
+        data = await stats(env, days);
+      } catch (err) {
+        console.log(JSON.stringify({ event: isPanel ? 'panel_failed' : 'stats_failed', error: String(err) }));
+        return json({ error: 'unavailable' }, 503, corsHeaders(env, request));
+      }
       if (!isPanel) return json(data);
 
       const prefs = prefsFromCookies(request);
@@ -1100,22 +1129,35 @@ export default {
   async scheduled(event, env, ctx) {
     const days = Number(env.RETENTION_DAYS) || 180;
     const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
-    const upsert = env.DB.prepare(
-      `INSERT INTO lifetime_path (path, pv)
-         SELECT path, COUNT(*) FROM visits WHERE ts < ? GROUP BY path
-       ON CONFLICT(path) DO UPDATE SET pv = lifetime_path.pv + excluded.pv`,
-    ).bind(cutoff);
-    const del = env.DB.prepare('DELETE FROM visits WHERE ts < ?').bind(cutoff);
-    const results = await env.DB.batch([upsert, del]);
-    const changes = results?.[1]?.meta?.changes ?? 0;
-    console.log(
-      JSON.stringify({
-        event: 'retention_purge',
-        cutoff_day: dayKey(cutoff),
-        rows_deleted: changes,
-        retention_days: days,
-        cron: event?.cron,
-      }),
-    );
+    try {
+      const upsert = env.DB.prepare(
+        `INSERT INTO lifetime_path (path, pv)
+           SELECT path, COUNT(*) FROM visits WHERE ts < ? GROUP BY path
+         ON CONFLICT(path) DO UPDATE SET pv = lifetime_path.pv + excluded.pv`,
+      ).bind(cutoff);
+      const del = env.DB.prepare('DELETE FROM visits WHERE ts < ?').bind(cutoff);
+      const results = await env.DB.batch([upsert, del]);
+      const changes = results?.[1]?.meta?.changes ?? 0;
+      console.log(
+        JSON.stringify({
+          event: 'retention_purge',
+          cutoff_day: dayKey(cutoff),
+          rows_deleted: changes,
+          retention_days: days,
+          cron: event?.cron,
+        }),
+      );
+    } catch (err) {
+      // 今晚删不掉明天还有下一次 cron；留一行结构化日志，别让异常裸奔
+      console.log(
+        JSON.stringify({
+          event: 'retention_purge_failed',
+          error: String(err),
+          retention_days: days,
+          cron: event?.cron,
+        }),
+      );
+      throw err; // 照常标红这次调用，CF 面板上能看见
+    }
   },
 };

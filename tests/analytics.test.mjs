@@ -13,13 +13,17 @@ const ENV = {
   IP_SALT: 'test-salt',
 };
 
-/** 假 D1：记住每次 prepare 的 SQL 与绑定值，按查询关键字返回预设结果 */
-function fakeDb(overrides = {}) {
+/** 假 D1：记住每次 prepare 的 SQL 与绑定值，按查询关键字返回预设结果。
+ *  opts.failRuns / failAlls / failBatch 模拟 D1 忙锁、网络抖动等瞬时故障，
+ *  用来验证 Worker 的重试与优雅降级路径。 */
+function fakeDb(overrides = {}, opts = {}) {
   const calls = [];
+  let runsLeft = opts.failRuns ?? 0;
+  let allsLeft = opts.failAlls ?? 0;
   return {
     calls,
     prepare(sql) {
-      const call = { sql, args: [] };
+      const call = { sql, args: [], runs: 0 };
       calls.push(call);
       return {
         bind(...args) {
@@ -27,9 +31,18 @@ function fakeDb(overrides = {}) {
           return this;
         },
         async run() {
+          call.runs++;
+          if (runsLeft > 0) {
+            runsLeft--;
+            throw new Error('D1_ERROR: database is locked ( SQLITE_BUSY )');
+          }
           return { meta: { changes: 3 } };
         },
         async all() {
+          if (allsLeft > 0) {
+            allsLeft--;
+            throw new Error('network reset');
+          }
           return { results: overrides[sql.trim().slice(0, 24)] ?? [] };
         },
       };
@@ -38,6 +51,7 @@ function fakeDb(overrides = {}) {
     // 这里照单执行每条语句；prepare 的调用记录仍按顺序留在 calls 里，
     // 测试照旧按 SQL 文本断言先后与参数。
     async batch(statements) {
+      if (opts.failBatch) throw new Error('D1 batch failed');
       return Promise.all(statements.map((s) => s.run()));
     },
   };
@@ -148,6 +162,57 @@ test('机器人按 UA 认家族名写进 bot_name；认不出的机器人留空'
   const weird = await post('SomeRandomCrawler/1.0');
   assert.equal(weird.device, 'bot', '判定 bot 的老口径不变（UA 含 bot）');
   assert.equal(weird.bot_name, null, '认不出家族就留空，面板显示「其他」');
+});
+
+test('打点写入遇 D1 忙锁：重试一次仍成功，访客不丢', async () => {
+  const DB = fakeDb({}, { failRuns: 1 });
+  const res = await worker.fetch(
+    visit({}, {
+      'cf-connecting-ip': '198.51.100.23',
+      'user-agent': 'Mozilla/5.0 (Macintosh) Chrome/131.0 Safari/537.36',
+      origin: 'https://newnju.github.io',
+    }),
+    { ...ENV, DB },
+  );
+  assert.equal(res.status, 200);
+  const inserts = DB.calls.filter((c) => /^INSERT INTO visits/.test(c.sql));
+  assert.equal(inserts.length, 1, '重试复用同一条 prepared 语句，不重新 prepare');
+  assert.equal(inserts[0].runs, 2, '第一次 SQLITE_BUSY 后应原样重跑同一条 INSERT');
+});
+
+test('打点写入一直失败：重试耗尽后回 500，路由兜住不裸抛', async () => {
+  const DB = fakeDb({}, { failRuns: 99 });
+  const res = await worker.fetch(
+    visit({}, {
+      'cf-connecting-ip': '198.51.100.23',
+      'user-agent': 'Mozilla/5.0 Chrome/131.0',
+      origin: 'https://newnju.github.io',
+    }),
+    { ...ENV, DB },
+  );
+  assert.equal(res.status, 500);
+  assert.deepEqual(await res.json(), { ok: false });
+  const inserts = DB.calls.filter((c) => /^INSERT INTO visits/.test(c.sql));
+  assert.equal(inserts[0].runs, 2, '默认重试一次（共两次尝试）');
+});
+
+test('/stats 与 /api/stats：D1 查询抛错时回 503，不是 Cloudflare 的裸 1101', async () => {
+  const down = fakeDb({}, { failAlls: 99 });
+  const panel = await worker.fetch(new Request(`${ORIGIN}/stats`), { ...ENV, DB: down });
+  assert.equal(panel.status, 503);
+  assert.deepEqual(await panel.json(), { error: 'unavailable' });
+
+  const json = await worker.fetch(new Request(`${ORIGIN}/api/stats?key=let-me-in`), { ...ENV, DB: down });
+  assert.equal(json.status, 503);
+  assert.deepEqual(await json.json(), { error: 'unavailable' });
+});
+
+test('定时清理失败：记一行结构化日志后照常抛出（CF 面板可见红）', async () => {
+  const DB = fakeDb({}, { failBatch: true });
+  await assert.rejects(
+    () => worker.scheduled({ cron: '17 3 * * *' }, { ...ENV, DB }, {}),
+    /D1 batch failed/,
+  );
 });
 
 test('同一个 IP、同一天 → 同一个哈希（所以能算去重人数）', async () => {

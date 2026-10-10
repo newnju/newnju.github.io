@@ -208,4 +208,6 @@ node --test tests/analytics.test.mjs
 搜索词被丢掉、referrer 只留域名、机器人认家族名写 `bot_name`（认不出留空）、
 读接口必须要令牌、面板与 CSV 免凭据直出
 （`/login` 一律 302 回面板、不发任何 cookie）、排行类维度只统计真人、
+D1 忙锁时打点重试一次、查询挂掉时 `/stats` 回 503 而不是裸 1101、
+定时任务失败记结构化日志后照常抛出、
 定时任务按 `RETENTION_DAYS` 删旧行。
