@@ -12,7 +12,7 @@
 #     note  : 选填，补充说明（颁发单位、事由等），显示为小字
 #     period: 履历分期（只被 _includes/han-cv-timeline.html 使用，时间轴页与
 #             首页忽略它）。四个值，与 _data/profile.yml 的 period 一致：
-#               phd 博士 / gap 过渡期 / master 硕士 / bachelor 本科
+#               phd 博士 / master 硕士 / bachelor 本科
 #             跨期的条目归入主要发生期；毕业当年（2021.06 前）的归本科。
 #
 # 新增一条：复制下面任意一条改掉文字即可。加一个新年份就加一个 - year 分组。
@@ -28,11 +28,11 @@ groups:
       - text: "获第四届“艺蕴中国”艺术教育创新实践作品展编剧 A 类一等奖"
         text_en: "First Prize (Category A, Screenwriting), 4th \"Yi Yun China\" Art Education Innovation and Practice Exhibition"
         level: national
-        period: gap
+        period: phd
       - text: "获第三届新时代文化传播与媒介发展青年学者论坛二等奖"
         text_en: "Second Prize, 3rd Young Scholars Forum on Cultural Communication and Media Development"
         level: national
-        period: gap
+        period: phd
         note: "论文《文化生态视域下南京白局的个性维系与当代建构》；面向海内外公开征稿"
         note_en: "Paper: “Sustaining the Character of Nanjing Baiju and Its Contemporary Construction from the Perspective of Cultural Ecology”; open call for submissions in China and abroad"
 
@@ -43,7 +43,7 @@ groups:
         date: "2025.11"
         date_en: "2025.11"
         level: school
-        period: gap
+        period: phd
         note: "2025.11，论文《四神博局纹饰的质与文》"
         note_en: "2025.11, paper: “Zhi and Wen in the Ornament of the Four-Deity TLV Mirror”"
 

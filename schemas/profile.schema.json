@@ -29,9 +29,9 @@
   },
   "definitions": {
     "period": {
-      "description": "履历分期：phd 博士 / gap 过渡期 / master 硕士 / bachelor 本科。",
+      "description": "履历分期：phd 博士 / master 硕士 / bachelor 本科。",
       "type": "string",
-      "enum": ["phd", "gap", "master", "bachelor"]
+      "enum": ["phd", "master", "bachelor"]
     },
     "entry": {
       "type": "object",

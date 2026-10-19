@@ -16,7 +16,7 @@
   "definitions": {
     "period": {
       "type": "string",
-      "enum": ["phd", "gap", "master", "bachelor"]
+      "enum": ["phd", "master", "bachelor"]
     },
     "level": {
       "description": "等级标签，决定颜色与文字；填别的值会没有标签（不影响构建）。文字取自 _data/ui-text.yml 的 award_level_*。",

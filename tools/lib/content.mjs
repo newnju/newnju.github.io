@@ -15,7 +15,7 @@ const COLLECTION_DIRS = {
   teaching: '_teaching',
 };
 
-export const PERIODS = ['phd', 'gap', 'master', 'bachelor'];
+export const PERIODS = ['phd', 'master', 'bachelor'];
 
 /** YAML 把不加引号的 2026-09-30 解析成 Date；统一拍回字符串，免得 schema 分叉。 */
 function normalise(value) {

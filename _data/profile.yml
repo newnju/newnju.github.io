@@ -13,12 +13,10 @@
 # （履历时间轴为倒序，各时期内请把最近的写在前面）。
 #
 # period 字段（履历分期，只被 han-cv-timeline.html 使用）：
-#   phd     博士阶段（2026.09 – ）
-#   gap     硕士毕业后至博士入学前的过渡期（2024.07 – 2026.08）——
-#           不设块标题，其任职 / 项目 / 获奖排在博士块之后、硕士块之前
+#   phd     博士阶段（2026.09 – ）；硕士毕业后的任职与同期获奖、项目也进博士块
 #   master  硕士阶段（2021.09 – 2024.06，含 2023.10 – 2024.03 图宾根交换）
 #   bachelor 本科阶段（2017.09 – 2021.06）
-# 履历时间轴按 phd → gap → master → bachelor 顺序出块（倒序），块内只渲染
+# 履历时间轴按 phd → master → bachelor 顺序出块（倒序），块内只渲染
 # 学历头行与裸列表（任职 / 项目 / 获奖不分小节、不加标签）。
 # ==========================================================================
 
@@ -52,10 +50,12 @@ education:
       - "研究方向：美术考古 · 汉代物质文化与图像"
       - "学位论文：《四神博局镜纹饰及相关问题研究》"
       - "修读美术史、考古学、中国古代文学等课程，排名 10%，多次获学业奖学金"
+      - "毕业后在上海交通大学文科处智慧人文社科中心工作"
     notes_en:
       - "Research: art archaeology · Han-dynasty material culture and imagery"
       - "Thesis: *A Study of the Ornament of the Four-Deity TLV Mirror and Related Questions*"
       - "Coursework in art history, archaeology and classical Chinese literature; ranked in the top 10%, repeatedly awarded academic scholarships"
+      - "After graduation, worked at the Smart Humanities and Social Sciences Center, Office of Liberal Arts Development, Shanghai Jiao Tong University"
   - period: bachelor
     text: "**本科 / 学士**，南京晓庄学院新闻传播学院，广播电视编导（130305）"
     text_en: "**B.A.**, School of Journalism and Communication, Nanjing Xiaozhuang University — Broadcasting and Television Directing (130305)"
@@ -79,12 +79,12 @@ education:
 # 工作与任职（履历按时期嵌入；顺序即各时期内的显示顺序，最近在前）
 # 日期同样只在 daterange / daterange_en 里写一次，句首由模板拼。
 work:
-  # —— 过渡期 ——
-  - period: gap
+  # —— 博士阶段（含毕业后任职） ——
+  - period: phd
     text: "上海交通大学文科建设处 科研管理（校聘）"
     text_en: "Research administration, Office of Liberal Arts Development, Shanghai Jiao Tong University (university appointment)"
-    daterange: "2024.12 – 2025.05"
-    daterange_en: "Dec 2024 – May 2025"
+    daterange: "2024.11 – 2025.05"
+    daterange_en: "Nov 2024 – May 2025"
     notes:
       - "主导大模型轻应用竞赛、智慧文科论坛、院系 AI 赋能文科项目等"
     notes_en:

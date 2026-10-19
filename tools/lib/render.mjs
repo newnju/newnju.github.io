@@ -17,7 +17,7 @@ function pick(value, valueEn, en) {
   return en ? or(valueEn, value) : value;
 }
 
-export const PERIOD_ORDER = ['phd', 'gap', 'master', 'bachelor'];
+export const PERIOD_ORDER = ['phd', 'master', 'bachelor'];
 
 export function renderFragment(name, locale = 'zh', options = {}) {
   const en = locale === 'en';

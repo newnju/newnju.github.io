@@ -125,7 +125,6 @@ collections:
         widget: select
         options:
           - { label: 博士 phd, value: phd }
-          - { label: 过渡期 gap, value: gap }
           - { label: 硕士 master, value: master }
           - { label: 本科 bachelor, value: bachelor }
       - label: 链接地址
@@ -358,7 +357,6 @@ collections:
                 widget: select
                 options:
                   - { label: 博士 phd, value: phd }
-                  - { label: 过渡期 gap, value: gap }
                   - { label: 硕士 master, value: master }
                   - { label: 本科 bachelor, value: bachelor }
               - { label: 中文条目, name: text, widget: string, hint: 可以用 **加粗** }
@@ -433,7 +431,6 @@ collections:
                     required: false
                     options:
                       - { label: 博士 phd, value: phd }
-                      - { label: 过渡期 gap, value: gap }
                       - { label: 硕士 master, value: master }
                       - { label: 本科 bachelor, value: bachelor }
                   - { label: 中文补充说明, name: note, widget: text, required: false }

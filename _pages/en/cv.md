@@ -37,7 +37,6 @@ Skills
 
 * **Programming and data**: Python, JavaScript, Rust, SQL, Linux, web scraping, AI agents, RAG
 * **Design and product**: Visio, Figma, PRD, storyboarding, Photoshop, Premiere Pro, After Effects
-* **Open source**: DroidSeal, an Android security project with 1.2K+ npm downloads (`droidseal`)
 
 Talks and Summer Schools
 ======
