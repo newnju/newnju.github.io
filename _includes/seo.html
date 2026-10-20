@@ -160,16 +160,22 @@
 {%- else -%}
   {%- assign _person_job = '新闻传播学博士研究生' -%}
 {%- endif -%}
-{%- assign _same_as = false -%}
+{%- comment -%}
+  哨兵用布尔 —— Liquid 的 append 会把 false 连同字面 "false" 一起并进字符串
+  （线上肉眼见过 ["falsehttps://github.com/…"]），空串拼接但以单独的
+  _has_same 判断输出。
+{%- endcomment -%}
+{%- assign _same_as = "" -%}
+{%- assign _has_same = false -%}
 {%- assign _sep = "" -%}
-{%- if site.author.github -%}{%- assign _same_as = _same_as | append: _sep | append: "https://github.com/" | append: site.author.github -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.zhihu -%}{%- assign _same_as = _same_as | append: _sep | append: "https://www.zhihu.com/people/" | append: site.author.zhihu -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.orcid -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.orcid -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.googlescholar -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.googlescholar -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.academia -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.academia -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.semantic -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.semantic -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.ssrn -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.ssrn -%}{%- assign _sep = "," -%}{%- endif -%}
-{%- if site.author.researchgate -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.researchgate -%}{%- endif -%}
+{%- if site.author.github -%}{%- assign _same_as = _same_as | append: _sep | append: "https://github.com/" | append: site.author.github -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.zhihu -%}{%- assign _same_as = _same_as | append: _sep | append: "https://www.zhihu.com/people/" | append: site.author.zhihu -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.orcid -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.orcid -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.googlescholar -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.googlescholar -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.academia -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.academia -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.semantic -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.semantic -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.ssrn -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.ssrn -%}{%- assign _sep = "," -%}{%- assign _has_same = true -%}{%- endif -%}
+{%- if site.author.researchgate -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.researchgate -%}{%- assign _has_same = true -%}{%- endif -%}
 <script type="application/ld+json">
   {
     "@context" : "https://schema.org",
@@ -182,7 +188,7 @@
       "@type" : "CollegeOrUniversity",
       "name" : {{ _person_employer | jsonify }}
     },
-    "sameAs" : {% if _same_as %}{{ _same_as | split: "," | jsonify }}{% else %}[]{% endif %}
+    "sameAs" : {%- if _has_same %}{{ _same_as | split: "," | jsonify }}{% else %}[]{% endif -%}
   }
 </script>
 
