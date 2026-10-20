@@ -9,6 +9,8 @@ redirect_from:
 
 {% include base_path %}
 
+{% include han-print.html %}
+
 {% include han-cv-timeline.html %}
 
 荣誉

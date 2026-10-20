@@ -1,0 +1,15 @@
+<!-- ==========================================================================
+     简历打印入口 · 中英两版共用
+     --------------------------------------------------------------------------
+     用法：{% include han-print.html %}（/cv/ 与 /en/cv/ 页面里调用）。
+     一个纯文本按钮，点击唤起浏览器打印；样式在 _sass/_han.scss 第 27 节，
+     打印媒体下整块隐藏（§17 的履历样式接管输出）。不用图标字体 —— 加新图标
+     要重跑字体子集化（tools/subset-fonts.js），纯文本没有这层依赖。
+     ========================================================================== -->
+{%- assign _locale = page.locale | default: site.locale -%}
+{%- assign _ui = site.data.ui-text[_locale] | default: site.data.ui-text[site.locale] -%}
+<div class="han-print">
+  <button type="button" class="han-print__btn" onclick="window.print()">
+    {{ _ui.print_cv_label | default: "打印简历" }}
+  </button>
+</div>

@@ -6,6 +6,7 @@
 // 之所以连空行都对齐：kramdown 靠空行区分列表的松紧，差一个换行就会让
 // 列表项被 <p> 包起来，行距随之改变。见 han-recent-pubs.html 里的注释。
 import { loadData, loadCollections } from './content.mjs';
+import { PERIOD_ORDER } from './periods.mjs';
 
 /** Liquid 的 `x | default: y`：nil / false / 空串回落。 */
 function or(value, fallback) {
@@ -17,7 +18,7 @@ function pick(value, valueEn, en) {
   return en ? or(valueEn, value) : value;
 }
 
-export const PERIOD_ORDER = ['phd', 'master', 'bachelor'];
+export { PERIOD_ORDER };
 
 export function renderFragment(name, locale = 'zh', options = {}) {
   const en = locale === 'en';

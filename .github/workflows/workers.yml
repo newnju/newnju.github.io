@@ -4,6 +4,9 @@
 # Cloudflare 后台点出来的**（它等于把部署权限交给这个仓库），没法写进仓库。所以
 # token 存在 GitHub Secrets 里，由这里的 workflow 使用 —— 部署动作在 GitHub 上完成，
 # 不需要在你本机跑 wrangler。
+# 版本锁定：全文件用 npx wrangler@4.151.2（2026-10 的最新 4.x），不用裸 @4 ——
+# npx 会缓存拉到的版本，runner 缓存里挂着旧版就会跟文档对不上；要升级改这十处，
+# 或临时 `npx wrangler@latest …` 验证后再提交。
 #
 # 一次性准备（详见 oauth-proxy/README.md 与 analytics/README.md）：
 #   1) Cloudflare 后台建一个 API token（Workers Scripts:Edit + D1:Edit + Account:Read）
@@ -107,13 +110,13 @@ jobs:
             echo "::error::Secrets 里没有 OAUTH_ALLOWED_USERS —— 先填上再部署，否则部署完后台就登不进去了"
             exit 1
           fi
-          npx wrangler@4 deploy
-          put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
+          npx wrangler@4.151.2 deploy
+          put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4.151.2 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
           put GITHUB_OAUTH_ID "$OAUTH_GITHUB_ID"
           put GITHUB_OAUTH_SECRET "$OAUTH_GITHUB_SECRET"
           put ALLOWED_GITHUB_USERS "$OAUTH_ALLOWED_USERS"
           put SITE_ORIGIN "$SITE_ORIGIN"
-          npx wrangler@4 secret list
+          npx wrangler@4.151.2 secret list
 
       # ---- analytics：访客统计 ----
       - name: 部署 analytics（访客统计）
@@ -146,14 +149,14 @@ jobs:
           fi
           # --remote 必须有：wrangler v4 的 d1 execute 默认只写本地 state，
           # 少了它建表语句根本不进线上库（worker 一写就 no such table）。
-          npx wrangler@4 d1 execute site-stats --remote --file=./schema.sql
+          npx wrangler@4.151.2 d1 execute site-stats --remote --file=./schema.sql
           # 老库迁移：CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，按
           # PRAGMA table_info 逐列探测、缺了才 ALTER（幂等，可重复跑）。
           # wrangler --json 输出是带空格的 pretty JSON，先去掉全部空白再 grep；
           # 读不到结构就立刻红（否则 cols 为空会让后面逐列 ALTER 盲试，
           # 撞上已存在的列直接 duplicate column 挂掉）。
           # 跑完再验一遍，缺列就让部署红在这里 —— 绝不带着残缺结构发代码。
-          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          cols=$(npx wrangler@4.151.2 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
           if [ -z "$cols" ]; then
             echo "::error::读不到 visits 表结构（PRAGMA 输出解析为空），拒绝继续迁移"
             exit 1
@@ -161,7 +164,7 @@ jobs:
           echo "  visits 现有列：$(printf '%s ' $cols)"
           add_col() {
             printf '%s\n' "$cols" | grep -qx "$1" && return 0
-            npx wrangler@4 d1 execute site-stats --remote --command "ALTER TABLE visits ADD COLUMN $1 $2"
+            npx wrangler@4.151.2 d1 execute site-stats --remote --command "ALTER TABLE visits ADD COLUMN $1 $2"
             echo "  + visits.$1 $2"
           }
           add_col ip TEXT
@@ -182,18 +185,18 @@ jobs:
           add_col bot_name TEXT
           add_col ref_host TEXT
           add_col lang TEXT
-          cols=$(npx wrangler@4 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
+          cols=$(npx wrangler@4.151.2 d1 execute site-stats --remote --json --command "PRAGMA table_info(visits)" | tr -d '[:space:]' | grep -o '"name":"[a-z_]*"' | cut -d'"' -f4)
           for c in ip continent country region region_code city postal tz lat lon asn colo bot_name; do
             printf '%s\n' "$cols" | grep -qx "$c" || { echo "::error::visits.$c 迁移没生效，拒绝部署"; exit 1; }
           done
           echo "  visits 表结构校验通过（$(printf '%s\n' "$cols" | grep -c .) 列）"
-          npx wrangler@4 deploy
-          put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
+          npx wrangler@4.151.2 deploy
+          put() { [ -n "$2" ] && printf '%s' "$2" | npx wrangler@4.151.2 secret put "$1" >/dev/null && echo "  secret $1 已同步" || echo "  secret $1 为空，跳过（保留线上原值）"; }
           put STATS_TOKEN "$STATS_TOKEN"
           put ALLOWED_ORIGIN "$ANALYTICS_ALLOWED_ORIGIN"
           put IP_SALT "$ANALYTICS_IP_SALT"
           put RETENTION_DAYS "$ANALYTICS_RETENTION_DAYS"
-          npx wrangler@4 secret list
+          npx wrangler@4.151.2 secret list
 
       - name: 部署后的健康检查
         run: |

@@ -1,0 +1,38 @@
+---
+layout: null
+permalink: /en/feed.xml
+locale: en
+---
+<?xml version="1.0" encoding="utf-8"?>
+{%- comment -%}
+  自建英文 Atom feed（_pages/feed.xml 的英文对偶），收录 _publications。
+  条目链接指向 /en 前缀的英文条目页（地址规则同 tools/render-en.mjs），
+  标题/摘要 *_en 优先、缺了回落中文——与全站“缺 _en 回落”的口径一致。
+  现在 zh-CN 也是全站语言，报文级 xml:lang 固定 en。
+{%- endcomment -%}
+{%- assign _items = site.publications | sort: "date" | reverse -%}
+{%- assign _author = site.author.name_en | default: site.author.name | default: site.name -%}
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <title>{{ site.title | xml_escape }}</title>
+  <subtitle>{{ site.description_en | default: site.description | xml_escape }}</subtitle>
+  <link href="{{ '/en/feed.xml' | absolute_url }}" rel="self" />
+  <link href="{{ '/en/' | absolute_url }}" />
+  <updated>{{ site.time | date_to_xmlschema }}</updated>
+  <id>{{ '/en/feed.xml' | absolute_url }}</id>
+  <author>
+    <name>{{ _author | xml_escape }}</name>
+    <uri>{{ '/en/' | absolute_url }}</uri>
+  </author>
+  {%- for post in _items limit: 20 %}
+  {%- assign _excerpt = post.excerpt_en | default: post.excerpt | default: post.description | default: "" | strip_html | normalize_whitespace | truncate: 300 %}
+  {%- assign _link = post.url | prepend: "/en" | absolute_url %}
+  <entry>
+    <title>{{ post.title_en | default: post.title | xml_escape }}</title>
+    <link href="{{ _link }}" rel="alternate" type="text/html" />
+    <id>{{ _link }}</id>
+    <published>{{ post.date | date_to_xmlschema }}</published>
+    <updated>{{ post.date | date_to_xmlschema }}</updated>
+    <summary type="text">{{ _excerpt | xml_escape }}</summary>
+  </entry>
+  {%- endfor %}
+</feed>

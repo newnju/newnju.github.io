@@ -55,9 +55,56 @@
   <meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}">
 {% endif %}
 
+{%- comment -%}
+  Google Scholar 引用元数据（citation_*）：只有论文条目页带 citation 字段，
+  拿它当门槛，列表页与其他集合页都不发。citation_author 按惯例一个作者一行，
+  汉字名与拉丁转写各发一条；日期用 Scholar 认的 YYYY/MM/DD。
+{%- endcomment -%}
+{%- if page.citation -%}
+  <meta name="citation_title" content="{{ page.title }}">
+  <meta name="citation_author" content="{{ site.author.name | default: site.name }}">
+  <meta name="citation_author" content="{{ site.author.name_en | default: site.author.name }}">
+  <meta name="citation_publication_date" content="{{ page.date | date: '%Y/%m/%d' }}">
+  {%- assign _venue = page.venue -%}
+  {%- if _page_en and page.venue_en -%}{%- assign _venue = page.venue_en -%}{%- endif -%}
+  {%- if _venue -%}
+  <meta name="citation_journal_title" content="{{ _venue }}">
+  {%- endif -%}
+{%- endif -%}
+
 {% if seo_url %}
   <link rel="canonical" href="{{ page.url | prepend: seo_url | replace: "/index.html", "/" }}">
 {% endif %}
+
+{%- comment -%}
+  中英互链（hreflang）：英文条目页自带 zh_url（tools/render-en.mjs 写入）；
+  中文页与未带 zh_url 的英文页按「/en + 原地址」规则在 site.pages 里找对面
+  （列表页与条目页都成对成页，404 / feed 这类单语页找不到，就不输出）。
+  x-default 永远给中文版 —— 中文是本站的默认语言。
+{%- endcomment -%}
+{%- comment -%}
+  注意 Liquid 的 truthiness：空字符串是「真」，所以这两个哨兵必须用 false
+  初始化 —— 用 "" 初始化的话，404 这类没有对面页的路径照样进 if。
+{%- endcomment -%}
+{%- assign _zh_alt = false -%}
+{%- assign _en_alt = false -%}
+{%- if page.zh_url -%}
+  {%- assign _zh_alt = page.zh_url -%}
+  {%- assign _en_alt = page.url -%}
+{%- else -%}
+  {%- assign _self_path = page.url | replace: "/index.html", "/" -%}
+  {%- assign _en_probe = "/en" | append: _self_path -%}
+  {%- assign _en_found = site.pages | where: "url", _en_probe | first -%}
+  {%- if _en_found -%}
+    {%- assign _zh_alt = _self_path -%}
+    {%- assign _en_alt = _en_probe -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if _en_alt -%}
+  <link rel="alternate" hreflang="zh-CN" href="{{ _zh_alt | prepend: seo_url }}">
+  <link rel="alternate" hreflang="en" href="{{ _en_alt | prepend: seo_url }}">
+  <link rel="alternate" hreflang="x-default" href="{{ _zh_alt | prepend: seo_url }}">
+{%- endif -%}
 
 {%- comment -%}
   卡片信息不依赖 twitter.username（本站没填）：原先整块包在 if 里，结果连 twitter:card 都不输出，
@@ -96,17 +143,48 @@
   <link rel="next" href="{{ paginator.next_page_path | prepend: seo_url }}">
 {% endif %}
 
-{% if site.social %}
-  <script type="application/ld+json">
-    {
-      "@context" : "http://schema.org",
-      "@type" : "{% if site.social.type %}{{ site.social.type }}{% else %}Person{% endif %}",
-      "name" : "{{ site.social.name | default: site.name }}",
-      "url" : {{ seo_url | jsonify }},
-      "sameAs" : {{ site.social.links | jsonify }}
-    }
-  </script>
-{% endif %}
+{%- comment -%}
+  结构化数据：整站只发一条 Person（旧脚本里 sameAs 恒为 null 的 Person 与把
+  头像当 logo 的 Organization 都撤掉了）。name / jobTitle / affiliation 随
+  page.locale 取中英；sameAs 从 author 社交链接里逐项收，填了哪个就发哪个，
+  全空时发空数组而不是 null。
+{%- endcomment -%}
+{%- assign _person_en = false -%}
+{%- if page.locale contains 'en' -%}{%- assign _person_en = true -%}{%- endif -%}
+{%- assign _person_name = site.author.name | default: site.name -%}
+{%- if _person_en -%}{%- assign _person_name = site.author.name_en | default: _person_name -%}{%- endif -%}
+{%- assign _person_employer = site.author.employer -%}
+{%- if _person_en -%}{%- assign _person_employer = site.author.employer_en | default: _person_employer -%}{%- endif -%}
+{%- if _person_en -%}
+  {%- assign _person_job = 'Ph.D. student in Journalism and Communication' -%}
+{%- else -%}
+  {%- assign _person_job = '新闻传播学博士研究生' -%}
+{%- endif -%}
+{%- assign _same_as = false -%}
+{%- assign _sep = "" -%}
+{%- if site.author.github -%}{%- assign _same_as = _same_as | append: _sep | append: "https://github.com/" | append: site.author.github -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.zhihu -%}{%- assign _same_as = _same_as | append: _sep | append: "https://www.zhihu.com/people/" | append: site.author.zhihu -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.orcid -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.orcid -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.googlescholar -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.googlescholar -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.academia -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.academia -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.semantic -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.semantic -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.ssrn -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.ssrn -%}{%- assign _sep = "," -%}{%- endif -%}
+{%- if site.author.researchgate -%}{%- assign _same_as = _same_as | append: _sep | append: site.author.researchgate -%}{%- endif -%}
+<script type="application/ld+json">
+  {
+    "@context" : "https://schema.org",
+    "@type" : "Person",
+    "name" : {{ _person_name | jsonify }},
+    "url" : {{ seo_url | jsonify }},
+    "image" : {{ site.og_image | default: "avatar.png" | prepend: "/images/" | prepend: base_path | jsonify }},
+    "jobTitle" : {{ _person_job | jsonify }},
+    "affiliation" : {
+      "@type" : "CollegeOrUniversity",
+      "name" : {{ _person_employer | jsonify }}
+    },
+    "sameAs" : {% if _same_as %}{{ _same_as | split: "," | jsonify }}{% else %}[]{% endif %}
+  }
+</script>
 
 {% if site.google_site_verification %}
   <meta name="google-site-verification" content="{{ site.google_site_verification }}" />
@@ -123,30 +201,19 @@
 <!-- end SEO -->
 
 <!-- Open Graph protocol data (https://ogp.me/), used by social media -->
-<meta property="og:locale" content="{{ site.locale | default: "en" }}">
+<meta property="og:locale" content="{% if page.locale contains 'en' %}en_US{% else %}zh_CN{% endif %}">
 <meta property="og:site_name" content="{{ site.title }}"> 
 <meta property="og:title" content="{{ page.title | default: site.title | markdownify | strip_html | strip_newlines | escape_once }}">
 {% if page.date %}
   <meta property="og:type" content="article">
 {% endif %}
 {% if seo_description %}
-  <meta property="og:description" name="description" content="{{ seo_description }}">
+  <meta property="og:description" content="{{ seo_description }}">
 {% elsif site.og_description %}
-  <meta property="og:description" name="description" content="{{ site.og_description }}">
+  <meta property="og:description" content="{{ site.og_description }}">
 {% endif %}
 {% if seo_url %}
   <meta property="og:url" content="{{ page.url | prepend: seo_url | replace: "/index.html", "/" }}">
-{% endif %}
-
-{% if site.og_image %}
-  <script type="application/ld+json">
-    {
-      "@context": "http://schema.org",
-      "@type": "Organization",
-      "url": {{ seo_url | jsonify }},
-      "logo": {{ site.og_image | prepend: "/images/" | prepend: base_path | jsonify }}
-    }
-  </script>
 {% endif %}
 
 {% if page.header.image %}

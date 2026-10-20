@@ -4,7 +4,18 @@
 
 {% include seo.html %}
 
-<link href="{% if site.atom_feed.path %}{{ site.atom_feed.path }}{% else %}{{ base_path }}/feed.xml{% endif %}" type="application/atom+xml" rel="alternate" title="{{ site.title }} Feed">
+{%- comment -%}
+  订阅地址随语言：英文页指向自建英文 feed（_pages/en/feed.xml），中文页保持
+  /feed.xml；site.atom_feed.path 仍是最高的手动覆盖优先级。
+{%- endcomment -%}
+{%- if page.locale contains 'en' -%}
+  {%- assign _feed_url = "/en/feed.xml" -%}
+{%- elsif site.atom_feed.path -%}
+  {%- assign _feed_url = site.atom_feed.path -%}
+{%- else -%}
+  {%- assign _feed_url = "/feed.xml" -%}
+{%- endif -%}
+<link href="{{ _feed_url | prepend: base_path }}" type="application/atom+xml" rel="alternate" title="{{ site.title }} Feed">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 

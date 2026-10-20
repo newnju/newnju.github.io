@@ -123,7 +123,9 @@ collections:
       - label: 履历时期
         name: period
         widget: select
-        options:
+        # 单一口径来自 tools/lib/periods.mjs；下面两处用 *period_options 复用，
+        # 增减时期只改这里的锚点块（及 periods.mjs）
+        options: &period_options
           - { label: 博士 phd, value: phd }
           - { label: 硕士 master, value: master }
           - { label: 本科 bachelor, value: bachelor }
@@ -355,10 +357,7 @@ collections:
               - label: 履历时期
                 name: period
                 widget: select
-                options:
-                  - { label: 博士 phd, value: phd }
-                  - { label: 硕士 master, value: master }
-                  - { label: 本科 bachelor, value: bachelor }
+                options: *period_options
               - { label: 中文条目, name: text, widget: string, hint: 可以用 **加粗** }
               - { label: 英文条目, name: text_en, widget: string }
               - { label: 中文日期跨度, name: daterange, widget: string, hint: 例如 2026.09 – 至今 }
@@ -429,10 +428,7 @@ collections:
                     name: period
                     widget: select
                     required: false
-                    options:
-                      - { label: 博士 phd, value: phd }
-                      - { label: 硕士 master, value: master }
-                      - { label: 本科 bachelor, value: bachelor }
+                    options: *period_options
                   - { label: 中文补充说明, name: note, widget: text, required: false }
                   - { label: 英文补充说明, name: note_en, widget: text, required: false }
                   - { label: 中文日期, name: date, widget: string, required: false }

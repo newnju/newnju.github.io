@@ -1,0 +1,47 @@
+# 访客统计备份：每月把公开的 /stats.csv 拉一份存成 artifact
+# ---------------------------------------------------------------------------
+# /stats.csv 是无凭据端点（D1 里 visits 表最近 180 天的全量明细），D1 本身
+# 不提供时间点备份 —— 这里按月存快照：误清库时，最近一次 artifact 就是现成
+# 的重建源（analytics/schema.sql 建表 + 按列导回，见 analytics/README.md）。
+# 手动跑：Actions → Stats backup → Run workflow。
+#
+# 为什么不赶 0 点整：GitHub 的 schedule 会整月漂移几分钟到十几分钟，放在
+# 03:00 只是排一个「北京工作时间里的上午」，准不准无所谓。
+name: Stats backup
+
+on:
+  schedule:
+    - cron: "0 3 1 * *" # 每月 1 号 03:00 UTC（北京 11:00）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 拉 /stats.csv（days=40 覆盖上月漏跑）
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 5 -o stats.csv \
+            "https://stats.oaking.kdns.fr/stats.csv?days=40"
+          header=$(head -n 1 stats.csv)
+          case "$header" in
+            ts,iso_time,day,path*) : ;;
+            *) echo "::error::表头异常，拉到的疑似不是 stats.csv"; head -n 3 stats.csv; exit 1 ;;
+          esac
+          rows=$(($(wc -l < stats.csv) - 1))
+          echo "rows=$rows"
+          # 端点单次最多回 10000 行；到顶说明这个月没 backup 到的部分会被截断，
+          # 提高频率（如手动改 cron）或改用导出脚本分窗拉取
+          if [ "$rows" -ge 10000 ]; then
+            echo "::warning::CSV 命中 LIMIT 10000 上限，本份备份不完整 —— 请提高备份频率或分窗导出"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stats-backup-${{ github.run_number }}
+          path: stats.csv
+          retention-days: 365
+          if-no-files-found: error

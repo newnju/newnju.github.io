@@ -8,6 +8,8 @@ author_profile: true
 
 {% include base_path %}
 
+{% include han-print.html %}
+
 {% include han-cv-timeline.html %}
 
 Honours

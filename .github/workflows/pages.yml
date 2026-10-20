@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run check
+      # 图标审计：页面里用到的 fa 图标都在子集字体里（加新图标要 npm run fonts）
+      - run: npm run check:icons
       # 中英同步提醒：改了中文却没动 *_en 时提一句。
       # 只报不挡 —— 英文措辞得人翻，忘了改不是构建错误。
       # BASE_SHA 用 push 前的那个提交，这样一次推送里含多个提交也能覆盖到。
