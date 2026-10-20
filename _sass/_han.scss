@@ -1872,3 +1872,186 @@ html.theme-transition .han-minimap * {
     opacity: 0.85;
     margin-bottom: 0.9rem;
 }
+
+/* ==========================================================================
+   31. 404 太空侵略者（_pages/404.md）
+   --------------------------------------------------------------------------
+   门面小游戏的样式：纯 Canvas 自绘像素街机（零外部素材）。整个区块默认
+   hidden，JS 可用才由脚本亮出来；无 JS / 打印 / reduced-motion 下只剩 §30
+   的静态文字与自助导航（游戏的一切动效都从用户点「开始」之后才开始）。
+   画布内部固定 480×640，CSS 拉伸自适应，image-rendering: pixelated 保住
+   像素锯齿。屏幕内部的配色固定为街机柜调（暖白 / 薄荷 / 鎏金），不随站点
+   明暗主题翻转 —— 街机屏幕自成一个世界；页框、HUD 与音量钮仍走
+   --global / --han 变量。
+   ========================================================================== */
+
+.n404-inv {
+    max-width: 520px;
+    margin: 0 auto 1.8rem;
+}
+
+.n404-inv-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem 0.9rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.85em;
+}
+
+.n404-inv-stat {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.n404-inv-num {
+    font-weight: 700;
+    font-size: 1.2em;
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+    color: var(--global-link-color, inherit);
+}
+
+.n404-inv-label {
+    font-size: 0.78em;
+    letter-spacing: 0.2em;
+    opacity: 0.65;
+}
+
+.n404-inv-mute {
+    font: inherit;
+    font-size: 0.9em;
+    padding: 0.3em 0.9em;
+    margin-left: auto;
+    border: 1px solid color-mix(in srgb, var(--global-text-color, currentColor) 30%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--global-text-color, inherit);
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--global-bg-color, #fff);
+        background: var(--global-link-color, var(--han-patina));
+        border-color: transparent;
+        outline: none;
+    }
+}
+
+.n404-inv-stage {
+    position: relative;
+    line-height: 0;
+    background: #0a0d12;
+    border: 2px solid color-mix(in srgb, var(--global-text-color, currentColor) 42%, transparent);
+
+    canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 480 / 640;
+        image-rendering: pixelated;
+        touch-action: none; // 游戏面上拖动就是操纵，不许带着页面滚
+    }
+}
+
+/* 遮罩（开始 / 结算）：盖在画布上。display:flex 会压过 hidden 的 UA 样式，
+   必须显式把 hidden 打回来 */
+.n404-inv-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 1.4rem 1.2rem;
+    text-align: center;
+    line-height: 1.55;
+    background: rgba(10, 13, 18, 0.78);
+    color: #d9d4c5;
+
+    &[hidden] {
+        display: none;
+    }
+
+    a {
+        color: inherit;
+    }
+}
+
+.n404-inv-overtitle {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.3em;
+    letter-spacing: 0.06em;
+    color: #9fe3c0;
+}
+
+.n404-inv-oversub {
+    margin: 0;
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.n404-inv-overhint {
+    margin: 0.35rem 0 0;
+    font-size: 0.78em;
+    opacity: 0.62;
+}
+
+/* 像素风的方角按钮：双线描边用 box-shadow 叠出来 */
+.n404-inv-btn {
+    font: inherit;
+    font-weight: 700;
+    margin-top: 0.6rem;
+    padding: 0.55em 1.7em;
+    letter-spacing: 0.12em;
+    color: #0a0d12;
+    background: #9fe3c0;
+    border: 0;
+    border-radius: 2px;
+    box-shadow: 0 0 0 2px #0a0d12, 0 0 0 4px rgba(159, 227, 192, 0.55);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: #c9f2dc;
+        outline: none;
+    }
+}
+
+/* 波次横幅与彩蛋句：淡入淡出（hidden 控制占位，is-on 控制透明度） */
+.n404-inv-banner,
+.n404-inv-egg {
+    margin: 0.75rem 0 0;
+    text-align: center;
+    font-size: 0.9em;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+
+.n404-inv-banner.is-on,
+.n404-inv-egg.is-on {
+    opacity: 0.9;
+}
+
+.n404-inv-egg {
+    color: var(--global-link-color, inherit);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .n404-inv-banner,
+    .n404-inv-egg {
+        transition: none;
+    }
+}
+
+@media print {
+    .n404-inv {
+        display: none !important;
+    }
+}
