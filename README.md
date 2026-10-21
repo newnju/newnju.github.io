@@ -459,7 +459,7 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 - `package.json` 声明 `type: module`（tools/tests 全 ESM；`tools/subset-fonts.js` 顺手转 `.mjs` 领了 ESM 户口）—— npm test 里那条 `MODULE_TYPELESS_PACKAGE_JSON` 警告随之消失；
 - **金丝雀**（工作流 deploy 关尾部）：部署完成立刻对**生产站**做三条断言（404 页有引擎挂点、min 脚本可达且非空、首页 200），带 8 轮 × 15 秒重试 —— CDN 传播窗口里「页面全绿但站没换掉」这种空欢喜，从这条起当场红；
 - **dependabot**（`.github/dependabot.yml`）：npm 与 GitHub Actions 每周一收一批小步更新（minor/patch 打包成一个 PR），Jekyll 的 Gemfile 月度巡检 —— 版本漂移不再靠人肉盯；
-- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着（不依赖 chrome-launcher —— 它在受限环境会撞 ProcessSingleton 锁；Windows 本机连完整 Chrome 都起不来，这关只在 CI 里跑，本地自动跳过并说明原因）。
+- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。用 `CHROME_PATH` 把 Playwright 缓存里的完整 chromium 指给 Lighthouse 的 chrome-launcher，让它自己拉起浏览器跑审计（试过 Playwright 托管 + `--port` 附着，在 runner 上必挂 `Target closed`；Playwright 默认的 headless-shell 又缺 Storage 配额子系统 —— 两个坑都写在工具头注释里）；Windows 本机连完整 Chrome 都起不来，这关只在 CI 里跑，本地自动跳过并说明原因。
 
 ---
 
@@ -781,7 +781,7 @@ sw.js 是 Jekyll 渲染产物，版本号靠 `site.time` 注入 —— 写坏 fr
 
 **第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，只在 CI 里真正跑）
 
-性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引巨额 JS、一张没压缩的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 −5」的地板就红。地板是死的数字写在 `tools/check-lh.mjs` 顶部，改基线 consciously：刻意让分数变差的要求是「重跑一轮、连同地板和基线文档一起更新，方向才算数」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着 —— 不依赖 chrome-launcher（它在受限环境会撞 ProcessSingleton 锁）；Windows 本机没有能用的完整 Chrome，这关只在 CI 里跑，本地会自动跳过并说明原因。
+性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由 Lighthouse 自己拉起，`CHROME_PATH` 显式指向 Playwright 缓存里的完整 chromium（Playwright 托管 + `--port` 附着在 runner 上实测必挂 `Target closed`；而 Playwright 默认的 headless-shell 缺 Storage 配额子系统，审计根本开不了跑）；Windows 本机没有能用的完整 Chrome，这关只在 CI 里跑，本地会自动跳过并说明原因。
 
 ### 六个容易踩的坑
 

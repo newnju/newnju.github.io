@@ -8,9 +8,9 @@
 //
 // 方法口径（与 docs/lighthouse-baseline.md 对齐）：
 // - 默认 mobile 模拟节流（4G）——线上访客的主要形态；
-// - 浏览器交给 Playwright 启动其管理的 chromium（本机没有独立 Chrome，也不想
-//   在 CI 再装一份），LH 以 --port 附着 —— 详见下文注释；
-// - 目标是**本地 _site** 而不是生产站：预部署就能红，且不受本机代理噪声影响；
+// - 浏览器由 Lighthouse 自己拉起：CHROME_PATH 显式指向 Playwright 缓存里的
+//   **完整 chromium**（runner 上唯一的 Chrome 就是它；不猜 PATH、不装系统版）；
+// - 目标设成**本地 _site** 而不是生产站：预部署就能红，且不受本机代理噪声影响；
 // - 分数小幅波动是常态（参照基线文档的 TBT 噪声记录），连续跌破地板才算真回归
 //   —— 在 CI 里偶尔抖红一次，重跑本 job 即可判真伪。
 //
@@ -25,7 +25,6 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { chromium } from 'playwright';
 import { SITE_ROOT } from './lib/content.mjs';
 
 const argv = process.argv.slice(2);
@@ -82,41 +81,60 @@ await new Promise(
 );
 const origin = `http://127.0.0.1:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`;
 
-/* 浏览器直接交给 Playwright 掌管：它在任何环境（本机受限 shell、CI）都已
-   证明能把这颗 chromium 拉起来，而 LH 自带的 chrome-launcher 在受限环境下
-   会撞上 ProcessSingleton 锁文件的权限墙。做法：launch 时多塞一个
-   --remote-debugging-port，LH 用 --port 附着上去，完全绕开 chrome-launcher。 */
-const chromePort = await (async () => {
-  const temp = http.createServer();
-  await new Promise(
-    /** @type {(r: (v?: undefined) => void) => void} */ ((r) => temp.listen(0, '127.0.0.1', () => r())),
-  );
-  const port = /** @type {import('node:net').AddressInfo} */ (temp.address()).port;
-  await new Promise(
-    /** @type {(r: (v?: undefined) => void) => void} */ ((r) => temp.close(() => r())),
-  ); // 立刻释放给 chrome 用（有小概率撞占，重跑即可）
-  return port;
-})();
+/* 浏览器怎么起：让 Lighthouse 自己拉 chrome-launcher 起，我们只负责用
+   CHROME_PATH 把「完整 chromium」的路径指清楚。走过两条弯路，都记在这：
+   1) Playwright launch + LH --port 附着：LH 建 target 后 Page.navigate 时
+      会被收走（Target closed），GitHub runner 上实测必挂；
+   2) Playwright 默认 headless 用的是 chromium-headless-shell（阉割构建，
+      缺 Storage 配额子系统），LH13 prepare 阶段会报
+      Protocol error(Storage.getUsageAndQuota)。
+   所以这里扫描 Playwright 缓存，只要 chromium-<rev> 的**完整**构建（排除
+   headless_shell），把路径交给 chrome-launcher。 */
 
-// Windows 本机不跑（预算关的家在 CI ubuntu）：
-// 1) 沙箱环境起完整 chrome 会撞 ProcessSingleton 锁（launch 直接死）；
-// 2) playwright 默认给的 headless-shell 缺 Storage 配额子系统，LH13 的
-//    prepare 阶段会被 Protocol error(Storage.getUsageAndQuota) 绊死。
-// CI linux 上 channel:'chromium' 拿到完整构建（绕开 shell），一切正常。
+/** @returns {string} */
+function findFullChromium() {
+  const base = process.platform === 'win32'
+    ? path.join(process.env.LOCALAPPDATA || '', 'ms-playwright')
+    : process.platform === 'darwin'
+      ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
+      : process.env.PLAYWRIGHT_BROWSERS_PATH || path.join(os.homedir(), '.cache', 'ms-playwright');
+  const exe = process.platform === 'win32'
+    ? ['chrome-win64', 'chrome.exe']
+    : process.platform === 'darwin'
+      ? ['chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium']
+      : ['chrome-linux', 'chrome'];
+  /** @type {string[]} */
+  const found = [];
+  if (fs.existsSync(base)) {
+    for (const d of fs.readdirSync(base)) {
+      // 只认完整构建：chromium-1243 版本号，不认 chromium_headless_shell-1243
+      if (!/^chromium-\d+$/.test(d)) continue;
+      const p = path.join(base, d, ...exe);
+      if (fs.existsSync(p)) found.push(p);
+    }
+  }
+  if (!found.length) {
+    throw new Error(`check-lh: 找不到完整 chromium（扫了 ${base}）—— 先 npx playwright install chromium`);
+  }
+  // 多版本共存时取修订号最大的那颗
+  found.sort((a, b) => {
+    const rev = (s) => Number((s.match(/chromium-(\d+)/) || [])[1] || 0);
+    return rev(b) - rev(a);
+  });
+  return found[0];
+}
+
+// Windows 本机不跑（预算关的家在 CI ubuntu）：沙箱环境里完整 chrome 起不来
+// （ProcessSingleton 锁被拒），headless-shell 又缺配额子系统。CI linux 上
+// 完整 chromium + chrome-launcher 是通途。
 if (process.platform === 'win32') {
-  console.log('check-lh: 本机 Windows 没有运行中的完整 Chrome（沙箱限制 + headless-shell 缺配置额）——预算关交给 CI 跑');
+  console.log('check-lh: 本机 Windows 没有能跑的完整 Chrome（沙箱限制 + headless-shell 缺配额）——预算关交给 CI 跑');
   await server.close();
   process.exit(0);
 }
 
-let browser;
-try {
-  browser = await chromium.launch({ channel: 'chromium', args: [`--remote-debugging-port=${chromePort}`] });
-} catch (e) {
-  console.log(`check-lh: 起 chromium 失败（这是环境问题不是站点回归）：\n${String(e).slice(0, 600)}`);
-  await server.close();
-  process.exit(1);
-}
+const CHROME_PATH = findFullChromium();
+console.log('check-lh: chromium =', CHROME_PATH);
 
 const LH_CLI = path.join(SITE_ROOT, 'node_modules', 'lighthouse', 'cli', 'index.js');
 const problems = [];
@@ -134,16 +152,15 @@ for (const p of Object.keys(PAGE_FLOORS)) {
     execFileSync(
       process.execPath,
       [LH_CLI, url,
-        '--port=' + chromePort,
         `--output-path=${outJson}`,
         '--output=json',
         '--only-categories=performance,accessibility,best-practices,seo',
         '--max-wait-for-load=120000',
+        '--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage',
         '--quiet'],
-      { cwd: SITE_ROOT, stdio: ['ignore', 'pipe', 'pipe'] },
+      { cwd: SITE_ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CHROME_PATH } },
     );
   } catch (e) {
-    browser.close().catch(() => {});
     await server.close();
     console.log(`check-lh: Lighthouse 审计 ${p} 失败（${e.status ?? 'exec'} 损）：`);
     console.log(String((e.stderr || e.stdout || '')).slice(0, 800));
@@ -164,7 +181,6 @@ for (const p of Object.keys(PAGE_FLOORS)) {
   }
 }
 
-await browser.close();
 await server.close();
 
 const head = '页面            | 性能 | 可访问性 | 最佳实践 | SEO';

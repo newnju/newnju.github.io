@@ -76,7 +76,7 @@ npx --yes lighthouse@12 https://newnju.github.io/cv/ --output=json --output-path
   一轮校准、把**分数表与地板一起**按新引擎的实际值更新。
 - 同一版本内比较才算数：怀疑真回归时，在同一环境重复两次，连续两红
   才算（单次抖动参照上文试跑的教训）。
-- 本机 Windows 无法跑这道关（Playwright 只带 headless-shell，缺少
-  Storage 配额子系统，Lighthouse 13 的 prepare 阶段会在它身上挂）；
-  CI（ubuntu，完整 chromium，Playwright 启动 + `--port` 附着）是这道关
-  的主场。
+- 本机 Windows 无法跑这道关（沙箱里完整 chrome 起不来，Playwright 默认
+  的 headless-shell 又缺 Storage 配额子系统，Lighthouse 13 的 prepare
+  阶段会在它身上挂）；CI（ubuntu，`CHROME_PATH` 指向 Playwright 缓存里的
+  完整 chromium，由 chrome-launcher 拉起）是这道关的主场。
