@@ -98,19 +98,37 @@ function findFullChromium() {
     : process.platform === 'darwin'
       ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
       : process.env.PLAYWRIGHT_BROWSERS_PATH || path.join(os.homedir(), '.cache', 'ms-playwright');
-  const exe = process.platform === 'win32'
-    ? ['chrome-win64', 'chrome.exe']
-    : process.platform === 'darwin'
-      ? ['chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium']
-      : ['chrome-linux', 'chrome'];
+
+  /* 可执行文件的位置在 Playwright 各平台各版本里改过好几轮：
+     Windows 是 chrome-win64/chrome.exe，Linux 老布局 chrome-linux/chrome、
+     新布局（Chrome for Testing）chrome-linux64/chrome……所以不猜子路径，
+     直接递归找文件本体，取路径最短的那颗（真身总在浅层，深层的同名文件
+     是杂项）。 */
+  /** @param {string} dir @returns {string | null} */
+  function findBinary(dir) {
+    /** @type {string[]} */
+    const queue = [dir];
+    /** @type {string[]} */
+    const hits = [];
+    while (queue.length && hits.length < 8) {
+      const cur = /** @type {string} */ (queue.shift());
+      for (const e of fs.readdirSync(cur, { withFileTypes: true })) {
+        const p = path.join(cur, e.name);
+        if (e.isDirectory()) queue.push(p);
+        else if (e.name === 'chrome' || e.name === 'chrome.exe' || e.name === 'Chromium') hits.push(p);
+      }
+    }
+    return hits.sort((a, b) => a.length - b.length)[0] || null;
+  }
+
   /** @type {string[]} */
   const found = [];
   if (fs.existsSync(base)) {
     for (const d of fs.readdirSync(base)) {
       // 只认完整构建：chromium-1243 版本号，不认 chromium_headless_shell-1243
       if (!/^chromium-\d+$/.test(d)) continue;
-      const p = path.join(base, d, ...exe);
-      if (fs.existsSync(p)) found.push(p);
+      const bin = findBinary(path.join(base, d));
+      if (bin) found.push(bin);
     }
   }
   if (!found.length) {
