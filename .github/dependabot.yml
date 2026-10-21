@@ -1,0 +1,35 @@
+# 依赖治理：版本漂移不再靠人肉盯。npm 与 Actions 每周一收一批小步更新，
+# Gemfile 版本低频（月度）就够了 —— 上游切换 GitHub Pages 的 jekyll 版本时
+# bundle 里能早日看到差异。全部 PR 照常过 Pages 工作流，红着就不许合。
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "07:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 3

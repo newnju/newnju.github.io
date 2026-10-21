@@ -167,3 +167,34 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      # 金丝雀：部署完成立刻对生产站抽查三条关键产物 —— 404 页有引擎挂点、
+      # min 脚本可达且非空、首页 200。Pages CDN 对静态站有传播窗口（通常
+      # 秒级），带 8 轮重试；这几条红了说明「上游全绿，用户看到的却不是
+      # 这份」，这类事靠人工是发现不了的。
+      - name: production canary
+        shell: bash
+        env:
+          PAGES_URL: https://newnju.github.io
+        run: |
+          set -u
+          ok=0
+          for i in 1 2 3 4 5 6 7 8; do
+            c404=$(curl -sS --max-time 30 -o /tmp/c404.html -w '%{http_code}' "$PAGES_URL/404.html" || true)
+            cjs=$(curl -sS --max-time 30 -o /tmp/cn404.js -w '%{http_code}' "$PAGES_URL/assets/js/n404.min.js" || true)
+            chome=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$PAGES_URL" || true)
+            szjs=$(wc -c < /tmp/cn404.js)
+            echo "attempt $i: 404=$c404 js=$cjs(${szjs}B) home=$chome"
+            if [ "$c404" = "200" ] && [ "$cjs" = "200" ] && [ "$chome" = "200" ] \
+               && [ "$szjs" -gt 1000 ] \
+               && grep -q 'n404-inv-canvas' /tmp/c404.html \
+               && grep -q 'n404-en-data' /tmp/c404.html; then
+              ok=1
+              break
+            fi
+            sleep 15
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::金丝雀未通过（${i} 轮）：404=${c404:-?} js=${cjs:-?} home=${chome:-?}"
+            exit 1
+          fi
+          echo "✓ 金丝雀通过（第 ${i} 轮）：生产站上 404 引擎挂点、min 脚本、首页全部就位"

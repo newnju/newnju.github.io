@@ -14,13 +14,11 @@
  *   --audit 只查「图标家族对不对得上」，纯文本分析、不要 Python，退出码非 0 即有问题
  */
 
-"use strict";
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
-const fs = require("fs");
-const path = require("path");
-const { execFileSync } = require("child_process");
-
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(import.meta.dirname, '..');
 const argv = process.argv.slice(2);
 const CHECK_ONLY = argv.indexOf("--check") !== -1;
 const AUDIT_ONLY = argv.indexOf("--audit") !== -1;
