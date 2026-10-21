@@ -20,7 +20,7 @@
 // 所以 front matter 用 yaml.stringify(lineWidth: 0)（不折行、键序即插入序）。
 import path from 'node:path';
 import { stringify as yamlStringify } from 'yaml';
-import { SITE_ROOT, loadCollections } from './content.mjs';
+import { loadCollections } from './content.mjs';
 
 /** 英文页模板会读的 front matter 键白名单 —— 与 schemas/page.schema.json 对齐，
  *  tests/render-en.test.mjs 拿它和 schema 互查，防止生成器写出 schema 不认识的键。 */
@@ -46,7 +46,7 @@ function pendingBlock(zhUrl) {
 
 /**
  * 一个条目 → 一页英文条目页的完整文件内容。
- * @param {{file: string, data: object, body: string}} entry loadFrontMatter 的结果
+ * @param {{file: string, data: Record<string, any>, body: string}} entry loadFrontMatter 的结果
  * @param {string} collection 集合名（publications / portfolio / talks / teaching）
  */
 export function renderEnPage(entry, collection) {

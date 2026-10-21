@@ -49,10 +49,10 @@ const PAGES = [
   ['cv-en', '/en/cv/'],
 ];
 
-const VIEWPORTS = [
+const VIEWPORTS = /** @type {Array<[string, import('playwright').ViewportSize]>} */ ([
   ['desktop', { width: 1366, height: 900 }],
   ['mobile', { width: 390, height: 844 }],
-];
+]);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -116,19 +116,23 @@ function startServer(root) {
 async function settle(page) {
   await page.evaluate(
     () =>
-      new Promise((done) => {
-        let y = 0;
-        const step = () => {
-          y += window.innerHeight * 0.8;
-          window.scrollTo(0, y);
-          if (y < document.body.scrollHeight) requestAnimationFrame(step);
-          else {
-            window.scrollTo(0, 0);
-            done();
+      new Promise(
+        /** @type {(done: (v?: undefined) => void) => void} */ (
+          (done) => {
+            let y = 0;
+            const step = () => {
+              y += window.innerHeight * 0.8;
+              window.scrollTo(0, y);
+              if (y < document.body.scrollHeight) requestAnimationFrame(step);
+              else {
+                window.scrollTo(0, 0);
+                done();
+              }
+            };
+            requestAnimationFrame(step);
           }
-        };
-        requestAnimationFrame(step);
-      }),
+        ),
+      ),
   );
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(250);

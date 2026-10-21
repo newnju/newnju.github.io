@@ -48,7 +48,6 @@
 
 /** CORS 只对本站开放；所有响应都不缓存 */
 function corsHeaders(env, request) {
-  const origin = request.headers.get('origin') || '';
   const allowed = env.ALLOWED_ORIGIN || 'https://newnju.github.io';
   return {
     'access-control-allow-origin': allowed,
@@ -125,7 +124,7 @@ function classify(ua) {
   if (bot) device = 'bot';
   else if (/ipad|tablet|playbook|silk/.test(s)) device = 'tablet';
   else if (/mobi|iphone|android.*mobile|windows phone/.test(s)) device = 'mobile';
-  const botName = bot ? (BOT_NAMES.find(([, re]) => re.test(s))?.[0] ?? null) : null;
+  const botName = bot ? (BOT_NAMES.find(([, re]) => /** @type {RegExp} */ (re).test(s))?.[0] ?? null) : null;
   return { browser, device, bot: device === 'bot' ? 1 : 0, botName };
 }
 

@@ -441,6 +441,28 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 
 ---
 
+### 10. PWA 离线与跨页视图过渡（2026-10 新增）
+
+**PWA 离线**（根 `sw.js` + `assets/js/pwa.js` + `images/manifest.json` + `tools/check-pwa.mjs`）：整站现在是一个可安装、可离线的 PWA。`sw.js` 是**根级 Jekyll 模板**（`layout: null` + `sitemap: false`，front matter 让 Jekyll 渲染它、`site.time` 每次构建注入版本号）：
+
+- **HTML 一律 network-first**（在线 3.3 秒内必须真网络，超时/断网才回缓存）—— 页脚「Site last updated」这类动态字样不能被旧缓存糊弄；响应用过的导航会顺手存快照，下次离线找得到。
+- **静态产物 stale-while-revalidate** ——`css/js/woff2/图片/manifest` 命中即用、后台换新；min 文件名固定但内容由 `check:min-sync` 与源码逐字节对账，缓存内容天然可信。
+- **预缓存清单**十六件：两条语言的首页/履历、时间轴、404 兜底、favicon 全家、main.css、四份 min 脚本、两份子集字体。`install` 阶段任何一件失败就整轮重试，不做半缓存。
+- **跨域一概不碰** —— analytics Worker 的 POST、外链、OAuth 回流原样放行。
+- **注册器** `assets/js/pwa.js` 只有十行：https 或本机才注册、`load` 事件之后才注册（首屏关键路径一寸不让）、注册被拒静默 —— 环境不支持时就当普通静态站，不给访问添噪声。
+- **验收** `npm run check:pwa`：真浏览器断网走两个场景（未知页落首页快照、`/cv/` 原页照常），恢复在线再验一轮，并断言「`/sw.js` 确实以 JavaScript 交付」—— sw.js 是 liquid 产物，写成 YAML 或文本这种「不跑不知道」的故障，只有这道关照得出来。
+
+**跨页视图过渡**（`_sass/_han.scss` 第 32 节）：`@view-transition { navigation: auto }` 一行总开关，同源跳页从「白纸闪一下」变成同底色 250ms 交叉淡入；只开总开关、不自编 `::view-transition-*` 动画 —— 默认过渡克制而得体，再花哨就不是本站气质了。只有 Chromium 认识它，Firefox/Safari 静默忽略零回归；`prefers-reduced-motion` 用户连默认动画也无（整个开关嵌在 `no-preference` 媒体里）。
+
+**依赖与部署通道成熟化**（同批落地）：
+
+- `package.json` 声明 `type: module`（tools/tests 全 ESM；`tools/subset-fonts.js` 顺手转 `.mjs` 领了 ESM 户口）—— npm test 里那条 `MODULE_TYPELESS_PACKAGE_JSON` 警告随之消失；
+- **金丝雀**（工作流 deploy 关尾部）：部署完成立刻对**生产站**做三条断言（404 页有引擎挂点、min 脚本可达且非空、首页 200），带 8 轮 × 15 秒重试 —— CDN 传播窗口里「页面全绿但站没换掉」这种空欢喜，从这条起当场红；
+- **dependabot**（`.github/dependabot.yml`）：npm 与 GitHub Actions 每周一收一批小步更新（minor/patch 打包成一个 PR），Jekyll 的 Gemfile 月度巡检 —— 版本漂移不再靠人肉盯；
+- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着（不依赖 chrome-launcher —— 它在受限环境会撞 ProcessSingleton 锁；Windows 本机连完整 Chrome 都起不来，这关只在 CI 里跑，本地自动跳过并说明原因）。
+
+---
+
 ## 四、日常维护
 
 ### 改内容的两种方式
@@ -633,7 +655,7 @@ node --test tests/oauth-proxy.test.mjs
 
 ```bash
 npm ci          # 第一次
-npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 个回归测试
+npm run check   # 一键：校验 → 内容一致性 → 结构检查 → lint → 类型 → 回归测试
 ```
 
 `npm run check` 会挡掉这些问题：
@@ -643,14 +665,18 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 �
 | `npm run validate` | front matter 缺字段、类型不对、permalink 重复、`category` 拼错 |
 | `npm run check:content` | 生成物与数据不同步 —— **只提示，不挡**：后台改完内容生成物必然过期，而后台没法跑生成器，所以 CI 每次 `jekyll build` 之前都会自动重新生成 |
 | `npm run check:structure` | 列表塌成一段、Liquid 漏渲染、页面缺章节、薄包装片段里混进 Liquid、img 缺 width/height（CLS，图片加载完会把下面内容顶动） |
-| `npm test` | JS 生成器与原 Liquid 模板**现场渲染**结果逐字节一致（40 个） |
+| `npm run lint` | ESLint 静态分析：未定义引用、变量拼错名、无用赋值、可疑模式 —— 浏览器 / 工具 / Worker 三个域各一套规则（`eslint.config.mjs`） |
+| `npm run check:types` | TypeScript 的 checkJs：工具脚本里不存在的属性、传错的参数 —— 只查不生成，专吃「不跑起来就发现不了」的属性级笔误 |
+| `npm test` | JS 生成器与原 Liquid 模板**现场渲染**结果逐字节一致（110 个） |
 | `npm run check:en` | 改了中文却没动对应 `*_en` 字段 —— **只提醒，不挡**（见下） |
 | `npm run check:links` | 重复 id、假链接、站内 404、缺 alt、横向溢出 —— **只报不挡**（见下） |
 | `npm run check:min-sync` | min 产物与源码不同步（改了 `assets/js/*.js` 忘跑 `build:js`，线上跑的还是旧逻辑）—— 压缩重跑与仓库里的 min 逐字节比对 |
 | `npm run check:inline-js` | 内联 `<script>` 被 `compress_html` 压坏（`//` 注释吞代码）—— 对最终 `_site` HTML 里的可执行内联脚本做语法校验 |
 | `npm run check:404` | 404 页的行为：游戏点亮、文案与页内 JSON 一致、点开始挂遮罩摘除、`/en/` 换装、无 JS 报错 |
+| `npm run check:pwa` | PWA 三件套：sw.js 以 JavaScript 交付、注册并接管页面、预缓存就绪、断网回落首页快照、断网后已缓存页照常渲染（sw.js 是 Jekyll 模板产物，断网才现形的故障只有真浏览器验得出） |
+| `npm run check:lh` | Lighthouse 预算：首页 / 履历四类分数低于「基线 −5」就红（基线与口径见 `docs/lighthouse-baseline.md`）—— 在 CI 里跑；本机 Windows 没有可用的完整 Chrome，会自动跳过 |
 
-CI 里这些步骤全部会跑，**任何一步红都不会部署**。`check:min-sync` 与 Jekyll 无关，在构建机上装完 node_modules 就跑；构建产物上的六道（`check:structure` 后半段、`check:links`、`check:behavior`、`check:inline-js`、`check:404`、`screenshots`）在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。
+CI 里这些步骤全部会跑，**任何一步红都不会部署**。`check:min-sync` 与 Jekyll 无关，在构建机上装完 node_modules 就跑；构建产物上的七道（`check:structure` 后半段、`check:links`、`check:behavior`、`check:inline-js`、`check:404`、`check:pwa`、`check:lh`）与 `screenshots` 在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。部署完成后 deploy 关还有一道**金丝雀**：部署即刻对生产站做三条断言（404 页引擎挂点、min 脚本可达、首页 200），带 8 轮重试以吸收 CDN 传播窗口 —— 「上游全绿但站点没换版」这种空欢喜，从此当场暴露。
 
 > 关键设计：所有比对都用**同一份当前数据现场渲染**，不依赖任何存下来的快照。
 > 否则在后台改一个字，快照就过期了 —— 那等于白设门禁。
@@ -748,6 +774,14 @@ CI 里还会拿它和 `tests/__screenshots__/` 的基线做**像素比对**，�
 内容、结构的真回归由上面四道确定性的关卡负责。
 
 基线必须在 CI 环境下生成（字体渲染在 Windows 和 Linux 上必然不同），首次从 artifact 取回提交即可。
+
+**第八道：PWA 与离线**（`npm run check:pwa`，需要 `_site/`）
+
+sw.js 是 Jekyll 渲染产物，版本号靠 `site.time` 注入 —— 写坏 front matter、漏掉分隔符，它就会以 YAML 或纯文本的模样被浏览器拒绝注册，页面照样能开：这类「断网才现形」的故障，其它所有关一个都照不出。这道关用真浏览器把整条链走一遍：`/sw.js` 确实是 JavaScript、注册并接管页面、预缓存清单就位、断网后未知页回落首页快照（URL 保持原样）、断网后 `/cv/` 从缓存原样渲染、恢复在线一切照旧、全程无 JS 报错（共 10 项）。本地假站点也能跑（`--site <dir>`），线上验证用 `--base https://newnju.github.io`。
+
+**第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，只在 CI 里真正跑）
+
+性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引巨额 JS、一张没压缩的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 −5」的地板就红。地板是死的数字写在 `tools/check-lh.mjs` 顶部，改基线 consciously：刻意让分数变差的要求是「重跑一轮、连同地板和基线文档一起更新，方向才算数」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着 —— 不依赖 chrome-launcher（它在受限环境会撞 ProcessSingleton 锁）；Windows 本机没有能用的完整 Chrome，这关只在 CI 里跑，本地会自动跳过并说明原因。
 
 ### 六个容易踩的坑
 

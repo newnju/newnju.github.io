@@ -1,0 +1,30 @@
+{
+  // tools/ 与 tests/ 的静态类型守门：checkJs 只查不emit，noEmit 恒定。
+  //
+  // 为什么不是 strict：这两个域没有类型标注传统（注释文化在「为什么」上，
+  // 不在「类型」上），一上 noImplicitAny 会淹没在无意义的告警里；本配置
+  // 开启的是「免跑就能抓到的真 bug」级别：拼写错字段名、不存在的属性、
+  // null 解引用路径中的 this 语义、返回值类型冲突等。
+  // 要升级成 strict 的话方向是逐文件补 JSDoc，改这里 + tools/lib/ 起步。
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023", "dom"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "types": ["node"],
+    "noImplicitThis": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "tools/**/*.mjs"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

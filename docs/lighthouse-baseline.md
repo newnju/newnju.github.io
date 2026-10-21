@@ -63,3 +63,20 @@ npx --yes lighthouse@12 https://newnju.github.io/cv/ --output=json --output-path
   Speed Index 高与首屏字体/渲染链相关（宋体族 + 全站 CSS），属于
   「主题性慢」，后续可以从 fonts 子集与 `font-display` 慢慢抠。
 - 本机环境加载超时警告会放大 TBT/SI，跨版本对比时注意换网络重跑。
+
+## 2026-10-21 起：这份基线由 CI 替人盯着
+
+`tools/check-lh.mjs` 在 build 关把 `_site` 起成本地服务，对 `/` 与 `/cv/`
+各跑一次 Lighthouse（同口径：默认 mobile 4G 模拟节流），分数低于
+「本文档基线 − 5」的地板就红 —— 地板数字落在工具顶部的 `PAGE_FLOORS`。
+
+- 本文档的分数仍是 **Lighthouse 12.8.2** 的记录；构建机现在装的是
+  **Lighthouse 13**。12→13 的算法另定，绝对分数允许搬家：只要 CI 的
+  首轮跑分不低于地板即视作守住了底线，哪天地板整体偏高/偏低，就重跑
+  一轮校准、把**分数表与地板一起**按新引擎的实际值更新。
+- 同一版本内比较才算数：怀疑真回归时，在同一环境重复两次，连续两红
+  才算（单次抖动参照上文试跑的教训）。
+- 本机 Windows 无法跑这道关（Playwright 只带 headless-shell，缺少
+  Storage 配额子系统，Lighthouse 13 的 prepare 阶段会在它身上挂）；
+  CI（ubuntu，完整 chromium，Playwright 启动 + `--port` 附着）是这道关
+  的主场。

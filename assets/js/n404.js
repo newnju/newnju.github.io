@@ -108,7 +108,7 @@
       if (a === b) { return 0; }
       if (!a.length) { return b.length; }
       if (!b.length) { return a.length; }
-      var prev = [], cur = [], i, j;
+      var prev = [], cur, i, j;
       for (i = 0; i <= b.length; i++) { prev[i] = i; }
       for (i = 1; i <= a.length; i++) {
         cur = [i];
@@ -159,7 +159,7 @@
           return c.d <= Math.max(2, Math.floor(nb.length * 0.34));
         }).slice(0, 3);
         if (best.length) {
-          var listEl = show("n404-sugg-" + lang, true);
+          show("n404-sugg-" + lang, true);
           var ul = document.getElementById("n404-sugg-list-" + lang);
           if (ul) {
             best.forEach(function (c) {

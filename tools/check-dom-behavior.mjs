@@ -305,13 +305,13 @@ async function newPage(viewport) {
     await page.click('[data-share-wechat]');
     await page.waitForTimeout(700);
     const opened = await page.evaluate(() => {
-      const panel = document.querySelector('.han-sharecard');
+      const panel = /** @type {HTMLElement | null} */ (document.querySelector('.han-sharecard'));
       const svg = panel?.querySelector('svg');
       const path = svg?.querySelector('path');
       return {
         open: !!panel && !panel.hidden,
         role: panel?.getAttribute('role'),
-        qrLoaded: !!window.qrcode,
+        qrLoaded: !!/** @type {any} */ (window).qrcode,
         hasPath: !!path && (path.getAttribute('d') || '').length > 40,
         hasUrl: (panel?.querySelector('.han-sharecard__url')?.textContent || '').includes('newnju.github.io'),
         expanded: document.querySelector('[data-share-wechat]')?.getAttribute('aria-expanded'),
@@ -325,7 +325,9 @@ async function newPage(viewport) {
 
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
-    const closed = await page.evaluate(() => document.querySelector('.han-sharecard')?.hidden);
+    const closed = await page.evaluate(
+      () => /** @type {HTMLElement} */ (document.querySelector('.han-sharecard'))?.hidden,
+    );
     check('ESC 关闭弹层', closed === true, `hidden=${closed}`);
   }
 
@@ -409,8 +411,8 @@ async function newPage(viewport) {
     const h1 = document.querySelector('h1');
     const content = document.querySelector('.page__content');
     const sw = document.querySelector('.lang-switch a');
-    const share = document.querySelector('.page__share');
-    const btns = share ? [...share.querySelectorAll('.btn')] : [];
+    const share = /** @type {HTMLElement | null} */ (document.querySelector('.page__share'));
+    const btns = share ? /** @type {HTMLElement[]} */ ([...share.querySelectorAll('.btn')]) : [];
     const pv = document.querySelector('.page__views');
     const nav = [
       ...document.querySelectorAll(

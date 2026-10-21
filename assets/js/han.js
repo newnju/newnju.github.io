@@ -19,7 +19,7 @@ function copyText(text, onDone) {
   document.body.appendChild(ta);
   ta.select();
   ta.setSelectionRange(0, text.length);
-  var ok = false;
+  var ok;
   try {
     ok = document.execCommand("copy");
   } catch (e) {

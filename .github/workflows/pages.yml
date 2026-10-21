@@ -112,6 +112,16 @@ jobs:
       # 「脚本在线上死了、CI 依旧全绿」的历史首发地，单独一道关。
       - name: 404 page behavior on _site
         run: npm run check:404
+      # PWA 守门：sw.js 是 liquid 产物，手滑 loss 只在「断网那一刻」现形，
+      # 单独一道关把注册/预缓存/离线回落全走一遍（tools/check-pwa.mjs）。
+      - name: pwa and offline behavior on _site
+        run: npm run check:pwa
+      # 第六道关：Lighthouse 预算——性能/可访问性低于基线−5 的地板就红。
+      # 文档里记的基线只有被这道关守着才是活的：docs/lighthouse-baseline.md。
+      # chromium 在上面的 install chromium 步骤已就位；check-lh 用 Playwright
+      # 拉起完整 chromium，Lighthouse 以 --port 附着（不用 chrome-launcher）。
+      - name: lighthouse budgets on _site
+        run: npm run check:lh
       # 第五道关：把关键页面各截一张（桌面 + 手机），与基线做像素比对。
       # 截图即使用例失败也照上传，方便点开看现场。
       - name: screenshots

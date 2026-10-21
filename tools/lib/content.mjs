@@ -66,6 +66,7 @@ export function loadFrontMatter(relativePath) {
   return { file: relativePath, data: applyMergeKeys(normalise(parsed.data)), body: parsed.content };
 }
 
+/** @param {(name: string) => boolean} filter */
 function listFiles(relativeDir, filter = () => true) {
   const absolute = path.join(SITE_ROOT, relativeDir);
   if (!fs.existsSync(absolute)) return [];
@@ -76,7 +77,8 @@ function listFiles(relativeDir, filter = () => true) {
     .map((name) => path.posix.join(relativeDir, name));
 }
 
-/** 递归列出目录下所有命中 filter 的文件（相对路径，posix 分隔）。 */
+/** 递归列出目录下所有命中 filter 的文件（相对路径，posix 分隔）。
+ *  @param {(name: string) => boolean} filter */
 function listFilesDeep(relativeDir, filter = () => true) {
   const absolute = path.join(SITE_ROOT, relativeDir);
   if (!fs.existsSync(absolute)) return [];

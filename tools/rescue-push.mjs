@@ -107,7 +107,7 @@ const tok = gitCred();
 console.log('token 已取出（不回显）');
 
 // —— 远端当前 main ——
-let ref = await api(tok, `/repos/${REPO}/git/ref/heads/main`);
+const ref = await api(tok, `/repos/${REPO}/git/ref/heads/main`);
 if (ref.status !== 200) { throw new Error('读 ref 失败: ' + ref.status + ' ' + JSON.stringify(ref.json).slice(0, 300)); }
 const remoteHead = ref.json.object.object ? ref.json.object.object.sha : ref.json.object.sha;
 console.log('远端 main 当前:', mask(remoteHead));
@@ -132,7 +132,7 @@ for (const f of FILES) {
 }
 
 // —— 建树：base = 父提交的 tree，只叠本次改动的文件 ——
-let parentCommit = await api(tok, `/repos/${REPO}/git/commits/${parentSha}`);
+const parentCommit = await api(tok, `/repos/${REPO}/git/commits/${parentSha}`);
 if (parentCommit.status !== 200) { throw new Error('读父提交失败: ' + parentCommit.status); }
 const tree = await api(tok, `/repos/${REPO}/git/trees`, 'POST', {
   base_tree: parentCommit.json.tree.sha,

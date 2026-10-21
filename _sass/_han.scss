@@ -2055,3 +2055,23 @@ html.theme-transition .han-minimap * {
         display: none !important;
     }
 }
+
+/* ==========================================================================
+   32. 跨页视图过渡（MPA 跨文档 View Transitions，一行总开关）
+   --------------------------------------------------------------------------
+   @view-transition { navigation: auto } 是「跨文档 View Transitions」的
+   总开关：同源跳页时，两页各拍一张快照，旧页淡出、新页淡入 —— 把 MPA
+   固有的「白纸闪一下」换成同底色的翻页感。规则本体只有 Chromium 认识，
+   Firefox/Safari 静默忽略，行为退化成普通跳页，零回归。
+   这里只开总开关、不写任何自定义 ::view-transition-* 动画：默认过渡是
+   250ms 交叉淡入淡出，克制而得体；再花哨就该上 JS 逐元素编排了，那不是
+   本站该有的气质。
+   reduced-motion 用户：媒体偏好不满足，开关整个不生效（规范允许 @media
+   嵌套），连默认动画也无 —— 尊重系统偏好，跟其它 §17/§30 的动效门控同一套法度。
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+}

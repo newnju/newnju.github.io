@@ -24,18 +24,23 @@
     "node": ">= 20"
   },
   "type": "module",
-  "dependencies": {},
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
     "gray-matter": "^4.0.3",
     "js-yaml": "^5.4.2",
+    "lighthouse": "^13.5.0",
     "liquidjs": "^10.30.0",
     "node-html-parser": "^9.0.4",
     "onchange": "^7.1.0",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.63.0",
     "pngjs": "^7.0.0",
+    "typescript": "^7.0.2",
     "uglify-js": "^3.19.3",
     "yaml": "^2.9.1"
   },
@@ -56,9 +61,13 @@
     "check:icons": "node tools/subset-fonts.mjs --audit",
     "capture:reference": "node tools/capture-reference.mjs",
     "check:structure": "node tools/check-structure.mjs",
+    "lint": "eslint .",
+    "check:types": "tsc --noEmit",
+    "check:lh": "node tools/check-lh.mjs",
     "check:min-sync": "node tools/check-min-sync.mjs",
     "check:inline-js": "node tools/check-inline-js.mjs",
     "check:404": "node tools/check-404.mjs",
+    "check:pwa": "node tools/check-pwa.mjs",
     "rescue:push": "node tools/rescue-push.mjs",
     "ci:poll": "node tools/ci-poll.mjs",
     "check:en": "node tools/check-en-sync.mjs",
@@ -67,6 +76,6 @@
     "avatar": "node tools/make-avatar.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "test": "node --test \"**/*.test.mjs\"",
-    "check": "npm run validate && npm run check:content && npm run check:structure && npm test"
+    "check": "npm run validate && npm run check:content && npm run check:structure && npm run lint && npm run check:types && npm test"
   }
 }

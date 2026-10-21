@@ -65,4 +65,10 @@
   })();
 </script>
 
+<!-- PWA 注册（assets/js/pwa.js）：/sw.js 由 Jekyll 每次构建注入版本号。
+     外链是刻意的 —— compress_html 会把内联 <script> 压成一行，双斜杠
+     注释后面的代码就全没了（404 页的事故教训）。注册条件与静默策略
+     见 pwa.js 头注释；离线与缓存策略见根 sw.js 头注释。 -->
+<script defer src="{{ base_path }}/assets/js/pwa.js"></script>
+
 <!-- end custom head snippets -->

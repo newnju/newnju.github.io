@@ -7,7 +7,12 @@ permalink: /images/manifest.json
 	"short_name": {{ site.name | jsonify }},
 	"description": {{ site.description | jsonify }},
 	"start_url": "{{ site.baseurl }}/",
+	"id": "{{ site.baseurl }}/",
+	"scope": "{{ site.baseurl }}/",
 	"lang": {{ site.locale | default: "en" | jsonify }},
+	"display": "standalone",
+	"background_color": "#fbf8f1",
+	"theme_color": "#fbf8f1",
 	"icons": [
 		{
 			"src": "/images/favicon-192x192.png",

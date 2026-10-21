@@ -37,7 +37,7 @@ for (const w of WIDTHS) {
       const img = new Image();
       img.src = 'data:image/webp;base64,' + b64;
       await img.decode();
-      const c = document.getElementById('c');
+      const c = /** @type {HTMLCanvasElement} */ (document.getElementById('c'));
       c.width = w;
       c.height = w;
       const ctx = c.getContext('2d');

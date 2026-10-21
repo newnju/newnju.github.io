@@ -75,7 +75,7 @@ for (const file of htmls) {
   const html = fs.readFileSync(file, 'utf8');
   for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
     const attrs = m[1];
-    let code = m[2];
+    const code = m[2];
     const kind = scriptKind(attrs);
     if (kind === 'external' || kind === 'data') { counted[kind] += 1; continue; }
     if (kind === 'module') {

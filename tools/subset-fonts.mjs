@@ -38,7 +38,7 @@ function walk(dir, out) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch (e) {
+  } catch {
     return out;
   }
   entries.forEach(function (entry) {
@@ -270,14 +270,14 @@ function findPyftsubset() {
     try {
       execFileSync(name, ["--help"], { stdio: "ignore" });
       return name;
-    } catch (e) {
+    } catch {
       /* 试下一个 */
     }
   }
   try {
     execFileSync("python", ["-m", "fontTools.subset", "--help"], { stdio: "ignore" });
     return "python -m fontTools.subset";
-  } catch (e2) {
+  } catch {
     return null;
   }
 }

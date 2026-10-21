@@ -17,8 +17,8 @@ import {
 } from './lib/content.mjs';
 
 const require = createRequire(import.meta.url);
-const Ajv = require('ajv');
-const addFormats = require('ajv-formats');
+const Ajv = /** @type {new (opts?: object) => import('ajv').Ajv} */ (require('ajv'));
+const addFormats = /** @type {(ajv: import('ajv').Ajv) => void} */ (require('ajv-formats'));
 
 const args = process.argv.slice(2);
 const STRICT = args.includes('--strict');

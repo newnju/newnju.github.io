@@ -20,7 +20,6 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { SITE_ROOT } from './lib/content.mjs';
 
@@ -59,8 +58,14 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream' });
   res.end(fs.readFileSync(file));
 });
-await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
-const ORIGIN = `http://127.0.0.1:${server.address().port}`;
+await new Promise(
+  /** @type {(r: (v?: undefined) => void) => void} */ (
+    (r) => server.listen(PORT, '127.0.0.1', () => r())
+  ),
+);
+const ORIGIN = `http://127.0.0.1:${
+  /** @type {import('node:net').AddressInfo} */ (server.address()).port
+}`;
 
 const problems = [];
 const pagesSeen = new Set();
@@ -81,7 +86,7 @@ while (queue.length) {
 
   // 单个 URL 出岔子（畸形、跳到怪协议、DNS 失败）不该让整轮检查崩掉 ——
   // 崩掉等于这道关卡形同虚设，还会掩盖真正该报的问题。
-  let res = null;
+  let res;
   try {
     res = await page.goto(ORIGIN + p, { waitUntil: 'load', timeout: 30_000 });
   } catch (err) {
@@ -102,9 +107,10 @@ while (queue.length) {
     for (const id of ids) { if (seen.has(id)) dup.add(id); seen.add(id); }
     return {
       dupIds: [...dup],
-      links: [...document.querySelectorAll('a[href]')].map((a) => ({
-        href: a.getAttribute('href'), target: a.target, rel: a.rel,
-      })),
+      links: [...document.querySelectorAll('a[href]')].map((a) => {
+        const anchor = /** @type {HTMLAnchorElement} */ (a);
+        return { href: anchor.getAttribute('href'), target: anchor.target, rel: anchor.rel };
+      }),
       assets: [...document.querySelectorAll('img[src],script[src],link[href]')]
         .map((e) => e.getAttribute('src') ?? e.getAttribute('href'))
         .filter((u) => u && !/^(https?:)?\/\//.test(u) && !u.startsWith('data:')),
