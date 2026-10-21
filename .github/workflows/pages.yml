@@ -87,7 +87,7 @@ jobs:
         run: npm run check:structure
       # 第四、五道关都要真浏览器，装一次就够。
       - name: cache playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
