@@ -358,6 +358,8 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 
 **404 分中英两套**（`_pages/404.md`）。GitHub Pages 只用根目录 `/404.html` 兜底，`/en/xxx` 打不开时返回的也是它，所以页面按中文渲染，再用一小段脚本判断 `location.pathname` 是否以 `/en` 开头：是就换正文块、改 `<html lang>` 与 `<title>`（连带 `<h1>`），并把顶部导航、侧栏、页脚的文案与链接换成英文页那一套 —— 配对数据是页内那块 JSON，取自 `_data/navigation.yml`、`_data/ui-text.yml` 与 `_config.yml` 的 author 字段，与 `masthead.html` / `footer.html` / `author-profile.html` 的取值一一对应。关掉 JS 就是原来的中文 404，不影响可用性。
 
+**页面专属脚本一律走外链文件**（`assets/js/n404.js` → `npm run build:js` 压成 `n404.min.js`，min 与源码的逐字节同步由 `check:min-sync` 守着）。原因是站点的 `compress_html` 布局会把内联 `<script>` 压成一行，`//` 行注释之后的整段代码会被吞掉 —— 构建照样成功、五道 CI 关全绿，浏览器在控制台报 `Unexpected end of input`（2026-10 上线当天吃的亏：内联的换装/自助引擎和太空侵略者在线上全没跑起来，外链化才救活）。为此补了两道守门：`check:inline-js` 对最终 `_site` HTML（压缩后的形态）里每个可执行内联脚本做 vm 语法校验，这类故障从此挡在部署前；`check:404` 是这页自己的行为回归（游戏点亮、文案与页内 JSON 一致、点开始挂遮罩摘除、`/en/` 换装全套、无报错）—— 它不在导航爬取集合里、也没有像素基线，是「脚本死了 CI 还绿」的历史首发地，必须单独一道。
+
 **RSS 是自建的**（`_pages/feed.xml`）。`jekyll-feed` 只聚合 posts，本站没有 posts，原来的 `/feed.xml` 一直是 0 条；现在 `_config.yml` 的 `plugins` / `whitelist` 与 `Gemfile` 里都拿掉了 jekyll-feed，改由这一页输出，收录 `_publications`（四条 collection 里只有它带 `date`，talks / teaching / portfolio 没有日期，塞进去会被按构建时间顶到最前面）。页脚的 Feed 链接因此指向一份真有内容的 feed，`<head>` 里的 `<link rel="alternate">` 也指向它。
 
 **robots.txt 与社交预览**（根目录 `robots.txt`、`_config.yml` 的 `og_image`）。robots.txt 直接声明 `Sitemap: https://newnju.github.io/sitemap.xml`（由 jekyll-sitemap 生成）；`og_image: avatar.png` 让每页的 `og:image` / `twitter:image` 都指向 `/images/avatar.png`，分享出去才带预览图 —— `twitter:card` 那几行同时从 `twitter.username` 的 if 里挪了出来（本站没填账号，原先整块被跳过，连卡片类型都不输出）。没有 `excerpt` 的页面也会发 `og:description`。
@@ -644,8 +646,11 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → 40 �
 | `npm test` | JS 生成器与原 Liquid 模板**现场渲染**结果逐字节一致（40 个） |
 | `npm run check:en` | 改了中文却没动对应 `*_en` 字段 —— **只提醒，不挡**（见下） |
 | `npm run check:links` | 重复 id、假链接、站内 404、缺 alt、横向溢出 —— **只报不挡**（见下） |
+| `npm run check:min-sync` | min 产物与源码不同步（改了 `assets/js/*.js` 忘跑 `build:js`，线上跑的还是旧逻辑）—— 压缩重跑与仓库里的 min 逐字节比对 |
+| `npm run check:inline-js` | 内联 `<script>` 被 `compress_html` 压坏（`//` 注释吞代码）—— 对最终 `_site` HTML 里的可执行内联脚本做语法校验 |
+| `npm run check:404` | 404 页的行为：游戏点亮、文案与页内 JSON 一致、点开始挂遮罩摘除、`/en/` 换装、无 JS 报错 |
 
-CI 里这四步全部会跑，**任何一步红都不会部署**。构建产物上的四道（`check:structure` 后半段、`check:links`、`check:behavior`、`screenshots`）在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。
+CI 里这些步骤全部会跑，**任何一步红都不会部署**。`check:min-sync` 与 Jekyll 无关，在构建机上装完 node_modules 就跑；构建产物上的六道（`check:structure` 后半段、`check:links`、`check:behavior`、`check:inline-js`、`check:404`、`screenshots`）在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。
 
 > 关键设计：所有比对都用**同一份当前数据现场渲染**，不依赖任何存下来的快照。
 > 否则在后台改一个字，快照就过期了 —— 那等于白设门禁。
@@ -744,16 +749,26 @@ CI 里还会拿它和 `tests/__screenshots__/` 的基线做**像素比对**，�
 
 基线必须在 CI 环境下生成（字体渲染在 Windows 和 Linux 上必然不同），首次从 artifact 取回提交即可。
 
-### 五个容易踩的坑
+### 六个容易踩的坑
 
 1. **`permalink` 不能重复**。两个条目用同一个 permalink，后一个会覆盖前一个。建议沿用「日期 + 短标题」的命名。
 2. **日期格式必须是 `YYYY-MM-DD`**，写成 `2026.03.01` 会报错。会议条目的 `datetext` 是普通文字，不受此限制。
 3. **YAML 里的引号要配对**。`title: "标题` 少一个引号会导致整页构建失败。标题里如果有英文冒号 `:`，务必用引号包起来。
 4. **`category` 填错不会丢条目**（已做兜底）：填了 `manuscripts`/`conferences`/`books` 之外的词，或干脆没填，会归到「其他」分组里，不会被静默丢掉。
 5. **`awards.yml` 的 `level` 只能填那五个词**，填别的会没有颜色和文字标签（不影响页面生成）。
+6. **页面专属 JS 不要写内联 `<script>`**。`compress_html` 布局把内联脚本压成一行，`//` 注释之后的代码全部被吞 —— 构建成功、CI 全绿、线上死了。放 `assets/js/` 走外链，改完记得 `npm run build:js`（忘跑会被 `check:min-sync` 拦下）。
 
 > 改完发现页面没更新？先在本地跑 `npm run check`（见上一节），它会直接指出是哪个文件的哪一行。
 > 本地没跑就先去仓库的 **Actions** 标签页看构建状态：红色叉号说明构建失败，点进去能看到具体是哪一行出的问题，通常是 YAML 格式。
+
+**`git push` 推不上去时不要硬扛**：`github.com:443` 偶发整站连不上（TCP 失败），但 `api.github.com` 与 Pages CDN 往往还通。备用路先把改动 `git commit` 到本地，然后：
+
+```bash
+node tools/rescue-push.mjs _pages/404.md assets/js/n404.min.js   # 本次提交的全部改动文件
+npm run ci:poll -- <提交SHA>                                     # 推完盯 CI
+```
+
+rescue-push 走 Git Data API 逐字节复刻本地 HEAD —— 先把 tree 和 commit 对象原样建出来，复刻出的 SHA 与本地完全一致才允许动 ref，任何不一致都退出，绝不会推一份分岔的历史上去。2026-10 两次断网（404 上线当日、成熟化批次当日）都靠它送上去。
 
 ---
 
