@@ -8,8 +8,7 @@
 //
 // 方法口径（与 docs/lighthouse-baseline.md 对齐）：
 // - 默认 mobile 模拟节流（4G）——线上访客的主要形态；
-// - 浏览器由 Lighthouse 自己拉起：CHROME_PATH 显式指向 Playwright 缓存里的
-//   **完整 chromium**（runner 上唯一的 Chrome 就是它；不猜 PATH、不装系统版）；
+// - 浏览器交给 Playwright 托管的 headless-shell（见下方注释），LH 以 --port 附着；
 // - 目标设成**本地 _site** 而不是生产站：预部署就能红，且不受本机代理噪声影响；
 // - 分数小幅波动是常态（参照基线文档的 TBT 噪声记录），连续跌破地板才算真回归
 //   —— 在 CI 里偶尔抖红一次，重跑本 job 即可判真伪。
@@ -25,6 +24,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { chromium } from 'playwright';
 import { SITE_ROOT } from './lib/content.mjs';
 
 const argv = process.argv.slice(2);
@@ -81,78 +81,28 @@ await new Promise(
 );
 const origin = `http://127.0.0.1:${/** @type {import('node:net').AddressInfo} */ (server.address()).port}`;
 
-/* 浏览器怎么起：让 Lighthouse 自己拉 chrome-launcher 起，我们只负责用
-   CHROME_PATH 把「完整 chromium」的路径指清楚。走过两条弯路，都记在这：
-   1) Playwright launch + LH --port 附着：LH 建 target 后 Page.navigate 时
-      会被收走（Target closed），GitHub runner 上实测必挂；
-   2) Playwright 默认 headless 用的是 chromium-headless-shell（阉割构建，
-      缺 Storage 配额子系统），LH13 prepare 阶段会报
-      Protocol error(Storage.getUsageAndQuota)。
-   所以这里扫描 Playwright 缓存，只要 chromium-<rev> 的**完整**构建（排除
-   headless_shell），把路径交给 chrome-launcher。 */
+/* 浏览器怎么起：Playwright 托管 headless-shell（所有其它浏览器检查都已经在
+   用它，本机与 CI 都稳定），LH 以 --port 附着。两个坑都记在这：
+   1) 完整 chromium 不靠谱：Playwright 托管 + --port、chrome-launcher 用
+      CHROME_PATH 自拉，在 runner 上都是 Page.navigate 时 Target closed；
+   2) headless-shell 是阉割构建，缺 Storage 配额子系统：LH13 默认的存储重置
+      （prepare 阶段 Storage.getUsageAndQuota）会挂死。用官方开关
+      --disable-storage-reset 跳过重置 —— 每个页面都新起一个浏览器（全新
+      profile），缓存本来就是干净的，语义与重置等价。
+   注：这条路 2026-10-21 在本机 Windows 实测跑通（Chrome 153 / LH 13.5）。 */
 
-/** @returns {string} */
-function findFullChromium() {
-  const base = process.platform === 'win32'
-    ? path.join(process.env.LOCALAPPDATA || '', 'ms-playwright')
-    : process.platform === 'darwin'
-      ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
-      : process.env.PLAYWRIGHT_BROWSERS_PATH || path.join(os.homedir(), '.cache', 'ms-playwright');
-
-  /* 可执行文件的位置在 Playwright 各平台各版本里改过好几轮：
-     Windows 是 chrome-win64/chrome.exe，Linux 老布局 chrome-linux/chrome、
-     新布局（Chrome for Testing）chrome-linux64/chrome……所以不猜子路径，
-     直接递归找文件本体，取路径最短的那颗（真身总在浅层，深层的同名文件
-     是杂项）。 */
-  /** @param {string} dir @returns {string | null} */
-  function findBinary(dir) {
-    /** @type {string[]} */
-    const queue = [dir];
-    /** @type {string[]} */
-    const hits = [];
-    while (queue.length && hits.length < 8) {
-      const cur = /** @type {string} */ (queue.shift());
-      for (const e of fs.readdirSync(cur, { withFileTypes: true })) {
-        const p = path.join(cur, e.name);
-        if (e.isDirectory()) queue.push(p);
-        else if (e.name === 'chrome' || e.name === 'chrome.exe' || e.name === 'Chromium') hits.push(p);
-      }
-    }
-    return hits.sort((a, b) => a.length - b.length)[0] || null;
-  }
-
-  /** @type {string[]} */
-  const found = [];
-  if (fs.existsSync(base)) {
-    for (const d of fs.readdirSync(base)) {
-      // 只认完整构建：chromium-1243 版本号，不认 chromium_headless_shell-1243
-      if (!/^chromium-\d+$/.test(d)) continue;
-      const bin = findBinary(path.join(base, d));
-      if (bin) found.push(bin);
-    }
-  }
-  if (!found.length) {
-    throw new Error(`check-lh: 找不到完整 chromium（扫了 ${base}）—— 先 npx playwright install chromium`);
-  }
-  // 多版本共存时取修订号最大的那颗
-  found.sort((a, b) => {
-    const rev = (s) => Number((s.match(/chromium-(\d+)/) || [])[1] || 0);
-    return rev(b) - rev(a);
-  });
-  return found[0];
+/** 临时占一个端口再放掉：给 chrome 的 --remote-debugging-port 用。 */
+async function pickDebugPort() {
+  const temp = http.createServer();
+  await new Promise(
+    /** @type {(r: (v?: undefined) => void) => void} */ ((r) => temp.listen(0, '127.0.0.1', () => r())),
+  );
+  const port = /** @type {import('node:net').AddressInfo} */ (temp.address()).port;
+  await new Promise(
+    /** @type {(r: (v?: undefined) => void) => void} */ ((r) => temp.close(() => r())),
+  );
+  return port;
 }
-
-// Windows 本机不跑（预算关的家在 CI ubuntu）：沙箱环境里完整 chrome 起不来
-// （ProcessSingleton 锁被拒），headless-shell 又缺配额子系统。CI linux 上
-// 完整 chromium + chrome-launcher 是通途。
-if (process.platform === 'win32') {
-  console.log('check-lh: 本机 Windows 没有能跑的完整 Chrome（沙箱限制 + headless-shell 缺配额）——预算关交给 CI 跑');
-  await server.close();
-  process.exit(0);
-}
-
-const CHROME_PATH = findFullChromium();
-console.log('check-lh: chromium =', CHROME_PATH);
 
 const LH_CLI = path.join(SITE_ROOT, 'node_modules', 'lighthouse', 'cli', 'index.js');
 const problems = [];
@@ -166,24 +116,40 @@ for (const p of Object.keys(PAGE_FLOORS)) {
   }
   const url = origin + p;
   const outJson = path.join(os.tmpdir(), `lh-${p.replace(/[^\w]/g, '_')}.json`);
+
+  // 每页新起一个浏览器：--disable-storage-reset 之下，全新 profile 是「干净
+  // 缓存」的唯一保证（两页复用同一浏览器会让 /cv/ 蹭到 / 的 SW 与缓存）。
+  const debugPort = await pickDebugPort();
+  let browser;
+  try {
+    browser = await chromium.launch({ args: [`--remote-debugging-port=${debugPort}`] });
+  } catch (e) {
+    await server.close();
+    console.log(`check-lh: 起 headless-shell 失败（这是环境问题不是站点回归）：\n${String(e).slice(0, 600)}`);
+    process.exit(1);
+  }
+
   try {
     execFileSync(
       process.execPath,
       [LH_CLI, url,
+        `--port=${debugPort}`,
         `--output-path=${outJson}`,
         '--output=json',
         '--only-categories=performance,accessibility,best-practices,seo',
         '--max-wait-for-load=120000',
-        '--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage',
+        '--disable-storage-reset',
         '--quiet'],
-      { cwd: SITE_ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, CHROME_PATH } },
+      { cwd: SITE_ROOT, stdio: ['ignore', 'pipe', 'pipe'] },
     );
   } catch (e) {
+    await browser.close().catch(() => {});
     await server.close();
     console.log(`check-lh: Lighthouse 审计 ${p} 失败（${e.status ?? 'exec'} 损）：`);
-    console.log(String((e.stderr || e.stdout || '')).slice(0, 800));
+    console.log(String((e.stderr || e.stdout || '')).slice(0, 1200));
     process.exit(1);
   }
+  await browser.close().catch(() => {});
   const report = JSON.parse(fs.readFileSync(outJson, 'utf8'));
   fs.rmSync(outJson, { force: true });
   const cats = report.categories ?? {};

@@ -459,7 +459,7 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 - `package.json` 声明 `type: module`（tools/tests 全 ESM；`tools/subset-fonts.js` 顺手转 `.mjs` 领了 ESM 户口）—— npm test 里那条 `MODULE_TYPELESS_PACKAGE_JSON` 警告随之消失；
 - **金丝雀**（工作流 deploy 关尾部）：部署完成立刻对**生产站**做三条断言（404 页有引擎挂点、min 脚本可达且非空、首页 200），带 8 轮 × 15 秒重试 —— CDN 传播窗口里「页面全绿但站没换掉」这种空欢喜，从这条起当场红；
 - **dependabot**（`.github/dependabot.yml`）：npm 与 GitHub Actions 每周一收一批小步更新（minor/patch 打包成一个 PR），Jekyll 的 Gemfile 月度巡检 —— 版本漂移不再靠人肉盯；
-- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。用 `CHROME_PATH` 把 Playwright 缓存里的完整 chromium 指给 Lighthouse 的 chrome-launcher，让它自己拉起浏览器跑审计（试过 Playwright 托管 + `--port` 附着，在 runner 上必挂 `Target closed`；Playwright 默认的 headless-shell 又缺 Storage 配额子系统 —— 两个坑都写在工具头注释里）；Windows 本机连完整 Chrome 都起不来，这关只在 CI 里跑，本地自动跳过并说明原因。
+- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。Playwright 托管 headless-shell、Lighthouse 以 `--port` 附着，配官方开关 `--disable-storage-reset` 跳过 headless-shell 缺的 Storage 配额子系统（每页新起浏览器，profile 本就干净）。完整 chromium 的两条路都在 runner 上挂 `Target closed`，试错记录在工具头注释里；本机与 CI 都能跑，CI 是主场。
 
 ---
 
@@ -674,7 +674,7 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → lint 
 | `npm run check:inline-js` | 内联 `<script>` 被 `compress_html` 压坏（`//` 注释吞代码）—— 对最终 `_site` HTML 里的可执行内联脚本做语法校验 |
 | `npm run check:404` | 404 页的行为：游戏点亮、文案与页内 JSON 一致、点开始挂遮罩摘除、`/en/` 换装、无 JS 报错 |
 | `npm run check:pwa` | PWA 三件套：sw.js 以 JavaScript 交付、注册并接管页面、预缓存就绪、断网回落首页快照、断网后已缓存页照常渲染（sw.js 是 Jekyll 模板产物，断网才现形的故障只有真浏览器验得出） |
-| `npm run check:lh` | Lighthouse 预算：首页 / 履历四类分数低于「基线 −5」就红（基线与口径见 `docs/lighthouse-baseline.md`）—— 在 CI 里跑；本机 Windows 没有可用的完整 Chrome，会自动跳过 |
+| `npm run check:lh` | Lighthouse 预算：首页 / 履历四类分数低于「基线 −5」就红（基线与口径见 `docs/lighthouse-baseline.md`）—— 本机与 CI 都能跑（本机需先有 `_site/`，CI 是主场） |
 
 CI 里这些步骤全部会跑，**任何一步红都不会部署**。`check:min-sync` 与 Jekyll 无关，在构建机上装完 node_modules 就跑；构建产物上的七道（`check:structure` 后半段、`check:links`、`check:behavior`、`check:inline-js`、`check:404`、`check:pwa`、`check:lh`）与 `screenshots` 在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。部署完成后 deploy 关还有一道**金丝雀**：部署即刻对生产站做三条断言（404 页引擎挂点、min 脚本可达、首页 200），带 8 轮重试以吸收 CDN 传播窗口 —— 「上游全绿但站点没换版」这种空欢喜，从此当场暴露。
 
@@ -779,9 +779,9 @@ CI 里还会拿它和 `tests/__screenshots__/` 的基线做**像素比对**，�
 
 sw.js 是 Jekyll 渲染产物，版本号靠 `site.time` 注入 —— 写坏 front matter、漏掉分隔符，它就会以 YAML 或纯文本的模样被浏览器拒绝注册，页面照样能开：这类「断网才现形」的故障，其它所有关一个都照不出。这道关用真浏览器把整条链走一遍：`/sw.js` 确实是 JavaScript、注册并接管页面、预缓存清单就位、断网后未知页回落首页快照（URL 保持原样）、断网后 `/cv/` 从缓存原样渲染、恢复在线一切照旧、全程无 JS 报错（共 10 项）。本地假站点也能跑（`--site <dir>`），线上验证用 `--base https://newnju.github.io`。
 
-**第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，只在 CI 里真正跑）
+**第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，CI 是主场）
 
-性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由 Lighthouse 自己拉起，`CHROME_PATH` 显式指向 Playwright 缓存里的完整 chromium（Playwright 托管 + `--port` 附着在 runner 上实测必挂 `Target closed`；而 Playwright 默认的 headless-shell 缺 Storage 配额子系统，审计根本开不了跑）；Windows 本机没有能用的完整 Chrome，这关只在 CI 里跑，本地会自动跳过并说明原因。
+性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由 Playwright 托管 headless-shell、Lighthouse 以 `--port` 附着，并加官方开关 `--disable-storage-reset`：headless-shell 是阉割构建、缺 Storage 配额子系统，LH13 默认的存储重置会挂死；每页新起一个浏览器，profile 本来就是干净的，语义与重置等价。完整 chromium 的两条路（Playwright 托管、chrome-launcher 自拉）在 runner 上都会在 `Page.navigate` 挂 `Target closed` —— 试错记录都在工具头注释里。
 
 ### 六个容易踩的坑
 
