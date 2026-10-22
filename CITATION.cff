@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "引用本站或本站代码时，请使用以下信息。"
+title: "武嘉文的学术主页（Jiawen Wu — Academic Website）"
+type: website
+authors:
+  - family-names: 武
+    given-names: 嘉文
+    alias: Jiawen Wu
+    affiliation: 南京大学新闻传播学院
+    website: https://newnju.github.io
+repository-code: https://github.com/newnju/newnju.github.io
+url: https://newnju.github.io
+date-released: 2026-10-22
+version: "0.8.1.1"
+abstract: >-
+  南京大学新闻传播学院博士研究生的个人学术主页，包含履历、论文、项目、教学与获奖信息，
+  以 Jekyll + GitHub Pages 构建，支持中英双语、PWA 离线与跨页视图过渡。
+keywords:
+  - academic website
+  - Jekyll
+  - GitHub Pages
+  - digital humanities
+  - art archaeology
+  - visual history
