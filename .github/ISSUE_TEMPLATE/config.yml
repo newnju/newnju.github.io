@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 站点与内容
+    url: https://newnju.github.io
+    about: 内容勘误、合作等请直接邮件联系维护者
+  - name: 安全漏洞（私密）
+    url: https://github.com/newnju/newnju.github.io/security/advisories/new
+    about: 请不要公开提交安全 issue

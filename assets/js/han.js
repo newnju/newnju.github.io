@@ -146,7 +146,14 @@ function flashLabel(el, doneLabel, doneClass) {
        而按钮默认只有 ≤768px 才显示，那些栏目就永远点不到了（实测 900px 上下
        履历正好被折进去）。这里按「下拉非空」决定，按钮随之出现或消失。 */
     function syncOverflowClass() {
-      nav.classList.toggle("has-overflow", hidden.querySelectorAll("li").length > 0);
+      var folded = hidden.querySelectorAll("li").length > 0;
+      nav.classList.toggle("has-overflow", folded);
+      /* 按钮的 hidden 类最终拍板权也收在这里：本节与插件都管按钮，事件分发
+         顺序取决于两个脚本谁先注册监听（async 与 module 的加载次序是赛跑，
+         CI 上抓到过一次 han 先折、插件后量出「全放得下」把按钮重新藏掉）。
+         折叠态即真相：下拉里有条目，按钮就必须亮。用 rAF 修订 —— 它必然
+         排在本帧所有事件处理之后执行，谁先谁后都收敛到同一结果。 */
+      if (folded) btn.classList.remove("hidden");
     }
 
     function apply(isMobile) {
@@ -156,7 +163,9 @@ function flashLabel(el, doneLabel, doneClass) {
       } else {
         moveToVisible();
       }
-      syncOverflowClass();
+      // 同步放在 rAF 里：本帧就算插件的 updateNav 又跑了一轮（它 var 的
+      // 拍板可能跟折叠态相反），也要让这里的结果是当帧最终值
+      window.requestAnimationFrame(syncOverflowClass);
     }
 
     var mq = window.matchMedia("(max-width: 768px)");
@@ -174,8 +183,13 @@ function flashLabel(el, doneLabel, doneClass) {
       }
     });
 
-    // 字体就位、插件首轮量完后，条目数可能才最终定下来
+    // 字体就位、插件首轮量完后，条目数可能才最终定下来；load 事件再保一次：
+    // 插件的初始化量宽跑在 load 之前（module 顶层），若han 本轮加载赛跑输给了
+    // 它，这里就是折叠态把按钮重新点亮的最后一次机会
     window.requestAnimationFrame(syncOverflowClass);
+    window.addEventListener("load", function () {
+      window.requestAnimationFrame(syncOverflowClass);
+    });
     if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
       document.fonts.ready.then(function () {
         window.requestAnimationFrame(syncOverflowClass);

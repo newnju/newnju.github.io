@@ -1,0 +1,73 @@
+name: Bug 报告
+description: 站点渲染、交互、离线或 CI 出现异常
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先在 [issues](https://github.com/newnju/newnju.github.io/issues?q=is%3Aissue) 里搜一下，避免重复。
+        安全问题请不要走这里，见 [SECURITY.md](https://github.com/newnju/newnju.github.io/blob/main/SECURITY.md)。
+
+  - type: input
+    id: url
+    attributes:
+      label: 页面 URL
+      placeholder: https://newnju.github.io/cv/
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么
+      description: 实际看到的现象；有报错请贴控制台文本
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 …
+        2. 点击 …
+        3. 看到 …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望的行为
+
+  - type: dropdown
+    id: env
+    attributes:
+      label: 环境
+      options:
+        - 桌面 Chrome
+        - 桌面 Firefox
+        - 桌面 Safari
+        - 桌面 Edge
+        - iOS Safari
+        - Android Chrome
+        - 本地 Jekyll 构建
+        - CI / GitHub Actions
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 截图或补充信息
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我已搜索现有 issue
+          required: true
+        - label: 我已阅读 README 的「提交前自检」
+          required: true
