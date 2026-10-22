@@ -198,9 +198,13 @@ exclude:
   - assets/js/vendor
   - assets/webfonts/full
   - CHANGELOG
+  - CITATION.cff
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
   - Capfile
   - config
   - Dockerfile
+  - eslint.config.mjs
   - Gemfile
   - Gemfile.lock
   - Gruntfile.js
@@ -212,12 +216,14 @@ exclude:
   - oauth-proxy
   - package.json*
   - package-lock.json
-  - schemas
-  - tests
-  - tools
   - Rakefile
   - README.md
+  - schemas
+  - SECURITY.md
+  - tests
   - tmp
+  - tools
+  - tsconfig.json
   - vendor
 keep_files:
   - .git
