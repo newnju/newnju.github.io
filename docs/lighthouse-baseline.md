@@ -74,9 +74,13 @@ npx --yes lighthouse@12 https://newnju.github.io/cv/ --output=json --output-path
   **Lighthouse 13**。12→13 的算法另定，绝对分数允许搬家：只要 CI 的
   首轮跑分不低于地板即视作守住了底线，哪天地板整体偏高/偏低，就重跑
   一轮校准、把**分数表与地板一起**按新引擎的实际值更新。
+- **2026-10-21 CI 首跑（LH 13.5 + headless-shell + 本地 `_site`）**：
+  `/` 性能 97 / 可访问性 95 / 最佳实践 100 / SEO 100；
+  `/cv/` 98 / 85 / 100 / 100。地板继续按 LH 12.8.2 的「基线 − 5」保守值守，
+  新旧引擎的分数搬家在这里对账。
 - 同一版本内比较才算数：怀疑真回归时，在同一环境重复两次，连续两红
   才算（单次抖动参照上文试跑的教训）。
-- 本机 Windows 与 CI 理论上都能跑这道关（Playwright 托管 headless-shell +
-  官方开关 `--disable-storage-reset`；headless-shell 缺 Storage 配额子系统，
-  不跳过重置会让 LH13 的 prepare 阶段挂死）。CI（ubuntu）是主场：分数地板
-  按 CI 的实际值校准。
+- 本机 Windows 与 CI 都能跑这道关（工具自己 spawn Playwright 缓存里的
+  headless-shell + 官方开关 `--disable-storage-reset`；headless-shell 缺
+  Storage 配额子系统，不跳过重置会让 LH13 的 prepare 阶段挂死）。
+  CI（ubuntu）是主场：分数地板按 CI 的实际值校准。

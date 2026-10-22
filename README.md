@@ -459,7 +459,7 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 - `package.json` 声明 `type: module`（tools/tests 全 ESM；`tools/subset-fonts.js` 顺手转 `.mjs` 领了 ESM 户口）—— npm test 里那条 `MODULE_TYPELESS_PACKAGE_JSON` 警告随之消失；
 - **金丝雀**（工作流 deploy 关尾部）：部署完成立刻对**生产站**做三条断言（404 页有引擎挂点、min 脚本可达且非空、首页 200），带 8 轮 × 15 秒重试 —— CDN 传播窗口里「页面全绿但站没换掉」这种空欢喜，从这条起当场红；
 - **dependabot**（`.github/dependabot.yml`）：npm 与 GitHub Actions 每周一收一批小步更新（minor/patch 打包成一个 PR），Jekyll 的 Gemfile 月度巡检 —— 版本漂移不再靠人肉盯；
-- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。Playwright 托管 headless-shell、Lighthouse 以 `--port` 附着，配官方开关 `--disable-storage-reset` 跳过 headless-shell 缺的 Storage 配额子系统（每页新起浏览器，profile 本就干净）。完整 chromium 的两条路都在 runner 上挂 `Target closed`，试错记录在工具头注释里；本机与 CI 都能跑，CI 是主场。
+- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。工具自己 spawn Playwright 缓存里的 headless-shell、Lighthouse 以 `--port` 附着，配官方开关 `--disable-storage-reset` 跳过 headless-shell 缺的 Storage 配额子系统（每页新起浏览器，profile 本就干净）。自己拉浏览器是为了三样诊断能力：LH 输出实时透传、240 秒硬超时、chrome 自己的 stderr —— 这来自一次「静默挂十分钟、只剩一句 `Target closed`」的教训。完整 chromium 的两条路都在 runner 上挂 `Target closed`，试错记录在工具头注释里；本机与 CI 都能跑，CI 是主场。
 
 ---
 
@@ -781,7 +781,7 @@ sw.js 是 Jekyll 渲染产物，版本号靠 `site.time` 注入 —— 写坏 fr
 
 **第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，CI 是主场）
 
-性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由 Playwright 托管 headless-shell、Lighthouse 以 `--port` 附着，并加官方开关 `--disable-storage-reset`：headless-shell 是阉割构建、缺 Storage 配额子系统，LH13 默认的存储重置会挂死；每页新起一个浏览器，profile 本来就是干净的，语义与重置等价。完整 chromium 的两条路（Playwright 托管、chrome-launcher 自拉）在 runner 上都会在 `Page.navigate` 挂 `Target closed` —— 试错记录都在工具头注释里。
+性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由工具自己 spawn Playwright 缓存里的 headless-shell（不交给 Playwright、也不用 chrome-launcher），Lighthouse 以 `--port` 附着，并加官方开关 `--disable-storage-reset`：headless-shell 是阉割构建、缺 Storage 配额子系统，LH13 默认的存储重置会挂死；每页新起一个浏览器，profile 本来就是干净的，语义与重置等价。自己拉浏览器换来三样诊断能力——LH 输出实时透传、240 秒硬超时、chrome 自己的 stderr；完整 chromium 的两条路（Playwright 托管、chrome-launcher 自拉）在 runner 上都会在 `Page.navigate` 挂 `Target closed`，试错记录都在工具头注释里。
 
 ### 六个容易踩的坑
 
