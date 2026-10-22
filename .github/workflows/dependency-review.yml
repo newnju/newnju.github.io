@@ -1,0 +1,23 @@
+# 依赖审查：PR 里新增/升级的依赖若带高危漏洞，直接在 PR 上标红
+# ---------------------------------------------------------------------------
+# 与 dependabot 配合：dependabot 负责「有新版就提 PR」，这里负责「这个 PR 能不能进」。
+# 只拦 high 及以上；低危仍会出现在 PR 摘要里，由维护者判断。
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high

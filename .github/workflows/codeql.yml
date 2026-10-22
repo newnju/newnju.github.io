@@ -1,0 +1,39 @@
+# CodeQL：JavaScript / TypeScript 的静态安全扫描
+# ---------------------------------------------------------------------------
+# 站点本身没有后端，但仓库里有 tools/（Node 脚本）、assets/js/（浏览器脚本）、
+# oauth-proxy/ 与 analytics/（Cloudflare Workers）—— 这些都是可执行代码。
+# 用 GitHub 官方 CodeQL 做每周 + 每次推送/PR 的扫描，结果进 Security → Code scanning。
+#
+# 注意：如果仓库设置里启用了 CodeQL 的 "Default setup"，这个 workflow 会冲突；
+# 本仓库使用 advanced setup（即本文件），默认设置保持 not-configured。
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 每周一 03:23 UTC（北京时间 11:23），错开整点高峰
+    - cron: "23 3 * * 1"
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze JavaScript / TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v4
