@@ -1,8 +1,19 @@
 # 武嘉文的学术主页
 
-基于 [Academic Pages](https://github.com/academicpages/academicpages.github.io) 模板（Jekyll + GitHub Pages）搭建的个人学术主页，内容来自个人简历。
+[![Pages](https://github.com/newnju/newnju.github.io/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/newnju/newnju.github.io/actions/workflows/pages.yml)
+[![CodeQL](https://github.com/newnju/newnju.github.io/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/newnju/newnju.github.io/actions/workflows/codeql.yml)
+[![Website](https://img.shields.io/badge/website-newnju.github.io-8a3324)](https://newnju.github.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2f6f4e.svg)](LICENSE)
 
-在模板之上加了几样东西：一套从汉代铜镜取色的自定义主题（明暗两套）、首页那张四神博局镜图式、一个由数据文件驱动的获奖时间轴、论文条目的 BibTeX 与引用复制、右侧的页面缩略图导航，以及一套可以逐条补齐的英文版。
+**简体中文** · [English site](https://newnju.github.io/en/)
+
+南京大学新闻传播学院博士研究生的个人学术主页，基于 [Academic Pages](https://github.com/academicpages/academicpages.github.io) 模板（Jekyll + GitHub Pages）搭建，内容来自个人简历。
+
+在模板之上加了几样东西：一套从汉代铜镜取色的自定义主题（明暗两套）、首页那张四神博局镜图式、一个由数据文件驱动的获奖时间轴、论文条目的 BibTeX 与引用复制、右侧的页面缩略图导航，以及一套可以逐条补齐的英文版。整站**运行时零外部依赖**，并配有 PWA 离线、跨页视图过渡、Lighthouse 预算门禁与部署金丝雀。
+
+> **English** — Academic website of Jiawen Wu, Ph.D. student at Nanjing University's School of Journalism and Communication. Built with Jekyll and GitHub Pages; the site runs with **zero runtime dependencies** and ships a custom Han-dynasty-inspired theme, bilingual content, PWA offline support, cross-document view transitions, a Lighthouse budget gate, and a post-deploy canary.
+
+**快速导航**：[站点](https://newnju.github.io) · [日常维护](#四日常维护) · [本地预览](#五本地预览可选) · [目录结构](#六目录结构速查) · [参与贡献](CONTRIBUTING.md) · [安全策略](SECURITY.md) · [引用](CITATION.cff) · [许可](#七许可)
 
 ---
 
@@ -50,15 +61,15 @@ git remote add origin https://github.com/newnju/newnju.github.io.git
 git push -u origin main
 ```
 
-### 3. 打开 GitHub Pages
+### 3. 打开 GitHub Pages（Source 选 GitHub Actions）
 
 - 进入仓库 → **Settings** → 左侧 **Pages**
-- **Source** 选择 **Deploy from a branch**
-- **Branch** 选择 **main**，目录选择 **/ (root)**，点击 **Save**
+- **Build and deployment → Source** 选 **GitHub Actions**，不要选 “Deploy from a branch”
+- 发布由 `.github/workflows/pages.yml` 驱动：构建 → 九道门禁 → 上传 → 部署 → 金丝雀；选分支会绕过全部闸门
 
-### 4. 等待 1–3 分钟
+### 4. 等待第一次构建
 
-访问 <https://newnju.github.io> 即可看到站点。首次构建通常需要 1–3 分钟，可在仓库的 **Actions** 标签页查看构建进度。
+推送后到 **Actions** 标签页看 `Pages` 工作流。首次构建约 1–3 分钟；deploy 关的最后一步会对生产站做金丝雀断言，失败会标红，不会留下「部署成功但站点没换」的假象。
 
 ---
 
@@ -459,7 +470,7 @@ Markdown 强调、夹杂的英文专名、项目编号与日期挖成 `[[n]]`，
 - `package.json` 声明 `type: module`（tools/tests 全 ESM；`tools/subset-fonts.js` 顺手转 `.mjs` 领了 ESM 户口）—— npm test 里那条 `MODULE_TYPELESS_PACKAGE_JSON` 警告随之消失；
 - **金丝雀**（工作流 deploy 关尾部）：部署完成立刻对**生产站**做三条断言（404 页有引擎挂点、min 脚本可达且非空、首页 200），带 8 轮 × 15 秒重试 —— CDN 传播窗口里「页面全绿但站没换掉」这种空欢喜，从这条起当场红；
 - **dependabot**（`.github/dependabot.yml`）：npm 与 GitHub Actions 每周一收一批小步更新（minor/patch 打包成一个 PR），Jekyll 的 Gemfile 月度巡检 —— 版本漂移不再靠人肉盯；
-- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着（不依赖 chrome-launcher —— 它在受限环境会撞 ProcessSingleton 锁；Windows 本机连完整 Chrome 都起不来，这关只在 CI 里跑，本地自动跳过并说明原因）。
+- **Lighthouse 预算关**（`tools/check-lh.mjs`）：把 `docs/lighthouse-baseline.md` 从「记事本」升格成「守门人」。工具自己 spawn Playwright 缓存里的 headless-shell、Lighthouse 以 `--port` 附着，配官方开关 `--disable-storage-reset` 跳过 headless-shell 缺的 Storage 配额子系统（每页新起浏览器，profile 本就干净）。自己拉浏览器是为了三样诊断能力：LH 输出实时透传、240 秒硬超时、chrome 自己的 stderr —— 这来自一次「静默挂十分钟、只剩一句 `Target closed`」的教训。完整 chromium 的两条路都在 runner 上挂 `Target closed`，试错记录在工具头注释里；本机与 CI 都能跑，CI 是主场。
 
 ---
 
@@ -674,7 +685,7 @@ npm run check   # 一键：校验 → 内容一致性 → 结构检查 → lint 
 | `npm run check:inline-js` | 内联 `<script>` 被 `compress_html` 压坏（`//` 注释吞代码）—— 对最终 `_site` HTML 里的可执行内联脚本做语法校验 |
 | `npm run check:404` | 404 页的行为：游戏点亮、文案与页内 JSON 一致、点开始挂遮罩摘除、`/en/` 换装、无 JS 报错 |
 | `npm run check:pwa` | PWA 三件套：sw.js 以 JavaScript 交付、注册并接管页面、预缓存就绪、断网回落首页快照、断网后已缓存页照常渲染（sw.js 是 Jekyll 模板产物，断网才现形的故障只有真浏览器验得出） |
-| `npm run check:lh` | Lighthouse 预算：首页 / 履历四类分数低于「基线 −5」就红（基线与口径见 `docs/lighthouse-baseline.md`）—— 在 CI 里跑；本机 Windows 没有可用的完整 Chrome，会自动跳过 |
+| `npm run check:lh` | Lighthouse 预算：首页 / 履历四类分数低于「基线 −5」就红（基线与口径见 `docs/lighthouse-baseline.md`）—— 本机与 CI 都能跑（本机需先有 `_site/`，CI 是主场） |
 
 CI 里这些步骤全部会跑，**任何一步红都不会部署**。`check:min-sync` 与 Jekyll 无关，在构建机上装完 node_modules 就跑；构建产物上的七道（`check:structure` 后半段、`check:links`、`check:behavior`、`check:inline-js`、`check:404`、`check:pwa`、`check:lh`）与 `screenshots` 在 `jekyll build` 之后才跑，只有 `_site/` 存在时才执行，本地没装 Jekyll 会自动跳过并提示。部署完成后 deploy 关还有一道**金丝雀**：部署即刻对生产站做三条断言（404 页引擎挂点、min 脚本可达、首页 200），带 8 轮重试以吸收 CDN 传播窗口 —— 「上游全绿但站点没换版」这种空欢喜，从此当场暴露。
 
@@ -779,9 +790,9 @@ CI 里还会拿它和 `tests/__screenshots__/` 的基线做**像素比对**，�
 
 sw.js 是 Jekyll 渲染产物，版本号靠 `site.time` 注入 —— 写坏 front matter、漏掉分隔符，它就会以 YAML 或纯文本的模样被浏览器拒绝注册，页面照样能开：这类「断网才现形」的故障，其它所有关一个都照不出。这道关用真浏览器把整条链走一遍：`/sw.js` 确实是 JavaScript、注册并接管页面、预缓存清单就位、断网后未知页回落首页快照（URL 保持原样）、断网后 `/cv/` 从缓存原样渲染、恢复在线一切照旧、全程无 JS 报错（共 10 项）。本地假站点也能跑（`--site <dir>`），线上验证用 `--base https://newnju.github.io`。
 
-**第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，只在 CI 里真正跑）
+**第九道：Lighthouse 预算**（`npm run check:lh`，需要 `_site/`，CI 是主场）
 
-性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引巨额 JS、一张没压缩的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 −5」的地板就红。地板是死的数字写在 `tools/check-lh.mjs` 顶部，改基线 consciously：刻意让分数变差的要求是「重跑一轮、连同地板和基线文档一起更新，方向才算数」。浏览器由 Playwright 拉起完整 chromium、Lighthouse 以 `--port` 附着 —— 不依赖 chrome-launcher（它在受限环境会撞 ProcessSingleton 锁）；Windows 本机没有能用的完整 Chrome，这关只在 CI 里跑，本地会自动跳过并说明原因。
+性能与可访问性分数原来只记录在 `docs/lighthouse-baseline.md` 里当备忘 —— 一次引入巨额 JS、一张没压好的首图，分数掉下去没人知道。现在这道关在 `jekyll build` 之后把 `_site` 起成本地服务，对首页与履历各跑一次 Lighthouse（默认 mobile 4G 模拟节流，与基线口径一致），四类分数低于「基线 − 5」的地板就红。地板数字在 `tools/check-lh.mjs` 顶部的 `PAGE_FLOORS`；要动基线必须同批更新地板与 `docs/lighthouse-baseline.md`，换了 Lighthouse 大版本（12→13 这类）先重跑一轮校准。浏览器由工具自己 spawn Playwright 缓存里的 headless-shell（不交给 Playwright、也不用 chrome-launcher），Lighthouse 以 `--port` 附着，并加官方开关 `--disable-storage-reset`：headless-shell 是阉割构建、缺 Storage 配额子系统，LH13 默认的存储重置会挂死；每页新起一个浏览器，profile 本来就是干净的，语义与重置等价。自己拉浏览器换来三样诊断能力——LH 输出实时透传、240 秒硬超时、chrome 自己的 stderr；完整 chromium 的两条路（Playwright 托管、chrome-launcher 自拉）在 runner 上都会在 `Page.navigate` 挂 `Target closed`，试错记录都在工具头注释里。
 
 ### 六个容易踩的坑
 
@@ -859,6 +870,7 @@ bundle exec jekyll serve
 
 ## 七、许可
 
-站点内容（简历、文字、图片）版权归武嘉文所有。
-
-主题模板 Academic Pages 基于 MIT 协议，原作者为 Michael Rose 与 Robert Zupko，见 `LICENSE`。
+- **代码**（主题与本站脚本、工具链）：MIT，见 [`LICENSE`](LICENSE)；主题模板 Academic Pages 由 Michael Rose 与 Robert Zupko 创建。
+- **站点内容**（简历、文字、图片、论文元数据）：版权归武嘉文所有，未经许可不得转载或再分发。
+- 引用本站请使用 [`CITATION.cff`](CITATION.cff)（GitHub 仓库页右侧的 “Cite this repository”）。
+- 参与贡献见 [`CONTRIBUTING.md`](CONTRIBUTING.md)；安全问题请按 [`SECURITY.md`](SECURITY.md) 私密报告，行为准则见 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)。

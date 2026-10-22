@@ -1,0 +1,55 @@
+name: 功能建议
+description: 对站点、工具链或仓库流程的改进建议
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先说明要解决的问题，再谈具体方案。涉及个人内容的调整请直接邮件联系，不走这里。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 现在哪里不方便 / 不准确 / 不够好？
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议的做法
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - 内容与信息结构
+        - 主题与视觉
+        - 脚本与交互
+        - 构建 / CI / 工具链
+        - 文档
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我已搜索现有 issue
+          required: true

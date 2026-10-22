@@ -20,6 +20,7 @@ jobs:
   # 放在构建之前 —— 数据出问题时，失败信息比「Jekyll 挂了」好懂得多。
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,6 +51,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: check
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
@@ -141,6 +143,7 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 5
     outputs:
       deploy: ${{ steps.state.outputs.deploy }}
     steps:
@@ -170,6 +173,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: preflight
+    timeout-minutes: 10
     if: needs.preflight.outputs.deploy == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment:
       name: github-pages
