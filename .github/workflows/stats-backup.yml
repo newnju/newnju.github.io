@@ -39,7 +39,7 @@ jobs:
           if [ "$rows" -ge 10000 ]; then
             echo "::warning::CSV 命中 LIMIT 10000 上限，本份备份不完整 —— 请提高备份频率或分窗导出"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: stats-backup-${{ github.run_number }}
           path: stats.csv
