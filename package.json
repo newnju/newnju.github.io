@@ -1,25 +1,30 @@
 {
   "name": "academic-pages",
   "version": "0.8.1.1",
-  "description": "Academic Pages Mistakes Jekyll theme npm build scripts",
+  "description": "武嘉文的学术主页：Jekyll + GitHub Pages，零运行时依赖，含 PWA、Lighthouse 预算门禁与部署金丝雀",
+  "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/academicpages/academicpages.github.io"
+    "url": "git+https://github.com/newnju/newnju.github.io.git"
   },
   "keywords": [
+    "academic-website",
     "jekyll",
-    "theme",
-    "minimal"
+    "github-pages",
+    "pwa",
+    "lighthouse",
+    "accessibility"
   ],
   "contributors": [
+    "Jiawen Wu",
     "Michael Rose",
     "Robert Zupko"
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/academicpages/academicpages.github.io/issues"
+    "url": "https://github.com/newnju/newnju.github.io/issues"
   },
-  "homepage": "https://github.com/academicpages/academicpages.github.io",
+  "homepage": "https://newnju.github.io",
   "engines": {
     "node": ">= 20"
   },

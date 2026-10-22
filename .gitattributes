@@ -20,3 +20,8 @@
 *.scss text
 *.css  text
 *.js   text
+
+# GitHub 语言统计：压缩产物与第三方库不计入本项目源码
+assets/js/*.min.js   linguist-generated=true
+assets/js/plugins/** linguist-vendored
+assets/js/vivus.js   linguist-vendored
