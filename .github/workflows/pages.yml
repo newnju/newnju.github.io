@@ -180,7 +180,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
       # 金丝雀：部署完成立刻对生产站抽查三条关键产物 —— 404 页有引擎挂点、
       # min 脚本可达且非空、首页 200。Pages CDN 对静态站有传播窗口（通常
       # 秒级），带 8 轮重试；这几条红了说明「上游全绿，用户看到的却不是
