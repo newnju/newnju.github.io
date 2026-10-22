@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -65,7 +65,7 @@ jobs:
       # node 必须在 jekyll build 之前装好 —— 生成器要用 gray-matter / js-yaml。
       # 构建机上因此会有 node_modules，但 _config.yml 的 exclude 里挡着
       # node_modules，不会混进 _site。
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
