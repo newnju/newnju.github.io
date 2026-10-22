@@ -1,8 +1,19 @@
 # 武嘉文的学术主页
 
-基于 [Academic Pages](https://github.com/academicpages/academicpages.github.io) 模板（Jekyll + GitHub Pages）搭建的个人学术主页，内容来自个人简历。
+[![Pages](https://github.com/newnju/newnju.github.io/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/newnju/newnju.github.io/actions/workflows/pages.yml)
+[![CodeQL](https://github.com/newnju/newnju.github.io/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/newnju/newnju.github.io/actions/workflows/codeql.yml)
+[![Website](https://img.shields.io/badge/website-newnju.github.io-8a3324)](https://newnju.github.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2f6f4e.svg)](LICENSE)
 
-在模板之上加了几样东西：一套从汉代铜镜取色的自定义主题（明暗两套）、首页那张四神博局镜图式、一个由数据文件驱动的获奖时间轴、论文条目的 BibTeX 与引用复制、右侧的页面缩略图导航，以及一套可以逐条补齐的英文版。
+**简体中文** · [English site](https://newnju.github.io/en/)
+
+南京大学新闻传播学院博士研究生的个人学术主页，基于 [Academic Pages](https://github.com/academicpages/academicpages.github.io) 模板（Jekyll + GitHub Pages）搭建，内容来自个人简历。
+
+在模板之上加了几样东西：一套从汉代铜镜取色的自定义主题（明暗两套）、首页那张四神博局镜图式、一个由数据文件驱动的获奖时间轴、论文条目的 BibTeX 与引用复制、右侧的页面缩略图导航，以及一套可以逐条补齐的英文版。整站**运行时零外部依赖**，并配有 PWA 离线、跨页视图过渡、Lighthouse 预算门禁与部署金丝雀。
+
+> **English** — Academic website of Jiawen Wu, Ph.D. student at Nanjing University's School of Journalism and Communication. Built with Jekyll and GitHub Pages; the site runs with **zero runtime dependencies** and ships a custom Han-dynasty-inspired theme, bilingual content, PWA offline support, cross-document view transitions, a Lighthouse budget gate, and a post-deploy canary.
+
+**快速导航**：[站点](https://newnju.github.io) · [日常维护](#四日常维护) · [本地预览](#五本地预览可选) · [目录结构](#六目录结构速查) · [参与贡献](CONTRIBUTING.md) · [安全策略](SECURITY.md) · [引用](CITATION.cff) · [许可](#七许可)
 
 ---
 
@@ -50,15 +61,15 @@ git remote add origin https://github.com/newnju/newnju.github.io.git
 git push -u origin main
 ```
 
-### 3. 打开 GitHub Pages
+### 3. 打开 GitHub Pages（Source 选 GitHub Actions）
 
 - 进入仓库 → **Settings** → 左侧 **Pages**
-- **Source** 选择 **Deploy from a branch**
-- **Branch** 选择 **main**，目录选择 **/ (root)**，点击 **Save**
+- **Build and deployment → Source** 选 **GitHub Actions**，不要选 “Deploy from a branch”
+- 发布由 `.github/workflows/pages.yml` 驱动：构建 → 九道门禁 → 上传 → 部署 → 金丝雀；选分支会绕过全部闸门
 
-### 4. 等待 1–3 分钟
+### 4. 等待第一次构建
 
-访问 <https://newnju.github.io> 即可看到站点。首次构建通常需要 1–3 分钟，可在仓库的 **Actions** 标签页查看构建进度。
+推送后到 **Actions** 标签页看 `Pages` 工作流。首次构建约 1–3 分钟；deploy 关的最后一步会对生产站做金丝雀断言，失败会标红，不会留下「部署成功但站点没换」的假象。
 
 ---
 
@@ -859,6 +870,7 @@ bundle exec jekyll serve
 
 ## 七、许可
 
-站点内容（简历、文字、图片）版权归武嘉文所有。
-
-主题模板 Academic Pages 基于 MIT 协议，原作者为 Michael Rose 与 Robert Zupko，见 `LICENSE`。
+- **代码**（主题与本站脚本、工具链）：MIT，见 [`LICENSE`](LICENSE)；主题模板 Academic Pages 由 Michael Rose 与 Robert Zupko 创建。
+- **站点内容**（简历、文字、图片、论文元数据）：版权归武嘉文所有，未经许可不得转载或再分发。
+- 引用本站请使用 [`CITATION.cff`](CITATION.cff)（GitHub 仓库页右侧的 “Cite this repository”）。
+- 参与贡献见 [`CONTRIBUTING.md`](CONTRIBUTING.md)；安全问题请按 [`SECURITY.md`](SECURITY.md) 私密报告，行为准则见 [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)。
