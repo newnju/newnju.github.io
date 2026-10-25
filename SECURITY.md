@@ -10,8 +10,8 @@
 
 <https://github.com/newnju/newnju.github.io/security/advisories/new>
 
-如果无法使用该入口，请通过站点「关于」页列出的联系方式联系维护者
-（<https://newnju.github.io/about/>），标题注明 `[SECURITY]`。
+如果无法使用该入口，请通过站点首页「联系方式」一节联系维护者
+（<https://newnju.github.io/#联系方式>），标题注明 `[SECURITY]`。
 
 报告请尽量包含：
 
